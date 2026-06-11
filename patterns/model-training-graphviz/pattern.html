@@ -6,13 +6,21 @@
   <title>Model Training Graphviz Pattern</title>
   <script>
     (() => {
-      const theme = new URLSearchParams(window.location.search).get('theme');
-      if (theme === 'light' || theme === 'dark' || theme === 'glass') {
-        document.documentElement.dataset.theme = theme;
-      }
-      if (new URLSearchParams(window.location.search).get('embed') === '1') {
+      const params = new URLSearchParams(window.location.search);
+      const applyTheme = (theme) => {
+        if (theme === 'light' || theme === 'dark' || theme === 'glass') {
+          document.documentElement.dataset.theme = theme;
+        }
+      };
+      if (params.get('embed') === '1') {
         document.documentElement.dataset.embed = '1';
       }
+      applyTheme(params.get('theme'));
+      window.addEventListener('message', (event) => {
+        if (event.data?.type === 'pto-preview-theme') {
+          applyTheme(event.data.theme);
+        }
+      });
     })();
   </script>
   <link rel="stylesheet" href="../../tokens/foundation.css">

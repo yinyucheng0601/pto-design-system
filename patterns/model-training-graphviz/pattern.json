@@ -9,15 +9,25 @@
       "Profiling_Insight_and_Tool/AI_Profiling_Tool/js/graph-evidence/graph-stage.js",
       "patterns/model-graphviz/pattern.js",
       "patterns/model-training-graphviz/pattern.html",
+      "patterns/model-training-graphviz/openpangu_model_architecture_pattern_graphviz.html",
       "patterns/model-training-graphviz/pattern.css",
       "patterns/model-training-graphviz/pattern.js"
     ],
     "patternHtml": "patterns/model-training-graphviz/pattern.html",
+    "openPanguParityHtml": "patterns/model-training-graphviz/openpangu_model_architecture_pattern_graphviz.html",
     "patternCss": "patterns/model-training-graphviz/pattern.css",
     "renderScript": "patterns/model-training-graphviz/pattern.js",
     "basePattern": "patterns/model-graphviz/pattern.js",
     "originalModule": "Profiling_Insight_and_Tool/AI_Profiling_Tool/graph-evidence-workbench.html"
   },
+  "examples": [
+    {
+      "id": "openpangu-embedded-7b-v1.1",
+      "preview": "patterns/model-training-graphviz/openpangu_model_architecture_pattern_graphviz.html",
+      "model": "openPangu-Embedded-7B-V1.1",
+      "notes": "Full source/config architecture parity page generated from the OpenPangu local model repo. It consumes model-graphviz and model-training-graphviz directly, keeps fold controls and phase anchors in page-local data logic, and inherits the shared light-mode 50% node-fill opacity from model-graphviz."
+    }
+  ],
   "classification": "hybrid-pattern: DOM shell and hover panel with SVG renderer-driven graph geometry and interaction math.",
   "requiredApis": [
     "window.PtoModelGraphvizPattern.render(container, graph, options)",
