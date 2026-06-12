@@ -104,6 +104,17 @@
       dominant-baseline: central;
       letter-spacing: 0;
     }
+    :root[data-theme='light'] .openpangu-stage .pto-model-graphviz-node rect,
+    :root[data-theme='light'] .openpangu-stage .pto-model-training-edge-tag rect,
+    :root[data-theme='light'] .openpangu-stage .openpangu-repeat-tag rect,
+    :root[data-theme='light'] .openpangu-stage .pto-model-graphviz-cluster-title-bg,
+    :root[data-theme='light'] .openpangu-stage .pto-model-graphviz-cluster-title-tag,
+    :root[data-theme='light'] .openpangu-stage .pto-model-graphviz-report-node-badge {
+      fill-opacity: 0.5;
+    }
+    :root[data-theme='light'] .openpangu-stage .openpangu-repeat-tag text {
+      fill: var(--foreground);
+    }
   </style>
 </head>
 <body class="pto-model-graphviz-pattern-page openpangu-pattern-page">
@@ -113,7 +124,7 @@
   <script id="graph-data" type="application/json">{
   "id": "openpangu-embedded-7b-v1.1-pattern-graphviz",
   "sourceSchema": "model_architecture.v1",
-  "width": 1260,
+  "width": 1500,
   "height": 2060,
   "model": {
     "name": "openPangu-Embedded-7B-V1.1",
@@ -229,7 +240,7 @@
       "label": "Attention Mask",
       "typeLabel": "Input",
       "kind": "tensor",
-      "x": 760,
+      "x": 800,
       "y": 48,
       "width": 200,
       "height": 48,
@@ -251,7 +262,7 @@
       "label": "Position IDs",
       "typeLabel": "Input",
       "kind": "tensor",
-      "x": 1010,
+      "x": 1080,
       "y": 48,
       "width": 180,
       "height": 48,
@@ -385,7 +396,7 @@
       "label": "Causal Mask",
       "typeLabel": "Op",
       "kind": "op",
-      "x": 895,
+      "x": 800,
       "y": 390,
       "width": 210,
       "height": 56,
@@ -407,9 +418,9 @@
       "label": "Rotary Embedding",
       "typeLabel": "Module",
       "kind": "op",
-      "x": 895,
+      "x": 1080,
       "y": 500,
-      "width": 230,
+      "width": 240,
       "height": 56,
       "colorKey": "sem:rope",
       "parent": "model_group",
@@ -435,7 +446,7 @@
       "label": "RoPE Frequencies",
       "typeLabel": "State",
       "kind": "tensor",
-      "x": 1110,
+      "x": 1360,
       "y": 500,
       "width": 190,
       "height": 48,
@@ -3078,6 +3089,41 @@
       svg.appendChild(group);
     }
 
+    function customEdgeTagPosition(edge, nodePositions) {
+      const source = nodePositions.get(edge.source);
+      const target = nodePositions.get(edge.target);
+      if (!source || !target) return null;
+      if (edge.source === 'rope_frequencies' && edge.target === 'rotary_embedding') {
+        const left = target.x + target.width / 2;
+        const right = source.x - source.width / 2;
+        return { x: (left + right) / 2, y: target.y };
+      }
+      if (edge.source === 'token_embedding' && edge.target === 'input_norm') {
+        return { x: target.x - target.width / 2 - 34, y: target.y - 2 };
+      }
+      if (edge.source === 'token_embedding' && edge.target === 'decoder_layer') {
+        return { x: target.x - target.width / 2 - 34, y: target.y };
+      }
+      if (edge.source === 'causal_mask' && edge.target === 'self_attention') {
+        return { x: target.x + target.width / 2 + 36, y: target.y - 10 };
+      }
+      return null;
+    }
+
+    function repositionEdgeTags(viewGraph) {
+      const svg = controller?.svg;
+      if (!svg) return;
+      const nodePositions = new Map((viewGraph.nodes || []).map((node) => [node.id, node]));
+      const tags = Array.from(svg.querySelectorAll('.pto-model-training-edge-tag'));
+      tags.forEach((tag, index) => {
+        const edge = (viewGraph.edges || [])[index];
+        if (!edge) return;
+        const position = customEdgeTagPosition(edge, nodePositions);
+        if (!position) return;
+        tag.setAttribute('transform', 'translate(' + position.x.toFixed(1) + ' ' + position.y.toFixed(1) + ')');
+      });
+    }
+
     function appendHierarchyOverlays(viewGraph) {
       const svg = controller?.svg;
       if (!svg) return;
@@ -3125,6 +3171,7 @@
           },
         },
       });
+      repositionEdgeTags(viewGraph);
       appendHierarchyOverlays(viewGraph);
       wireCollapsedNodeToggles(viewGraph);
     }
