@@ -42,6 +42,11 @@
       "preview": "patterns/model-training-graphviz/pattern.html"
     },
     {
+      "id": "training-metrics-chart",
+      "path": "patterns/training-metrics-chart/pattern.json",
+      "preview": "patterns/training-metrics-chart/pattern.html"
+    },
+    {
       "id": "workbench-shell",
       "path": "patterns/workbench-shell/pattern.json",
       "preview": "patterns/workbench-shell/pattern.html"
