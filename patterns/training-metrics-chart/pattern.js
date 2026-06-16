@@ -161,14 +161,36 @@
       const frac = Math.min(1, Math.max(0, (vx - P.l) / plotW));
       return Math.round(x0 + frac * (x1 - x0));
     };
+    // hover tooltip（默认开；spec.tooltip===false 关闭；为函数时其返回值作为解释文案追加）
+    let tipEl = null;
+    function idxFor(step) { let i = steps.indexOf(step); if (i < 0) i = Math.round((step - x0) / (x1 - x0 || 1) * (steps.length - 1)); return Math.min(steps.length - 1, Math.max(0, i)); }
+    function showTip(step, clientX, clientY) {
+      if (spec.tooltip === false || opt.compact) return;
+      const i = idxFor(step);
+      const rows = spec.series.map(s => `<span class="pto-tmchart__tip-row"><i style="background:${cssVar(s.colorVar)}"></i>${s.label}<b>${fmt(spec.data[s.key][i])}</b></span>`).join('');
+      let note = '';
+      if (typeof spec.tooltip === 'function') { const r = spec.tooltip(step, i); if (r) note = `<div class="pto-tmchart__tip-note">${r}</div>`; }
+      if (!tipEl) { tipEl = document.createElement('div'); tipEl.className = 'pto-tmchart__tip'; host.appendChild(tipEl); }
+      tipEl.innerHTML = `<div class="pto-tmchart__tip-step">Step ${step}</div>${rows}${note}`;
+      tipEl.classList.add('is-visible');
+      const hr = host.getBoundingClientRect();
+      let left = clientX - hr.left + 14, top = clientY - hr.top + 12;
+      if (left + tipEl.offsetWidth > hr.width) left = clientX - hr.left - tipEl.offsetWidth - 14;
+      if (top + tipEl.offsetHeight > hr.height) top = clientY - hr.top - tipEl.offsetHeight - 12;
+      tipEl.style.left = Math.max(0, left) + 'px';
+      tipEl.style.top = Math.max(0, top) + 'px';
+    }
+    function hideTip() { if (tipEl) tipEl.classList.remove('is-visible'); }
+
     if (!opt.compact && spec.onBrush !== false) {
       let dragging = false, anchor = null;
-      hit.addEventListener('pointerdown', (e) => { dragging = true; anchor = stepFromClient(e.clientX); hit.setPointerCapture(e.pointerId); brush = { start: anchor, end: anchor }; drawBrush(); });
+      hit.addEventListener('pointerdown', (e) => { dragging = true; anchor = stepFromClient(e.clientX); hit.setPointerCapture(e.pointerId); brush = { start: anchor, end: anchor }; drawBrush(); hideTip(); });
       hit.addEventListener('pointermove', (e) => {
         if (dragging) { brush = { start: anchor, end: stepFromClient(e.clientX) }; drawBrush(); }
-        else { cursor = stepFromClient(e.clientX); drawCursor(); if (spec.onCursorHover) spec.onCursorHover(cursor); }
+        else { cursor = stepFromClient(e.clientX); drawCursor(); showTip(cursor, e.clientX, e.clientY); if (spec.onCursorHover) spec.onCursorHover(cursor); }
       });
       hit.addEventListener('pointerup', (e) => { dragging = false; if (brush && Math.abs(brush.end - brush.start) >= 1 && spec.onBrush) spec.onBrush({ start: Math.min(brush.start, brush.end), end: Math.max(brush.start, brush.end) }); else { brush = null; drawBrush(); } });
+      hit.addEventListener('pointerleave', hideTip);
     }
 
     drawAnomaly(); drawBrush(); drawCursor();
