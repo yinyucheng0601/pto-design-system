@@ -77,12 +77,14 @@
     const semantic = String(task?.label || task?.displayName || task?.rawName || 'compute');
     const inputCount = Array.isArray(task?.inputRawMagic) ? task.inputRawMagic.length : 0;
     const outputCount = Array.isArray(task?.outputRawMagic) ? task.outputRawMagic.length : 0;
+    const hasInput = inputCount > 0;
+    const hasOutput = outputCount > 0;
     const showCounts = widthPx >= DEFAULTS.minBarSegmentCountsPx;
 
     return [
-      { key: 'in', text: showCounts ? `IN ${inputCount}` : 'IN' },
+      { key: 'in', text: hasInput ? (showCounts ? `IN ${inputCount}` : 'IN') : '', visible: hasInput },
       { key: 'compute', text: semantic },
-      { key: 'out', text: showCounts ? `OUT ${outputCount}` : 'OUT' },
+      { key: 'out', text: hasOutput ? (showCounts ? `OUT ${outputCount}` : 'OUT') : '', visible: hasOutput },
     ];
   }
 
@@ -506,8 +508,10 @@
       isRelated: options.isRelated,
     });
 
-    const inW = Math.max(DEFAULTS.minInWidth, Math.min(width * DEFAULTS.sideRatio, DEFAULTS.maxInWidth));
-    const outW = Math.max(DEFAULTS.minOutWidth, Math.min(width * DEFAULTS.sideRatio, DEFAULTS.maxOutWidth));
+    const hasInput = Array.isArray(task.inputRawMagic) && task.inputRawMagic.length > 0;
+    const hasOutput = Array.isArray(task.outputRawMagic) && task.outputRawMagic.length > 0;
+    const inW = hasInput ? Math.max(DEFAULTS.minInWidth, Math.min(width * DEFAULTS.sideRatio, DEFAULTS.maxInWidth)) : 0;
+    const outW = hasOutput ? Math.max(DEFAULTS.minOutWidth, Math.min(width * DEFAULTS.sideRatio, DEFAULTS.maxOutWidth)) : 0;
     const computeW = Math.max(0, width - inW - outW);
 
     ctx.save();
@@ -561,6 +565,7 @@
       { x: barX + inW, w: computeW, align: 'left', text: segments[1].text },
       { x: barX + inW + computeW, w: outW, align: 'center', text: segments[2].text },
     ].forEach((segment, index) => {
+      if (!segment.text) return;
       if (segment.w < (index === 1 ? 20 : 14)) return;
       ctx.fillStyle = DEFAULTS.textColor;
       if (segment.align === 'left') {
