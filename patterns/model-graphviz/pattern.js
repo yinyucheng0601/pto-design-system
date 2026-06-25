@@ -17,7 +17,7 @@
   const COLORMAP_LIGHTNESS = 0.40;
   const LIGHT_COLORMAP_SATURATION = 0.32;
   const LIGHT_COLORMAP_LIGHTNESS = 0.84;
-  const LIGHT_THEME_NODE_FILL_OPACITY = '0.50';
+  const LIGHT_THEME_NODE_FILL_OPACITY = '0.75';
   const FORBIDDEN_HUES = { from: 300 / 360, to: 150 / 360, wraps: true };
   const LINE_COLOR = 'var(--model-graphviz-line)';
   const NODE_TEXT_COLOR = 'var(--model-graphviz-node-label)';
