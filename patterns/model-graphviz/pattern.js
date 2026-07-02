@@ -3,22 +3,41 @@
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const CORE_COLORS = [
-    '#34D399',
     '#14B8A6',
     '#06B6D4',
+    '#EC4899',
+    '#A855F7',
     '#0EA5E9',
     '#3B82F6',
-    '#6366F1',
     '#8B5CF6',
-    '#A855F7',
-    '#1E40AF',
+    '#F59E0B',
+    '#F97316',
+    '#22D3EE',
   ];
+  const SEMANTIC_COLOR_DEFAULTS = {
+    'sem:embedding': '#14B8A6',
+    'sem:norm': '#06B6D4',
+    'sem:attention': '#EC4899',
+    'sem:position': '#A855F7',
+    'sem:rope': '#A855F7',
+    'sem:qknorm': '#0EA5E9',
+    'sem:linear': '#3B82F6',
+    'sem:head': '#3B82F6',
+    'sem:mlp': '#8B5CF6',
+    'sem:act': '#8B5CF6',
+    'sem:gate': '#F59E0B',
+    'sem:moe': '#F97316',
+    'sem:comm': '#22D3EE',
+  };
   const COLORMAP_SATURATION = 0.82;
   const COLORMAP_LIGHTNESS = 0.40;
-  const LIGHT_COLORMAP_SATURATION = 0.32;
-  const LIGHT_COLORMAP_LIGHTNESS = 0.84;
-  const LIGHT_THEME_NODE_FILL_OPACITY = '0.75';
-  const FORBIDDEN_HUES = { from: 300 / 360, to: 150 / 360, wraps: true };
+  const LIGHT_COLORMAP_SATURATION = 0.74;
+  const LIGHT_COLORMAP_LIGHTNESS = 0.60;
+  const LIGHT_THEME_NODE_FILL_OPACITY = '0.90';
+  const FORBIDDEN_HUE_RANGES = [
+    { from: 345 / 360, to: 15 / 360, wraps: true },
+    { from: 85 / 360, to: 165 / 360, wraps: false },
+  ];
   const LINE_COLOR = 'var(--model-graphviz-line)';
   const NODE_TEXT_COLOR = 'var(--model-graphviz-node-label)';
   const NODE_TYPE_COLOR = 'var(--model-graphviz-node-type)';
@@ -103,20 +122,25 @@
 
   function isHueForbidden(hue) {
     const h = normalizeHue(hue);
-    if (!FORBIDDEN_HUES.wraps) {
-      return h >= FORBIDDEN_HUES.from && h <= FORBIDDEN_HUES.to;
-    }
-    return h >= FORBIDDEN_HUES.from || h <= FORBIDDEN_HUES.to;
+    return FORBIDDEN_HUE_RANGES.some((range) => {
+      if (!range.wraps) return h >= range.from && h <= range.to;
+      return h >= range.from || h <= range.to;
+    });
   }
 
   function snapToValidHue(hue) {
     const h = normalizeHue(hue);
     if (!isHueForbidden(h)) return h;
-    const lower = FORBIDDEN_HUES.to;
-    const upper = FORBIDDEN_HUES.from;
-    const distanceToLower = Math.min(Math.abs(h - lower), 1 - Math.abs(h - lower));
-    const distanceToUpper = Math.min(Math.abs(h - upper), 1 - Math.abs(h - upper));
-    return distanceToLower <= distanceToUpper ? lower : upper;
+    const step = 1 / 3600;
+    let lower = h;
+    let upper = h;
+    for (let index = 0; index < 1800; index += 1) {
+      lower = normalizeHue(lower - step);
+      if (!isHueForbidden(lower)) return lower;
+      upper = normalizeHue(upper + step);
+      if (!isHueForbidden(upper)) return upper;
+    }
+    return h;
   }
 
   function hexToRgb(hex) {
@@ -268,13 +292,17 @@
     const resolved = resolvedColormapOptions(options);
     const unique = Array.from(new Set(keys || []));
     const semanticKeys = unique.filter((key) => !String(key).startsWith('io:')).sort();
+    const generatedKeys = semanticKeys.filter((key) => !SEMANTIC_COLOR_DEFAULTS[key]);
     const colors = expandPalette(resolved.coreColors, Math.max(semanticKeys.length, resolved.coreColors.length), resolved);
     const map = new Map();
     map.set('io:input', normalizeColormapColor(resolved.ioColors.input || '#A855F7', resolved));
-    map.set('io:output', normalizeColormapColor(resolved.ioColors.output || '#34D399', resolved));
+    map.set('io:output', normalizeColormapColor(resolved.ioColors.output || '#38BDF8', resolved));
     map.set('io:constant', normalizeColormapColor(resolved.ioColors.constant || '#64748B', resolved));
     map.set('io:parameter', normalizeColormapColor(resolved.ioColors.parameter || '#3B82F6', resolved));
-    semanticKeys.forEach((key, index) => map.set(key, colors[index]));
+    Object.entries(SEMANTIC_COLOR_DEFAULTS).forEach(([key, color]) => {
+      if (unique.includes(key)) map.set(key, normalizeColormapColor(color, resolved));
+    });
+    generatedKeys.forEach((key, index) => map.set(key, colors[index]));
     return map;
   }
 
@@ -314,6 +342,9 @@
     if (getNodeVisualKind(node) === 'tensor') {
       return TENSOR_NODE_FILL;
     }
+    if (node.colorKey && colorMap.has(node.colorKey)) {
+      return colorMap.get(node.colorKey);
+    }
     if (node.parent && clusterColors.has(node.parent)) {
       return clusterColors.get(node.parent);
     }
@@ -322,21 +353,39 @@
   }
 
   function nodeAnchor(node, direction) {
-    const x = direction === 'left' ? node.x - node.width / 2 : direction === 'right' ? node.x + node.width / 2 : node.x;
-    const y = direction === 'top' ? node.y - node.height / 2 : direction === 'bottom' ? node.y + node.height / 2 : node.y;
-    return { x, y };
+    const anchor = typeof direction === 'object' && direction !== null
+      ? direction
+      : { side: direction };
+    const side = anchor.side || anchor.anchor || 'center';
+    const x = side === 'left'
+      ? node.x - node.width / 2
+      : side === 'right'
+        ? node.x + node.width / 2
+        : node.x;
+    const y = side === 'top'
+      ? node.y - node.height / 2
+      : side === 'bottom'
+        ? node.y + node.height / 2
+        : node.y;
+    return {
+      x: x + (Number(anchor.dx) || 0),
+      y: y + (Number(anchor.dy) || 0),
+    };
   }
 
-  function edgePath(source, target) {
+  function edgePath(source, target, edge) {
     const vertical = Math.abs(source.y - target.y) >= Math.abs(source.x - target.x);
-    const start = vertical
-      ? nodeAnchor(source, source.y < target.y ? 'bottom' : 'top')
-      : nodeAnchor(source, source.x < target.x ? 'right' : 'left');
-    const end = vertical
-      ? nodeAnchor(target, source.y < target.y ? 'top' : 'bottom')
-      : nodeAnchor(target, source.x < target.x ? 'left' : 'right');
+    const sourceAnchor = edge?.sourceAnchor || (vertical
+      ? source.y < target.y ? 'bottom' : 'top'
+      : source.x < target.x ? 'right' : 'left');
+    const targetAnchor = edge?.targetAnchor || (vertical
+      ? source.y < target.y ? 'top' : 'bottom'
+      : source.x < target.x ? 'left' : 'right');
+    const start = nodeAnchor(source, sourceAnchor);
+    const end = nodeAnchor(target, targetAnchor);
+    const curve = edge?.curve || (vertical ? 'vertical' : 'horizontal');
 
-    if (vertical) {
+    if (curve === 'vertical') {
       const midY = (start.y + end.y) / 2;
       return `M ${start.x} ${start.y} C ${start.x} ${midY}, ${end.x} ${midY}, ${end.x} ${end.y}`;
     }
@@ -616,7 +665,7 @@
       renderedEdges.add(edgeKey);
       svg.appendChild(createSvgElement('path', {
         class: 'pto-model-graphviz-edge',
-        d: edgePath(source, targetNode),
+        d: edgePath(source, targetNode, edge),
         stroke: edge.color || LINE_COLOR,
         'stroke-dasharray': edge.dashed ? '8 7' : null,
         'marker-end': `url(#${markerId})`,

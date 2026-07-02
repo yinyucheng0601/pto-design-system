@@ -1037,19 +1037,21 @@ function ptoHexToHsl(hex) {
 }
 
 const PTO_CORE_COLORS = [
-  "#34D399",
   "#14B8A6",
   "#06B6D4",
+  "#EC4899",
+  "#A855F7",
   "#0EA5E9",
   "#3B82F6",
-  "#6366F1",
   "#8B5CF6",
-  "#A855F7",
-  "#1E40AF",
+  "#F59E0B",
+  "#F97316",
+  "#22D3EE",
 ];
 
 const PTO_FORBIDDEN_HUES = [
-  { from: 300 / 360, to: 150 / 360, wraps: true },
+  { from: 345 / 360, to: 15 / 360, wraps: true },
+  { from: 85 / 360, to: 165 / 360, wraps: false },
 ];
 
 function ptoIsHueForbidden(h) {

@@ -312,6 +312,121 @@
     };
   }
 
+  function setHiddenState(element, hidden) {
+    if (!element) return;
+    element.hidden = hidden;
+    element.setAttribute('aria-hidden', String(hidden));
+  }
+
+  function setSplitPaneHidden(pane, hidden) {
+    setHiddenState(pane, hidden);
+    const previous = pane?.previousElementSibling;
+    const next = pane?.nextElementSibling;
+    if (previous?.matches?.('.pto-workbench-shell__split-gutter')) {
+      previous.hidden = hidden;
+    }
+    if (next?.matches?.('.pto-workbench-shell__split-gutter') && hidden) {
+      next.hidden = true;
+    }
+  }
+
+  function elementIsVisible(element) {
+    return !!element && !element.hidden && element.getAttribute('aria-hidden') !== 'true';
+  }
+
+  function initBottomTerminalToggle(frame, splitInstances) {
+    const toggle = qs(frame, '[data-ide-toggle="terminal"]');
+    const terminalView = qs(frame, '[data-ide-bottom-panel="terminal"], [data-ide-pane="terminal"]');
+    if (!toggle || !terminalView) return null;
+
+    const bottomDock = terminalView.closest('[data-ide-bottom-dock], [data-ide-pane="bottom-panel"]');
+    const scope = bottomDock || frame;
+    const visualizationViews = qsa(scope, '[data-ide-bottom-panel="visualization"], [data-ide-pane="analysis-dock"]')
+      .filter((view) => view !== terminalView && !terminalView.contains(view));
+    const visualizationToggles = qsa(frame, '[data-ide-toggle="visualization"], [data-ide-toggle="bottom-panel"]')
+      .filter((button) => button !== toggle);
+    const terminalCloseButtons = qsa(frame, '[data-ide-close="terminal"]');
+    const initialTerminalOpen = elementIsVisible(terminalView);
+    const initialVisualizationOpen = visualizationViews.some(elementIsVisible);
+    let mode = frame.dataset.bottomPanelMode || (
+      initialTerminalOpen ? 'terminal' : (initialVisualizationOpen ? 'visualization' : 'closed')
+    );
+    let restoreMode = initialVisualizationOpen ? 'visualization' : 'closed';
+
+    const setViewHidden = (view, hidden) => {
+      if (bottomDock && view !== bottomDock) {
+        setHiddenState(view, hidden);
+        return;
+      }
+      setSplitPaneHidden(view, hidden);
+    };
+
+    const refreshSplits = () => {
+      global.requestAnimationFrame?.(() => {
+        splitInstances.forEach((instance) => instance?.refresh?.());
+        frame.dispatchEvent(new CustomEvent('pto-ide-bottom-panel-change', {
+          detail: { mode },
+          bubbles: true,
+        }));
+      });
+    };
+
+    const render = (nextMode) => {
+      mode = nextMode;
+      frame.dataset.bottomPanelMode = mode;
+      const terminalOpen = mode === 'terminal';
+      const visualizationOpen = mode === 'visualization';
+      const bottomOpen = terminalOpen || visualizationOpen;
+
+      if (bottomDock) setSplitPaneHidden(bottomDock, !bottomOpen);
+      setViewHidden(terminalView, !terminalOpen);
+      visualizationViews.forEach((view) => setViewHidden(view, !visualizationOpen));
+
+      toggle.classList.toggle('is-selected', terminalOpen);
+      toggle.setAttribute('aria-expanded', String(terminalOpen));
+      toggle.setAttribute('aria-pressed', String(terminalOpen));
+      visualizationToggles.forEach((button) => {
+        button.classList.toggle('is-selected', visualizationOpen);
+        button.setAttribute('aria-expanded', String(visualizationOpen));
+        button.setAttribute('aria-pressed', String(visualizationOpen));
+      });
+
+      refreshSplits();
+    };
+
+    const onTerminalClick = (event) => {
+      event.preventDefault();
+      if (mode === 'terminal') {
+        render(restoreMode);
+        return;
+      }
+      restoreMode = mode === 'visualization' ? 'visualization' : restoreMode;
+      render('terminal');
+    };
+
+    const onVisualizationClick = (event) => {
+      event.preventDefault();
+      restoreMode = 'visualization';
+      render(mode === 'visualization' ? 'closed' : 'visualization');
+    };
+
+    const onTerminalClose = () => render(restoreMode);
+
+    toggle.addEventListener('click', onTerminalClick);
+    visualizationToggles.forEach((button) => button.addEventListener('click', onVisualizationClick));
+    terminalCloseButtons.forEach((button) => button.addEventListener('click', onTerminalClose));
+    render(mode);
+
+    return {
+      destroy() {
+        toggle.removeEventListener('click', onTerminalClick);
+        visualizationToggles.forEach((button) => button.removeEventListener('click', onVisualizationClick));
+        terminalCloseButtons.forEach((button) => button.removeEventListener('click', onTerminalClose));
+        delete frame.dataset.bottomPanelMode;
+      },
+    };
+  }
+
   function init(root, options = {}) {
     const frame = typeof root === 'string' ? qs(document, root) : root;
     if (!frame || frame.dataset.ideFrameReady === 'true') return null;
@@ -323,6 +438,7 @@
       .map((split, index) => initSplit(frame, split, index, splitOptions[split.dataset.ideSplit] || splitOptions.default || {}));
     const resizeInstances = splitInstances.filter(Boolean);
     const explorerToggle = initExplorerToggle(frame, splits, splitInstances);
+    const bottomTerminalToggle = initBottomTerminalToggle(frame, splitInstances);
 
     const playbackOptions = options.playback || {};
     const playbackInstances = qsa(frame, '[data-ide-floating-playback]')
@@ -335,6 +451,7 @@
       splits,
       resizeInstances,
       explorerToggle,
+      bottomTerminalToggle,
       playbackInstances,
     });
 
@@ -342,9 +459,11 @@
       frame,
       resizeInstances,
       explorerToggle,
+      bottomTerminalToggle,
       playbackInstances,
       destroy() {
         explorerToggle?.destroy?.();
+        bottomTerminalToggle?.destroy?.();
         resizeInstances.splice(0).forEach((instance) => instance.destroy());
         playbackInstances.splice(0).forEach((instance) => instance.destroy());
         delete frame.dataset.ideFrameReady;

@@ -30,10 +30,7 @@
     return {
       ...source,
       clusters: (source.clusters || []).map((cluster) => ({ ...cluster })),
-      nodes: (source.nodes || []).map((node) => ({
-        ...node,
-        reportPriority: node.reportPriority || evidence[node.id]?.priority || null,
-      })),
+      nodes: (source.nodes || []).map((node) => ({ ...node })),
       edges: (source.edges || []).map((edge) => ({ ...edge })),
       trainingEvidence: evidence,
     };
@@ -41,6 +38,109 @@
 
   function nodeMap(graph) {
     return new Map((graph.nodes || []).map((node) => [node.id, node]));
+  }
+
+  function clusterMap(graph) {
+    return new Map((graph.clusters || []).map((cluster) => [cluster.id, cluster]));
+  }
+
+  function normalizeIdList(value) {
+    if (!value) return [];
+    return Array.isArray(value) ? value.filter(Boolean) : [value].filter(Boolean);
+  }
+
+  function buildHierarchy(graph) {
+    const nodes = nodeMap(graph);
+    const clusters = clusterMap(graph);
+    const nodeParent = new Map();
+    const clusterParent = new Map();
+    const clusterChildren = new Map();
+    const nodesByCluster = new Map();
+
+    clusters.forEach((cluster, clusterId) => {
+      nodesByCluster.set(clusterId, new Set(normalizeIdList(cluster.nodes)));
+      clusterChildren.set(clusterId, new Set(normalizeIdList(cluster.children)));
+      if (cluster.parent && clusters.has(cluster.parent)) {
+        clusterParent.set(clusterId, cluster.parent);
+      }
+    });
+
+    clusters.forEach((cluster, clusterId) => {
+      normalizeIdList(cluster.children).forEach((childId) => {
+        if (clusters.has(childId)) clusterParent.set(childId, clusterId);
+      });
+    });
+
+    if (graph.clusterChildren && typeof graph.clusterChildren === 'object') {
+      Object.entries(graph.clusterChildren).forEach(([clusterId, childIds]) => {
+        if (!clusterChildren.has(clusterId)) clusterChildren.set(clusterId, new Set());
+        normalizeIdList(childIds).forEach((childId) => {
+          if (!clusters.has(childId)) return;
+          clusterChildren.get(clusterId).add(childId);
+          clusterParent.set(childId, clusterId);
+        });
+      });
+    }
+
+    (graph.nodes || []).forEach((node) => {
+      if (!node.parent || !clusters.has(node.parent)) return;
+      nodeParent.set(node.id, node.parent);
+      if (!nodesByCluster.has(node.parent)) nodesByCluster.set(node.parent, new Set());
+      nodesByCluster.get(node.parent).add(node.id);
+    });
+
+    const ancestorClustersForCluster = (clusterId) => {
+      const out = [];
+      const seen = new Set();
+      let current = clusterId;
+      while (clusterParent.has(current)) {
+        current = clusterParent.get(current);
+        if (!current || seen.has(current)) break;
+        seen.add(current);
+        out.push(current);
+      }
+      return out;
+    };
+
+    const ancestorClustersForNode = (nodeId) => {
+      const parent = nodeParent.get(nodeId);
+      if (!parent) return [];
+      return [parent, ...ancestorClustersForCluster(parent)];
+    };
+
+    const descendantClustersOfCluster = (clusterId) => {
+      const out = new Set();
+      const visit = (id) => {
+        (clusterChildren.get(id) || new Set()).forEach((childId) => {
+          if (out.has(childId)) return;
+          out.add(childId);
+          visit(childId);
+        });
+      };
+      visit(clusterId);
+      return out;
+    };
+
+    const descendantNodesOfCluster = (clusterId) => {
+      const out = new Set(nodesByCluster.get(clusterId) || []);
+      descendantClustersOfCluster(clusterId).forEach((childId) => {
+        (nodesByCluster.get(childId) || new Set()).forEach((nodeId) => out.add(nodeId));
+      });
+      return out;
+    };
+
+    return {
+      nodes,
+      clusters,
+      nodeParent,
+      clusterParent,
+      clusterChildren,
+      nodesByCluster,
+      ancestorClustersForNode,
+      ancestorClustersForCluster,
+      descendantClustersOfCluster,
+      descendantNodesOfCluster,
+    };
   }
 
   function dedupeVisibleEdges(graph) {
@@ -72,26 +172,43 @@
     return Math.max(38, Math.min(94, String(label || '').length * 5.7 + 18));
   }
 
-  function relationForNode(graph, evidenceMap, nodeId, explicitRelated) {
-    const related = new Set([nodeId]);
-    (explicitRelated || []).forEach((id) => related.add(id));
+  function relationForNode(graph, evidenceMap, nodeId, explicitRelated, hierarchy) {
+    const nodeIds = new Set();
+    const clusterIds = new Set();
+
+    const addCluster = (clusterId) => {
+      if (!clusterId || !hierarchy?.clusters?.has(clusterId)) return;
+      clusterIds.add(clusterId);
+      hierarchy.ancestorClustersForCluster(clusterId).forEach((id) => clusterIds.add(id));
+    };
+
+    const addItem = (id, includeDescendants) => {
+      if (!id) return;
+      if (hierarchy?.clusters?.has(id)) {
+        addCluster(id);
+        if (includeDescendants) {
+          hierarchy.descendantClustersOfCluster(id).forEach((clusterId) => clusterIds.add(clusterId));
+          hierarchy.descendantNodesOfCluster(id).forEach((node) => nodeIds.add(node));
+        }
+        return;
+      }
+      if (!hierarchy?.nodes?.has(id)) return;
+      nodeIds.add(id);
+      hierarchy.ancestorClustersForNode(id).forEach((clusterId) => clusterIds.add(clusterId));
+    };
+
+    addItem(nodeId, true);
+    (explicitRelated || []).forEach((id) => addItem(id, true));
     const info = evidenceMap[nodeId] || {};
-    (info.relatedNodeIds || []).forEach((id) => related.add(id));
+    (info.relatedNodeIds || []).forEach((id) => addItem(id, true));
+
+    const seedNodes = new Set(nodeIds);
     (graph.edges || []).forEach((edge) => {
-      if (edge.source === nodeId) related.add(edge.target);
-      if (edge.target === nodeId) related.add(edge.source);
+      if (seedNodes.has(edge.source)) addItem(edge.target, false);
+      if (seedNodes.has(edge.target)) addItem(edge.source, false);
     });
-    return related;
-  }
 
-  function priorityClass(priority) {
-    return String(priority || '').toLowerCase();
-  }
-
-  function priorityTagHtml(priority) {
-    if (!priority) return '';
-    const p = String(priority).toUpperCase();
-    return `<span class="pto-model-training-priority ${priorityClass(p)}">${esc(p)}</span>`;
+    return { nodeIds, clusterIds };
   }
 
   function evidenceHtml(node, info) {
@@ -108,7 +225,6 @@
       .join('');
     return [
       '<div class="pto-model-training-hover-title">',
-        priorityTagHtml(info.priority || node.reportPriority),
         '<div>',
           `<small>${esc(node.id)}</small>`,
           `<strong>${esc(node.label || node.id)}</strong>`,
@@ -207,6 +323,7 @@
     const opts = options || {};
     const evidenceMap = opts.evidenceMap || graph?.trainingEvidence || {};
     const data = cloneGraph(graph, evidenceMap);
+    const hierarchy = buildHierarchy(data);
     const width = opts.width || data.width || 760;
     const height = opts.height || data.height || 980;
 
@@ -248,9 +365,20 @@
     });
     drawEdgeTags(svg, visibleEdges, edgeEntries);
 
+    const clusterEls = Array.from(stage.querySelectorAll('.pto-model-graphviz-cluster'));
+    const clusterEntries = clusterEls.map((el, index) => {
+      const cluster = data.clusters?.[index];
+      if (!cluster) return null;
+      el.dataset.clusterId = cluster.id;
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('role', 'button');
+      el.setAttribute('aria-label', cluster.label || cluster.id);
+      return { el, cluster };
+    }).filter(Boolean);
+
     const hover = createHover(stage);
-    let selectedNodeId = null;
-    let selectedRelated = new Set();
+    let selectedItemId = null;
+    let selectedRelated = { nodeIds: new Set(), clusterIds: new Set() };
     let transform = { tx: 0, ty: 0, zoom: 1 };
     let pan = null;
     let suppressClick = false;
@@ -287,9 +415,12 @@
     }
 
     function clearSelection() {
-      selectedNodeId = null;
-      selectedRelated = new Set();
+      selectedItemId = null;
+      selectedRelated = { nodeIds: new Set(), clusterIds: new Set() };
       nodeEntries.forEach(({ el }) => {
+        el.classList.remove('is-training-selected', 'is-training-related');
+      });
+      clusterEntries.forEach(({ el }) => {
         el.classList.remove('is-training-selected', 'is-training-related');
       });
       edgeEntries.forEach((entry) => {
@@ -306,22 +437,33 @@
         clearSelection();
         return;
       }
-      selectedNodeId = id;
-      selectedRelated = relationForNode(data, evidenceMap, id, selectOptions?.relatedNodeIds);
+      selectedItemId = id;
+      selectedRelated = relationForNode(data, evidenceMap, id, selectOptions?.relatedNodeIds, hierarchy);
       nodeEntries.forEach(({ el, node }) => {
         const isSelected = node.id === id;
-        const isRelated = selectedRelated.has(node.id);
+        const isRelated = selectedRelated.nodeIds.has(node.id);
+        el.classList.toggle('is-training-selected', isSelected);
+        el.classList.toggle('is-training-related', !isSelected && isRelated);
+      });
+      clusterEntries.forEach(({ el, cluster }) => {
+        const isSelected = cluster.id === id;
+        const isRelated = selectedRelated.clusterIds.has(cluster.id);
         el.classList.toggle('is-training-selected', isSelected);
         el.classList.toggle('is-training-related', !isSelected && isRelated);
       });
       edgeEntries.forEach((entry) => {
-        const related = selectedRelated.has(entry.source) && selectedRelated.has(entry.target);
+        const related = selectedRelated.nodeIds.has(entry.source) && selectedRelated.nodeIds.has(entry.target);
         entry.el.classList.toggle('is-training-related', related);
         if (entry.tagEl) {
           entry.tagEl.classList.toggle('is-training-related', related);
         }
       });
-      opts.onSelect?.({ nodeId: id, relatedNodeIds: Array.from(selectedRelated), source: selectOptions?.source || 'graph' });
+      opts.onSelect?.({
+        nodeId: id,
+        relatedNodeIds: Array.from(selectedRelated.nodeIds),
+        relatedClusterIds: Array.from(selectedRelated.clusterIds),
+        source: selectOptions?.source || 'graph',
+      });
     }
 
     function showHover(node, event) {
@@ -355,6 +497,22 @@
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
         selectNode(node.id, { source: 'keyboard' });
+      });
+    });
+
+    clusterEntries.forEach(({ el, cluster }) => {
+      listen(el, 'click', () => {
+        if (suppressClick) {
+          suppressClick = false;
+          return;
+        }
+        hideHover();
+        selectNode(cluster.id, { source: 'cluster' });
+      });
+      listen(el, 'keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        selectNode(cluster.id, { source: 'keyboard' });
       });
     });
 
@@ -412,7 +570,7 @@
 
     const resizeObserver = typeof ResizeObserver !== 'undefined'
       ? new ResizeObserver(() => {
-        if (!selectedNodeId) fit();
+        if (!selectedItemId) fit();
       })
       : null;
     if (resizeObserver) resizeObserver.observe(stage);

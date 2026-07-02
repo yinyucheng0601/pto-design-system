@@ -544,7 +544,7 @@
     const state = {
       schema: DEFAULT_SCHEMA,
       graph: null,
-      selectedNodeId: 'token_embedding',
+      selectedNodeId: null,
       collapsedModules: new Set(),
       zoom: 1,
       tx: 0,
@@ -1233,7 +1233,7 @@
         }
         state.schema = schema;
         state.collapsedModules = new Set();
-        state.selectedNodeId = schema.nodes.find((node) => !MODEL_TITLE_NODE_IDS.has(node.id))?.id || schema.nodes[0]?.id || '';
+        state.selectedNodeId = null;
         renderAll(`${file.name} loaded.`);
       } catch (error) {
         document.getElementById('statusText').textContent = `Could not load schema: ${error.message}`;

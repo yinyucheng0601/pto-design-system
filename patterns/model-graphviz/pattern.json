@@ -2,7 +2,7 @@
   "id": "model-graphviz",
   "name": "Model Graphviz",
   "type": "svg",
-  "description": "Reusable SVG visual contract for TorchVista/Graphviz model architecture maps and report overlays. Captures the approved DeepSeek V3.2 graph style and bundles clean architecture schema assets for DeepSeek V3.2, Qwen7B, and Gemma. The contract keeps default depth-2 folding, pill module/op nodes, rounded-rect tensor/state nodes, parent cluster shells with a fixed --radius-xl (16px) corner and 10% white expanded fill for every container including repeated layer templates, white edges, vertically centered node label+type stacks, normalized safe colormap at s=0.82/l=0.40, 50% node-fill opacity in light mode, strict semantic module hierarchy, parent-to-child fill inheritance for op/module nodes, folded representative edge dedupe, stable expand/collapse viewport anchoring, centered report-priority container title pills, no-extra-border priority tags, top-right corner fold controls, right-inset expand controls, no graph shadows, and no-border clicked-operator preview cards with dark code surfaces. New model graph pages should derive cluster boxes from the bounding box of their visible children, lay the decoder chain out as a single top-to-bottom column (Gate/Up the only parallel pair), use transform-based cursor-anchored pan/zoom, show a single white selection stroke with no browser focus ring, and place a repeat-count badge at the cluster top-left under the title.",
+  "description": "Reusable SVG visual contract for TorchVista/Graphviz model architecture maps and report overlays. Captures the approved DeepSeek V3.2 graph style and bundles clean architecture schema assets for DeepSeek V3.2, Qwen7B, and Gemma. The contract keeps default depth-2 folding, no default selected operator, pill module/op nodes, rounded-rect tensor/state nodes, parent cluster shells with a fixed --radius-xl (16px) corner and 10% white expanded fill for every container including repeated layer templates, white edges, vertically centered node label+type stacks, semantic-first colormap defaults for common op roles with unknown keys expanded through the shared palette, red/green forbidden hue ranges in generated palettes, stronger light-mode node fills, strict semantic module hierarchy, explicit op semantic colors before parent fallback, folded representative edge dedupe, stable expand/collapse viewport anchoring, centered report-priority container title pills, no-extra-border priority tags, top-right corner fold controls, right-inset expand controls, no graph shadows, and no-border clicked-operator preview cards with dark code surfaces. New model graph pages should derive cluster boxes from the bounding box of their visible children, lay the decoder chain out as a single top-to-bottom column (Gate/Up the only parallel pair), use transform-based cursor-anchored pan/zoom, show a single white selection stroke with no browser focus ring only after user selection, and place a repeat-count badge at the cluster top-left under the title.",
   "source": {
     "visualContract": [
       "graphviz/deepseek_v32_source_graph.html",
@@ -107,7 +107,7 @@
     "graph data: nodes, edges, clusters, labels, type labels, and fixed positions",
     "node dimensions when the Graphviz layout requires wider labels",
     "node semantic color keys, as long as colors are resolved through buildColorMap",
-    "node fill colors only; light mode must render those node fills at 50% opacity, and all non-node UI colors, typography, spacing, radii, borders, and code surfaces must stay token-derived",
+    "node fill colors only; light mode keeps semantic fills saturated enough for scanability, and all non-node UI colors, typography, spacing, radii, borders, and code surfaces must stay token-derived",
     "stage width, height, and viewport padding",
     "collapsed and expanded state data",
     "collapseDepth URL overrides, while the default remains depth 2",
@@ -120,14 +120,16 @@
     "placing expand buttons outside the right edge or over text",
     "adding border strokes to clicked-operator preview cards",
     "using light code/editor surfaces inside operator preview cards",
-    "using a red/orange/semantic-green colormap instead of the pass-ir safe hue algorithm",
-    "changing the shared colormap saturation/lightness away from s=0.82/l=0.40 without updating this pattern first",
+    "using page-local hard-coded node colors instead of the shared semantic-first colormap and generated fallback palette",
+    "changing the shared colormap saturation/lightness or semantic default map without updating this pattern first",
+    "using pure red or pure green hue ranges for generated colormap entries",
+    "initializing a graph page with any selected node or selected operator state before user action",
     "adding drop-shadow/filter shadows to graph nodes, clusters, fold controls, or graph panels",
     "using colored expanded-cluster backgrounds instead of 10% white fill for any container, including repeated layer templates",
     "using a parent cluster corner radius other than --radius-xl (16px)",
     "placing expanded-cluster fold controls away from the top-right corner anchor",
     "hard-coding non-node UI color, font, spacing, radius, border, or code-surface styles outside design-system tokens",
-    "breaking parent-to-child fill inheritance inside expanded clusters",
+    "dropping explicit op semantic colors; parent color is a fallback for nodes without a colorKey, not a replacement for sem:* node colors",
     "rendering multiple parallel representative edges between the same folded source and target modules",
     "recentering or refitting the whole graph after expand/collapse instead of preserving the clicked module's screen anchor",
     "using dark edge strokes on the dark graph stage",
@@ -139,5 +141,5 @@
     "letting a centered report title pill sit below edge strokes where the graph line crosses through the label",
     "adding visible border styles to the panel-shell report inspector beyond the shared panel-shell token contract"
   ],
-  "agentReuseRule": "Read this JSON first. For any model graph preview, use pattern.html as the parity preview because it iframes the real V3.2 Graphviz page. For new lightweight rendered examples, load pattern.css and pattern.js, then call window.PtoModelGraphvizPattern.render with data. Treat this as a rendered SVG pattern: node geometry, depth-2 default folding, top-right corner fold placement, right-inset expand placement, --radius-xl (16px) parent cluster corners, vertically centered node label+type stacks, parent/child color inheritance, 10% white expanded-cluster fill for every container, 50% light-mode node-fill opacity, Graphviz margin/pad, cluster margin, no-shadow graph rendering, centered report-priority container title pills, no-extra-border priority tags, invisible-only click hit targets, and normalized safe colormap generation stay in the shared renderer rather than page-local CSS. New pages additionally derive cluster boxes from child bounding boxes, use a single top-to-bottom decoder column, transform-based cursor-anchored pan/zoom, a single white selection stroke (no focus ring), and a top-left repeat-count badge."
+  "agentReuseRule": "Read this JSON first. For any model graph preview, use pattern.html as the parity preview because it iframes the real V3.2 Graphviz page. For new lightweight rendered examples, load pattern.css and pattern.js, then call window.PtoModelGraphvizPattern.render with data. Treat this as a rendered SVG pattern: node geometry, depth-2 default folding, top-right corner fold placement, right-inset expand placement, --radius-xl (16px) parent cluster corners, vertically centered node label+type stacks, explicit sem:* op colors before parent fallback, 10% white expanded-cluster fill for every container, stronger light-mode node-fill opacity, Graphviz margin/pad, cluster margin, no-shadow graph rendering, centered report-priority container title pills, no-extra-border priority tags, invisible-only click hit targets, no initial selected node/operator state, and semantic-first colormap generation with red/green forbidden hue ranges stay in the shared renderer rather than page-local CSS. New pages additionally derive cluster boxes from child bounding boxes, use a single top-to-bottom decoder column, transform-based cursor-anchored pan/zoom, a single white selection stroke after user selection (no focus ring), and a top-left repeat-count badge."
 }

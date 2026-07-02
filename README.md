@@ -34,7 +34,7 @@ design-system-share/
 ├── swimlane/styles.css          ← swimlane 模块样式（预览页要用）
 └── patterns/                    ← 页面级 / 可视化级复用 pattern，优先级高于基础组件拼装
     ├── patterns.json            ← pattern 注册表
-    ├── ide-frame/               ← PTO 典型 IDE 框架：topbar / activity rail / 目录树 / 代码区 / View slot
+    ├── ide-frame/               ← PTO 典型 IDE 框架与默认皮肤：渐变背景 / 磨砂 pane / topbar / activity rail / 目录树 / 代码区 / View slot
     ├── workbench-shell/         ← 可拖拽分屏 resize kernel，只负责 split / gutter / localStorage
     ├── floating-playback-control/ ← 悬浮播放、step、scrubber 控制条
     ├── model-graphviz/          ← TorchVista / DeepSeek V3.2 Graphviz / Qwen-7B model architecture / report overlay
@@ -51,7 +51,7 @@ design-system-share/
 
 | Pattern | 什么时候用 | 入口文件 |
 |---|---|---|
-| `ide-frame` | PTO IDE / 工作台 / 多视图分析页面的整体框架 | `patterns/ide-frame/pattern.html` |
+| `ide-frame` | PTO IDE / 工作台 / 多视图分析页面的整体框架；默认套用 100% 强度多点渐变背景、80% 透明磨砂 pane、透明 top chrome | `patterns/ide-frame/pattern.html` |
 | `workbench-shell` | 任意需要拖拽调整大小的分屏 | `patterns/workbench-shell/pattern.js` |
 | `floating-playback-control` | step、播放、暂停、scrubber、回放控制 | `patterns/floating-playback-control/pattern.js` |
 | `model-graphviz` | TorchVista / 模型 Graphviz / Qwen-7B 架构页 / 报告 overlay | `patterns/model-graphviz/pattern.html` |
@@ -107,6 +107,8 @@ git clone https://github.com/yinyucheng0601/pto-design-system \
 
 `design-system-preview.html` 只能辅助查看基础按钮、标签、卡片、输入框等原子组件。完整页面、IDE 框架、可拖拽分屏、Graphviz、泳道、模型架构图等，优先看 `patterns/`，不要让 AI 只照着 `design-system-preview.html` 拼页面。
 
+IDE / 工作台页面默认套用 `patterns/ide-frame` 的皮肤：100% 强度多点渐变和 aura 背景、80% 填充的半透明磨砂 pane、72% pane header 填充、`blur(18px) saturate(1.18)`、透明 topbar、悬浮播放条。不要让业务页复制一份本地渐变、实底面板或私有 workbench CSS；需要改皮肤时先改 `patterns/ide-frame`。
+
 ### 场景 A：从产品需求生成新页面
 
 1. 把整个 `design-system-share/` 文件夹一起丢给 AI 工具
@@ -156,7 +158,7 @@ AI 应该先问清楚：
 
 | 需求 | 应命中 |
 |---|---|
-| PTO IDE / 工作台页面 | `patterns/ide-frame`，可用 `hidden` 或 `data-activity-rail="hidden"` 隐藏左侧 activity rail |
+| PTO IDE / 工作台页面 | `patterns/ide-frame`，默认套用共享 IDE 皮肤；可用 `hidden` 或 `data-activity-rail="hidden"` 隐藏左侧 activity rail |
 | 可拖拽分屏 | `patterns/workbench-shell` |
 | 执行 trace / 时间线任务条 | `patterns/swimlane-task` |
 | Pass-IR graph 节点卡 | `patterns/pass-ir-graph-node` |
@@ -173,7 +175,7 @@ AI 应该先问清楚：
 - 所有颜色都用语义 token，例如 `var(--background)` / `var(--surface-*)` / `var(--foreground-*)` / `var(--primary)`，**没有硬编码的 `#xxxxxx`**
 - 间距用 `var(--space-1)` ~ `var(--space-6)`，**不要写死 `padding: 13px`**
 - 按钮用 `btn` / `btn btn-solid` / `btn btn-ghost`，**没有 `.my-button`、`.custom-cta` 这种自创 class**
-- IDE / graph / swimlane / memory architecture 这类页面要命中对应 pattern，不要只用基础组件临摹截图
+- IDE / graph / swimlane / memory architecture 这类页面要命中对应 pattern，不要只用基础组件临摹截图；IDE 页不要本地重写渐变背景、pane 透明度、pane blur 或播放条 chrome
 - 如果用了 iframe，要说明是为了保留完整运行环境；如果直接嵌入，要说明调用了哪个 pattern API
 - 旧 demo 的卡片/面板边框已消除：尤其不要留下旧的 `border-left`、伪元素竖条、左侧 inset shadow、侧向渐变高亮
 - AI 在最后会列出**"复用了哪些 PTO 组件"**和**"哪些地方系统没覆盖到"**
