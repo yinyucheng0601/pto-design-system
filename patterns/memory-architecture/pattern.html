@@ -56,16 +56,16 @@
       const viewport = document.querySelector('[data-pto-mem-arch-viewport]');
       const sizer = document.querySelector('[data-pto-mem-arch-sizer]');
       const canvas = document.querySelector('[data-pto-mem-arch-canvas]');
+      let lastReportedHeight = 0;
 
       const syncFrameHeight = () => {
         if (!isEmbedPreview || window.parent === window) return;
         const contentNode = document.querySelector('.pto-pattern-memory-arch__main') || document.querySelector('.pto-pattern-memory-arch__stage') || stage;
         const nextHeight = Math.ceil(contentNode.getBoundingClientRect().height);
         if (nextHeight > 0) {
-          const resolvedHeight = nextHeight + 4;
-          if (window.frameElement) {
-            window.frameElement.style.height = `${resolvedHeight}px`;
-          }
+          const resolvedHeight = nextHeight;
+          if (Math.abs(resolvedHeight - lastReportedHeight) <= 1) return;
+          lastReportedHeight = resolvedHeight;
           window.parent.postMessage({
             type: 'pto-pattern-preview-height',
             pathname: window.location.pathname,

@@ -3094,7 +3094,11 @@
           try {
             const iframePath = new URL(iframe.src, window.location.href).pathname;
             if (iframePath === pathname) {
-              iframe.style.height = `${Math.max(40, Math.ceil(height))}px`;
+              const currentHeight = iframe.getBoundingClientRect().height || iframe.clientHeight || 0;
+              const nextHeight = Math.max(40, Math.ceil(height));
+              const delta = nextHeight - currentHeight;
+              if (Math.abs(delta) <= 1 || (delta > 0 && delta <= 8)) return;
+              iframe.style.height = `${nextHeight}px`;
             }
           } catch (_error) {
             // Ignore malformed local preview URLs.

@@ -161,6 +161,8 @@ html[data-embed-preview='true'] .pto-pattern-memory-arch__page {
 }
 
 html[data-embed-preview='true'] .pto-pattern-memory-arch__main {
+  height: 720px;
+  min-height: 0;
   padding: 0;
   gap: 0;
 }
