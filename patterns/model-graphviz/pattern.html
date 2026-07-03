@@ -91,12 +91,9 @@
           mainNode.getBoundingClientRect().height
         ));
         if (nextHeight <= 0) return;
-        const resolvedHeight = nextHeight + 4;
+        const resolvedHeight = nextHeight;
         if (Math.abs(resolvedHeight - lastReportedHeight) <= 1) return;
         lastReportedHeight = resolvedHeight;
-        if (window.frameElement) {
-          window.frameElement.style.height = `${resolvedHeight}px`;
-        }
         window.parent.postMessage({
           type: 'pto-pattern-preview-height',
           pathname: window.location.pathname,
