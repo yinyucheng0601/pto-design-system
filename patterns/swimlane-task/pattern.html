@@ -61,22 +61,22 @@
       const rows = [
         {
           color: '#4d79d4',
-          task: { opName: 'Query-Linear', label: 'Query-Linear', laneKind: 'AIC', laneId: 'aic-0', totalCycle: 184, inputRawMagic: [], outputRawMagic: [] },
+          task: { opName: 'Query-Linear', label: 'Query-Linear', laneKind: 'AIC', laneId: 'aic-0', totalCycle: 184 },
           state: {},
         },
         {
           color: '#7b57bf',
-          task: { opName: 'dispatch', label: 'dispatch', laneKind: 'AICPU', laneId: 'ctrl-0', totalCycle: 96, status: 'accounted', inputRawMagic: new Array(6).fill(0), outputRawMagic: new Array(4).fill(0) },
+          task: { opName: 'dispatch', label: 'dispatch', laneKind: 'AICPU', laneId: 'ctrl-0', totalCycle: 96, status: 'accounted' },
           state: { isSelected: true },
         },
         {
           color: '#4da56d',
-          task: { opName: 'attention matmul', label: 'attention matmul', laneKind: 'AIC', laneId: 'aic-2', totalCycle: 412, clcCycle: 366, gap: 46, gapRatio: 0.112, status: 'wait', dominantCounter: 'aic_pipe_stall', wrapId: 'W12', inputRawMagic: new Array(3).fill(0), outputRawMagic: new Array(3).fill(0) },
+          task: { opName: 'attention matmul', label: 'attention matmul', laneKind: 'AIC', laneId: 'aic-2', totalCycle: 412, clcCycle: 366, gap: 46, gapRatio: 0.112, status: 'wait', dominantCounter: 'aic_pipe_stall', wrapId: 'W12' },
           state: { isRelated: true, isEmphasized: true },
         },
         {
           color: '#d98f55',
-          task: { opName: 'kernel', label: 'kernel', laneKind: 'MTE', laneId: 'mte-out', totalCycle: 73, status: 'overlap', inputRawMagic: new Array(2).fill(0), outputRawMagic: [] },
+          task: { opName: 'kernel', label: 'kernel', laneKind: 'MTE', laneId: 'mte-out', totalCycle: 73, status: 'overlap' },
           state: {},
         },
       ];

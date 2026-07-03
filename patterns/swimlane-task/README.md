@@ -37,4 +37,8 @@ Allowed render inputs:
 - `isEmphasized`
 - `fontFamily`
 
+`inputRawMagic` and `outputRawMagic` are optional. The pattern only renders the
+IN/OUT subsegments when those arrays exist and contain data; otherwise the task
+renders as a single compute/body bar.
+
 Do not rewrite segment width math, fill alpha, border alpha, font thresholds, text truncation rules, tooltip copy, or tooltip positioning outside `pattern.js`.

@@ -54,7 +54,231 @@
     P1: '#FF9D00',
     P2: '#FFE600',
   };
+  const MIN_ZOOM = 0.18;
+  const MAX_ZOOM = 2.6;
   let renderSequence = 0;
+
+  function esc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    })[char]);
+  }
+
+  function normalizeIdList(value) {
+    if (!value) return [];
+    return Array.isArray(value) ? value.filter(Boolean) : [value].filter(Boolean);
+  }
+
+  function nodeMap(graph) {
+    return new Map((graph.nodes || []).map((node) => [node.id, node]));
+  }
+
+  function clusterMap(graph) {
+    return new Map((graph.clusters || []).map((cluster) => [cluster.id, cluster]));
+  }
+
+  function cloneGraph(graph) {
+    const source = graph || {};
+    return {
+      ...source,
+      clusters: (source.clusters || []).map((cluster) => ({ ...cluster })),
+      nodes: (source.nodes || []).map((node) => ({ ...node })),
+      edges: (source.edges || []).map((edge) => ({ ...edge })),
+    };
+  }
+
+  function buildHierarchy(graph) {
+    const nodes = nodeMap(graph);
+    const clusters = clusterMap(graph);
+    const nodeParent = new Map();
+    const clusterParent = new Map();
+    const clusterChildren = new Map();
+    const nodesByCluster = new Map();
+
+    clusters.forEach((cluster, clusterId) => {
+      nodesByCluster.set(clusterId, new Set(normalizeIdList(cluster.nodes)));
+      clusterChildren.set(clusterId, new Set(normalizeIdList(cluster.children)));
+      if (cluster.parent && clusters.has(cluster.parent)) {
+        clusterParent.set(clusterId, cluster.parent);
+      }
+    });
+
+    clusters.forEach((cluster, clusterId) => {
+      normalizeIdList(cluster.children).forEach((childId) => {
+        if (clusters.has(childId)) clusterParent.set(childId, clusterId);
+      });
+    });
+
+    if (graph.clusterChildren && typeof graph.clusterChildren === 'object') {
+      Object.entries(graph.clusterChildren).forEach(([clusterId, childIds]) => {
+        if (!clusterChildren.has(clusterId)) clusterChildren.set(clusterId, new Set());
+        normalizeIdList(childIds).forEach((childId) => {
+          if (!clusters.has(childId)) return;
+          clusterChildren.get(clusterId).add(childId);
+          clusterParent.set(childId, clusterId);
+        });
+      });
+    }
+
+    (graph.nodes || []).forEach((node) => {
+      if (!node.parent || !clusters.has(node.parent)) return;
+      nodeParent.set(node.id, node.parent);
+      if (!nodesByCluster.has(node.parent)) nodesByCluster.set(node.parent, new Set());
+      nodesByCluster.get(node.parent).add(node.id);
+    });
+
+    const ancestorClustersForCluster = (clusterId) => {
+      const out = [];
+      const seen = new Set();
+      let current = clusterId;
+      while (clusterParent.has(current)) {
+        current = clusterParent.get(current);
+        if (!current || seen.has(current)) break;
+        seen.add(current);
+        out.push(current);
+      }
+      return out;
+    };
+
+    const ancestorClustersForNode = (nodeId) => {
+      const parent = nodeParent.get(nodeId);
+      if (!parent) return [];
+      return [parent, ...ancestorClustersForCluster(parent)];
+    };
+
+    const descendantClustersOfCluster = (clusterId) => {
+      const out = new Set();
+      const visit = (id) => {
+        (clusterChildren.get(id) || new Set()).forEach((childId) => {
+          if (out.has(childId)) return;
+          out.add(childId);
+          visit(childId);
+        });
+      };
+      visit(clusterId);
+      return out;
+    };
+
+    const descendantNodesOfCluster = (clusterId) => {
+      const out = new Set(nodesByCluster.get(clusterId) || []);
+      descendantClustersOfCluster(clusterId).forEach((childId) => {
+        (nodesByCluster.get(childId) || new Set()).forEach((nodeId) => out.add(nodeId));
+      });
+      return out;
+    };
+
+    return {
+      nodes,
+      clusters,
+      nodeParent,
+      clusterParent,
+      clusterChildren,
+      nodesByCluster,
+      ancestorClustersForNode,
+      ancestorClustersForCluster,
+      descendantClustersOfCluster,
+      descendantNodesOfCluster,
+    };
+  }
+
+  function relationForNode(graph, evidenceMap, nodeId, explicitRelated, hierarchy) {
+    const nodeIds = new Set();
+    const clusterIds = new Set();
+    const resolvedHierarchy = hierarchy || buildHierarchy(graph);
+
+    const addCluster = (clusterId) => {
+      if (!clusterId || !resolvedHierarchy.clusters.has(clusterId)) return;
+      clusterIds.add(clusterId);
+      resolvedHierarchy.ancestorClustersForCluster(clusterId).forEach((id) => clusterIds.add(id));
+    };
+
+    const addItem = (id, includeDescendants) => {
+      if (!id) return;
+      if (resolvedHierarchy.clusters.has(id)) {
+        addCluster(id);
+        if (includeDescendants) {
+          resolvedHierarchy.descendantClustersOfCluster(id).forEach((clusterId) => clusterIds.add(clusterId));
+          resolvedHierarchy.descendantNodesOfCluster(id).forEach((descendantNodeId) => nodeIds.add(descendantNodeId));
+        }
+        return;
+      }
+      if (!resolvedHierarchy.nodes.has(id)) return;
+      nodeIds.add(id);
+      resolvedHierarchy.ancestorClustersForNode(id).forEach((clusterId) => clusterIds.add(clusterId));
+    };
+
+    addItem(nodeId, true);
+    (explicitRelated || []).forEach((id) => addItem(id, true));
+    const info = (evidenceMap || {})[nodeId] || {};
+    (info.relatedNodeIds || []).forEach((id) => addItem(id, true));
+
+    const seedNodes = new Set(nodeIds);
+    (graph.edges || []).forEach((edge) => {
+      if (seedNodes.has(edge.source)) addItem(edge.target, false);
+      if (seedNodes.has(edge.target)) addItem(edge.source, false);
+    });
+
+    return { nodeIds, clusterIds };
+  }
+
+  function normalizeEdgeType(edge) {
+    return String((edge && (edge.edgeType || edge.type || edge.tag)) || 'activation')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || 'activation';
+  }
+
+  function edgeTagText(edge) {
+    return String(edge?.tag || edge?.edgeTypeLabel || edge?.edgeType || '').trim();
+  }
+
+  function edgeTagWidth(label) {
+    return Math.max(38, Math.min(94, String(label || '').length * 5.7 + 18));
+  }
+
+  function classToken(value) {
+    return String(value || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  function evidenceHtml(node, info, options) {
+    if (typeof options?.renderEvidence === 'function') {
+      return options.renderEvidence(node, info);
+    }
+    const chips = [
+      node.typeLabel,
+      info?.dimension,
+      info?.metric,
+    ].filter(Boolean).map((item) => `<span>${esc(item)}</span>`).join('');
+    const lines = (info?.evidence || info?.lines || []).slice(0, 4)
+      .map((line) => `<li>${esc(line)}</li>`)
+      .join('');
+    const sources = (info?.sources || []).slice(0, 2)
+      .map((item) => `<span>${esc(item)}</span>`)
+      .join('');
+    const actionLabel = options?.evidenceActionLabel || 'Action';
+
+    return [
+      '<div class="pto-model-graphviz-hover-title">',
+        '<div>',
+          `<small>${esc(node.id)}</small>`,
+          `<strong>${esc(node.label || node.id)}</strong>`,
+        '</div>',
+      '</div>',
+      chips ? `<div class="pto-model-graphviz-hover-chips">${chips}</div>` : '',
+      info?.what ? `<p>${esc(info.what)}</p>` : '',
+      info?.description ? `<p>${esc(info.description)}</p>` : '',
+      lines ? `<ul>${lines}</ul>` : '',
+      info?.action ? `<p><b>${esc(actionLabel)}</b> ${esc(info.action)}</p>` : '',
+      sources ? `<div class="pto-model-graphviz-hover-source">${sources}</div>` : '',
+    ].filter(Boolean).join('');
+  }
 
   const DEEPSEEK_V32_DEFAULT_GRAPH = {
     width: 720,
@@ -412,7 +636,10 @@
   }
 
   function drawCluster(svg, cluster, color) {
-    const group = createSvgElement('g', { class: 'pto-model-graphviz-cluster' });
+    const group = createSvgElement('g', {
+      class: 'pto-model-graphviz-cluster',
+      'data-cluster-id': cluster.id,
+    });
     const isRepeat = Boolean(cluster.repeat);
     const radius = 16; // --radius-xl, matches DeepSeek parent-radius; keeps corner toggle inside
     group.appendChild(createSvgElement('rect', {
@@ -456,6 +683,7 @@
     icon.textContent = '-';
     group.appendChild(icon);
     svg.appendChild(group);
+    return group;
   }
 
   function drawClusterTitlePill(svg, cluster) {
@@ -564,14 +792,23 @@
     group.appendChild(label);
   }
 
-  function drawNode(svg, node, color) {
+  function drawNode(svg, node, color, options) {
     const visualKind = getNodeVisualKind(node);
     const cornerRadius = visualKind === 'tensor'
       ? Math.min(14, Math.max(8, node.height * 0.32))
       : node.height / 2;
+    const overlayKind = classToken(node.overlayKind || node.overlayType);
+    const extraClasses = [
+      node.collapsed ? 'is-collapsed' : '',
+      node.virtual ? 'is-virtual' : '',
+      node.glyph ? 'is-glyph' : '',
+      overlayKind ? `is-overlay-${overlayKind}` : '',
+    ].filter(Boolean).join(' ');
     const group = createSvgElement('g', {
-      class: `pto-model-graphviz-node is-${visualKind}${node.collapsed ? ' is-collapsed' : ''}`,
+      class: `pto-model-graphviz-node is-${visualKind}${extraClasses ? ` ${extraClasses}` : ''}`,
       transform: `translate(${node.x}, ${node.y})`,
+      'data-node-id': node.id,
+      'data-node-kind': visualKind,
     });
     const rect = createSvgElement('rect', {
       x: -node.width / 2,
@@ -588,13 +825,13 @@
     const label = createSvgElement('text', {
       class: 'pto-model-graphviz-node-label',
       x: node.collapsed ? -8 : 0,
-      y: visualKind === 'tensor' ? 0 : -4,
+      y: visualKind === 'tensor' || node.hideTypeLabel || node.glyph ? 0 : -4,
       fill: NODE_TEXT_COLOR,
     });
     label.textContent = node.label || node.id;
     group.appendChild(label);
 
-    if (visualKind !== 'tensor') {
+    if (visualKind !== 'tensor' && !node.hideTypeLabel && !node.glyph) {
       const type = createSvgElement('text', {
         class: 'pto-model-graphviz-node-type',
         x: node.collapsed ? -8 : 0,
@@ -623,14 +860,418 @@
       group.appendChild(icon);
     }
 
-    drawReportBadge(group, node);
+    if (options?.reportOverlays !== false) {
+      drawReportBadge(group, node);
+    }
     svg.appendChild(group);
+    return group;
+  }
+
+  function drawEdgeTags(svg, edgeEntries, options) {
+    const layerClass = options.edgeTagLayerClass || 'pto-model-graphviz-edge-tags';
+    const tagClass = options.edgeTagClass || 'pto-model-graphviz-edge-tag';
+    const old = svg.querySelector(`.${layerClass}`);
+    if (old) old.remove();
+    const layer = createSvgElement('g', { class: layerClass });
+
+    edgeEntries.forEach((entry) => {
+      const edge = entry.edge || {};
+      const label = edgeTagText(edge);
+      if (!label || !entry.el || typeof entry.el.getTotalLength !== 'function') return;
+      let point;
+      try {
+        const length = entry.el.getTotalLength();
+        if (!length) return;
+        point = entry.el.getPointAtLength(length * (Number(edge.tagPosition) || 0.52));
+      } catch (_) {
+        return;
+      }
+
+      const width = edgeTagWidth(label);
+      const height = 18;
+      const group = createSvgElement('g', {
+        class: tagClass,
+        transform: `translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`,
+        'data-edge-type': normalizeEdgeType(edge),
+        'aria-label': label,
+      });
+      group.appendChild(createSvgElement('rect', {
+        x: -width / 2,
+        y: -height / 2,
+        width,
+        height,
+        rx: height / 2,
+        ry: height / 2,
+      }));
+      const text = createSvgElement('text', {
+        x: 0,
+        y: 0.4,
+        'text-anchor': 'middle',
+        'dominant-baseline': 'central',
+      });
+      text.textContent = label;
+      group.appendChild(text);
+      layer.appendChild(group);
+      entry.tagEl = group;
+    });
+
+    svg.appendChild(layer);
+  }
+
+  function createHover(stage, className) {
+    const panel = document.createElement('div');
+    panel.className = className || 'pto-model-graphviz-hover';
+    panel.setAttribute('aria-hidden', 'true');
+    stage.appendChild(panel);
+    return panel;
+  }
+
+  function placeHover(stage, panel, event) {
+    const rect = stage.getBoundingClientRect();
+    let x = event.clientX - rect.left + 16;
+    let y = event.clientY - rect.top + 16;
+    const width = panel.offsetWidth || 320;
+    const height = panel.offsetHeight || 180;
+    x = Math.max(10, Math.min(rect.width - width - 10, x));
+    y = Math.max(10, Math.min(rect.height - height - 10, y));
+    panel.style.left = `${x}px`;
+    panel.style.top = `${y}px`;
+  }
+
+  function applyTextContrast(nodeEntries) {
+    nodeEntries.forEach(({ el, node }) => {
+      const visualKind = getNodeVisualKind(node);
+      const label = el.querySelector('.pto-model-graphviz-node-label');
+      const type = el.querySelector('.pto-model-graphviz-node-type');
+      if (label) {
+        label.setAttribute('dominant-baseline', visualKind === 'tensor' ? 'middle' : 'auto');
+        label.style.paintOrder = 'stroke';
+      }
+      if (type) type.style.opacity = '0.92';
+    });
+  }
+
+  function applySemanticNodeClasses(nodeEntries, evidenceMap, options) {
+    const evidenceNodeClass = options.evidenceNodeClass || 'has-model-evidence';
+    const parameterClass = options.parameterClass || 'is-parameter-object';
+    const stateClass = options.stateClass || 'is-state-object';
+    nodeEntries.forEach(({ el, node }) => {
+      const semanticType = String(node.typeLabel || '').trim().toLowerCase();
+      if (evidenceMap?.[node.id]) el.classList.add(evidenceNodeClass);
+      if (semanticType === 'parameter') el.classList.add(parameterClass);
+      if (semanticType === 'state') el.classList.add(stateClass);
+    });
+  }
+
+  function createController(stage, svg, graph, metadata, options) {
+    const opts = options || {};
+    const interaction = opts.interaction === true ? {} : (opts.interaction || {});
+    const overlays = opts.overlays === true ? {} : (opts.overlays || {});
+    const evidenceMap = opts.evidenceMap || graph?.trainingEvidence || graph?.evidenceMap || {};
+    const hasEvidence = Object.keys(evidenceMap || {}).length > 0;
+    const selectedClass = opts.selectedClass || 'is-model-selected';
+    const relatedClass = opts.relatedClass || 'is-model-related';
+    const nodeEntries = metadata.nodeEntries || [];
+    const edgeEntries = metadata.edgeEntries || [];
+    const clusterEntries = metadata.clusterEntries || [];
+    const width = metadata.width;
+    const height = metadata.height;
+    const hierarchy = buildHierarchy(graph);
+    const abortController = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const panZoomEnabled = interaction.panZoom !== false && opts.panZoom !== false;
+    const selectable = interaction.selectable !== false && opts.selectable !== false;
+    const hoverEnabled = overlays.evidence !== false && opts.evidence !== false && hasEvidence;
+    const edgeTagsEnabled = overlays.edgeTags !== false && opts.edgeTags !== false;
+
+    let selectedItemId = null;
+    let selectedRelated = { nodeIds: new Set(), clusterIds: new Set() };
+    let transform = { tx: 0, ty: 0, zoom: 1 };
+    let pan = null;
+    let suppressClick = false;
+    let hover = null;
+    let resizeObserver = null;
+
+    stage.classList.add('pto-model-graphviz-interactive');
+    if (opts.className) {
+      String(opts.className).split(/\s+/).filter(Boolean).forEach((className) => stage.classList.add(className));
+    }
+    svg.classList.add('pto-model-graphviz-interactive-svg');
+    applyTextContrast(nodeEntries);
+    applySemanticNodeClasses(nodeEntries, evidenceMap, opts);
+
+    if (edgeTagsEnabled) {
+      drawEdgeTags(svg, edgeEntries, opts);
+    }
+
+    if (hoverEnabled) {
+      hover = createHover(stage, opts.hoverClassName);
+    }
+
+    function listen(target, type, handler, listenerOptions) {
+      const optsWithSignal = abortController
+        ? { ...(listenerOptions || {}), signal: abortController.signal }
+        : listenerOptions;
+      target.addEventListener(type, handler, optsWithSignal);
+    }
+
+    function applyTransform() {
+      svg.style.width = `${width}px`;
+      svg.style.height = `${height}px`;
+      svg.style.transform = `translate(${transform.tx}px, ${transform.ty}px) scale(${transform.zoom})`;
+    }
+
+    function setTransform(nextTransform) {
+      if (!nextTransform) return;
+      transform = {
+        tx: Number.isFinite(Number(nextTransform.tx)) ? Number(nextTransform.tx) : transform.tx,
+        ty: Number.isFinite(Number(nextTransform.ty)) ? Number(nextTransform.ty) : transform.ty,
+        zoom: Number.isFinite(Number(nextTransform.zoom))
+          ? Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Number(nextTransform.zoom)))
+          : transform.zoom,
+      };
+      applyTransform();
+    }
+
+    function fit() {
+      const rect = stage.getBoundingClientRect();
+      const pad = Number.isFinite(Number(opts.viewportPadding)) ? Number(opts.viewportPadding) : 28;
+      const widthFit = Math.max(120, rect.width - pad * 2) / width;
+      const heightFit = Math.max(120, rect.height - pad * 2) / height;
+      const readableFloor = Number.isFinite(Number(opts.minReadableZoom)) ? Number(opts.minReadableZoom) : 0.62;
+      const fitZoom = opts.fitMode === 'full'
+        ? Math.min(1.08, Math.max(MIN_ZOOM, Math.min(widthFit, heightFit)))
+        : Math.min(1.08, Math.max(MIN_ZOOM, Math.min(widthFit, Math.max(heightFit, readableFloor))));
+      transform.zoom = fitZoom;
+      transform.tx = Math.max(pad / 2, (rect.width - width * fitZoom) / 2);
+      transform.ty = height * fitZoom > rect.height
+        ? pad / 2
+        : Math.max(pad / 2, (rect.height - height * fitZoom) / 2);
+      applyTransform();
+    }
+
+    function clearSelection() {
+      selectedItemId = null;
+      selectedRelated = { nodeIds: new Set(), clusterIds: new Set() };
+      nodeEntries.forEach(({ el }) => el.classList.remove(selectedClass, relatedClass));
+      clusterEntries.forEach(({ el }) => el.classList.remove(selectedClass, relatedClass));
+      edgeEntries.forEach((entry) => {
+        entry.el.classList.remove(relatedClass);
+        if (entry.tagEl) entry.tagEl.classList.remove(relatedClass);
+      });
+    }
+
+    function selectNode(nodeId, selectOptions) {
+      const id = nodeId || null;
+      if (!id) {
+        clearSelection();
+        return;
+      }
+      selectedItemId = id;
+      selectedRelated = relationForNode(graph, evidenceMap, id, selectOptions?.relatedNodeIds, hierarchy);
+      nodeEntries.forEach(({ el, node }) => {
+        const isSelected = node.id === id;
+        const isRelated = selectedRelated.nodeIds.has(node.id);
+        el.classList.toggle(selectedClass, isSelected);
+        el.classList.toggle(relatedClass, !isSelected && isRelated);
+      });
+      clusterEntries.forEach(({ el, cluster }) => {
+        const isSelected = cluster.id === id;
+        const isRelated = selectedRelated.clusterIds.has(cluster.id);
+        el.classList.toggle(selectedClass, isSelected);
+        el.classList.toggle(relatedClass, !isSelected && isRelated);
+      });
+      edgeEntries.forEach((entry) => {
+        const related = selectedRelated.nodeIds.has(entry.source) && selectedRelated.nodeIds.has(entry.target);
+        entry.el.classList.toggle(relatedClass, related);
+        if (entry.tagEl) entry.tagEl.classList.toggle(relatedClass, related);
+      });
+      opts.onSelect?.({
+        nodeId: id,
+        relatedNodeIds: Array.from(selectedRelated.nodeIds),
+        relatedClusterIds: Array.from(selectedRelated.clusterIds),
+        source: selectOptions?.source || 'graph',
+      });
+    }
+
+    function setFocus(focus) {
+      if (!focus) return;
+      const nodeId = typeof focus === 'string' ? focus : (focus.nodeId || focus.id);
+      selectNode(nodeId, {
+        relatedNodeIds: typeof focus === 'string' ? null : focus.relatedNodeIds,
+        source: typeof focus === 'string' ? 'focus' : (focus.source || 'focus'),
+      });
+    }
+
+    function setPhase(phase) {
+      if (!phase) return;
+      const nodeId = typeof phase === 'string' ? phase : phase.nodeId;
+      selectNode(nodeId, {
+        relatedNodeIds: typeof phase === 'string' ? null : phase.relatedNodeIds,
+        source: 'phase',
+      });
+    }
+
+    function showHover(node, event) {
+      if (!hover) return;
+      const info = evidenceMap[node.id] || {};
+      hover.innerHTML = evidenceHtml(node, info, opts);
+      hover.classList.add('is-visible');
+      hover.setAttribute('aria-hidden', 'false');
+      placeHover(stage, hover, event);
+    }
+
+    function hideHover() {
+      if (!hover) return;
+      hover.classList.remove('is-visible');
+      hover.setAttribute('aria-hidden', 'true');
+    }
+
+    nodeEntries.forEach(({ el, node }) => {
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('role', 'button');
+      el.setAttribute('aria-label', node.label || node.id);
+      if (hoverEnabled) {
+        listen(el, 'pointerenter', (event) => showHover(node, event));
+        listen(el, 'pointermove', (event) => {
+          if (hover?.classList.contains('is-visible')) placeHover(stage, hover, event);
+        });
+        listen(el, 'pointerleave', hideHover);
+      }
+      if (selectable) {
+        listen(el, 'click', () => {
+          if (suppressClick) {
+            suppressClick = false;
+            return;
+          }
+          hideHover();
+          selectNode(node.id, { source: 'graph' });
+        });
+        listen(el, 'keydown', (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          selectNode(node.id, { source: 'keyboard' });
+        });
+      }
+    });
+
+    clusterEntries.forEach(({ el, cluster }) => {
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('role', 'button');
+      el.setAttribute('aria-label', cluster.label || cluster.id);
+      if (!selectable) return;
+      listen(el, 'click', () => {
+        if (suppressClick) {
+          suppressClick = false;
+          return;
+        }
+        hideHover();
+        selectNode(cluster.id, { source: 'cluster' });
+      });
+      listen(el, 'keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        selectNode(cluster.id, { source: 'keyboard' });
+      });
+    });
+
+    if (panZoomEnabled) {
+      listen(stage, 'wheel', (event) => {
+        if (!event.ctrlKey && !event.metaKey) return;
+        event.preventDefault();
+        const rect = stage.getBoundingClientRect();
+        const px = event.clientX - rect.left;
+        const py = event.clientY - rect.top;
+        const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+        const z0 = transform.zoom;
+        const z1 = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z0 * factor));
+        transform.tx = px - (px - transform.tx) * (z1 / z0);
+        transform.ty = py - (py - transform.ty) * (z1 / z0);
+        transform.zoom = z1;
+        applyTransform();
+      }, { passive: false });
+
+      listen(stage, 'pointerdown', (event) => {
+        if (event.button !== 0) return;
+        if (event.target.closest('.pto-model-graphviz-node, .pto-model-graphviz-toggle')) return;
+        suppressClick = false;
+        pan = { id: event.pointerId, x: event.clientX, y: event.clientY, tx: transform.tx, ty: transform.ty, moved: false };
+      });
+
+      listen(stage, 'pointermove', (event) => {
+        if (!pan || pan.id !== event.pointerId) return;
+        const dx = event.clientX - pan.x;
+        const dy = event.clientY - pan.y;
+        if (!pan.moved) {
+          if (Math.hypot(dx, dy) < 4) return;
+          pan.moved = true;
+          stage.classList.add('is-panning');
+          try { stage.setPointerCapture(event.pointerId); } catch (_) {}
+        }
+        transform.tx = pan.tx + dx;
+        transform.ty = pan.ty + dy;
+        applyTransform();
+        event.preventDefault();
+      });
+
+      const endPan = (event) => {
+        if (!pan || pan.id !== event.pointerId) return;
+        if (pan.moved) suppressClick = true;
+        pan = null;
+        stage.classList.remove('is-panning');
+        if (stage.hasPointerCapture && stage.hasPointerCapture(event.pointerId)) {
+          stage.releasePointerCapture(event.pointerId);
+        }
+      };
+
+      listen(stage, 'pointerup', endPan);
+      listen(stage, 'pointercancel', endPan);
+      listen(stage, 'lostpointercapture', endPan);
+    }
+
+    resizeObserver = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(() => {
+        if (opts.autoFit === false) return;
+        if (!selectedItemId) fit();
+      })
+      : null;
+    if (resizeObserver) resizeObserver.observe(stage);
+
+    requestAnimationFrame(() => {
+      if (opts.initialTransform) setTransform(opts.initialTransform);
+      else if (opts.autoFit !== false) fit();
+      if (opts.activeNodeId) {
+        selectNode(opts.activeNodeId, {
+          relatedNodeIds: opts.activeRelatedNodeIds,
+          source: 'init',
+        });
+      }
+    });
+
+    return {
+      svg,
+      graph,
+      hierarchy,
+      selectNode,
+      setFocus,
+      setPhase,
+      clearSelection,
+      fit,
+      setTransform,
+      getTransform() {
+        return { ...transform };
+      },
+      destroy() {
+        abortController?.abort();
+        resizeObserver?.disconnect();
+        stage.innerHTML = '';
+      },
+    };
   }
 
   function render(container, graph, options) {
     const target = typeof container === 'string' ? document.querySelector(container) : container;
     if (!target) return null;
-    const data = graph || DEEPSEEK_V32_DEFAULT_GRAPH;
+    const data = cloneGraph(graph || DEEPSEEK_V32_DEFAULT_GRAPH);
     const resolvedOptions = options || {};
     const width = resolvedOptions.width || data.width || 1180;
     const height = resolvedOptions.height || data.height || 520;
@@ -649,44 +1290,74 @@
     const colorMapOptions = resolvedColormapOptions(resolvedOptions);
     const colorMap = buildColorMap(collectColorKeys(data), colorMapOptions);
     const clusterColors = resolveClusterColors(data, colorMap, colorMapOptions);
-    const nodeMap = new Map((data.nodes || []).map((node) => [node.id, node]));
+    const nodesById = nodeMap(data);
+    const clusterEntries = [];
+    const nodeEntries = [];
+    const edgeEntries = [];
 
     (data.clusters || []).forEach((cluster) => {
-      drawCluster(svg, cluster, clusterColors.get(cluster.id) || normalizeColormapColor(CORE_COLORS[0], colorMapOptions));
+      const el = drawCluster(svg, cluster, clusterColors.get(cluster.id) || normalizeColormapColor(CORE_COLORS[0], colorMapOptions));
+      clusterEntries.push({ el, cluster });
     });
 
     const renderedEdges = new Set();
     (data.edges || []).forEach((edge) => {
-      const source = nodeMap.get(edge.source);
-      const targetNode = nodeMap.get(edge.target);
+      const source = nodesById.get(edge.source);
+      const targetNode = nodesById.get(edge.target);
       if (!source || !targetNode) return;
       const edgeKey = `${edge.source}->${edge.target}`;
       if (renderedEdges.has(edgeKey)) return;
       renderedEdges.add(edgeKey);
-      svg.appendChild(createSvgElement('path', {
+      const el = createSvgElement('path', {
         class: 'pto-model-graphviz-edge',
         d: edgePath(source, targetNode, edge),
         stroke: edge.color || LINE_COLOR,
         'stroke-dasharray': edge.dashed ? '8 7' : null,
         'marker-end': `url(#${markerId})`,
-      }));
+        'data-source': edge.source,
+        'data-target': edge.target,
+      });
+      svg.appendChild(el);
+      edgeEntries.push({ el, edge, source: edge.source, target: edge.target, tagEl: null });
     });
 
     (data.nodes || []).forEach((node) => {
-      drawNode(svg, node, resolveNodeColor(node, colorMap, clusterColors));
+      const el = drawNode(svg, node, resolveNodeColor(node, colorMap, clusterColors), resolvedOptions);
+      nodeEntries.push({ el, node });
     });
 
-    (data.clusters || []).forEach((cluster) => {
-      drawClusterTitlePill(svg, cluster);
-    });
+    if (resolvedOptions.reportOverlays !== false) {
+      (data.clusters || []).forEach((cluster) => {
+        drawClusterTitlePill(svg, cluster);
+      });
+    }
 
     target.appendChild(svg);
+    const metadata = { width, height, nodeEntries, edgeEntries, clusterEntries };
+    svg.ptoModelGraphviz = { graph: data, metadata };
+    if (resolvedOptions.interaction || resolvedOptions.overlays || resolvedOptions.attachController) {
+      svg.ptoModelGraphvizController = createController(target, svg, data, metadata, resolvedOptions);
+    }
     return svg;
+  }
+
+  function renderController(container, graph, options) {
+    const svg = render(container, graph, {
+      ...(options || {}),
+      attachController: true,
+      interaction: options?.interaction === undefined ? true : options.interaction,
+      overlays: options?.overlays === undefined ? true : options.overlays,
+    });
+    return svg?.ptoModelGraphvizController || null;
   }
 
   global.PtoModelGraphvizPattern = {
     render,
+    renderController,
     buildColorMap,
+    buildHierarchy,
+    relationForNode,
+    drawEdgeTags,
     reportPriorityColors: { ...REPORT_PRIORITY_COLORS },
     defaultDotLayout: { ...DEFAULT_DOT_LAYOUT },
     sourcePages: {

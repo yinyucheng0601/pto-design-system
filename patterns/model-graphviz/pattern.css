@@ -29,6 +29,14 @@
   --model-graphviz-node-shadow: none;
   --model-graphviz-parent-shadow: none;
   --model-graphviz-panel-shadow: none;
+  --model-graphviz-hover-bg: color-mix(in srgb, var(--surface-1) 96%, black);
+  --model-graphviz-hover-border: var(--border-default);
+  --model-graphviz-hover-shadow: none;
+  --model-graphviz-active-stroke: color-mix(in srgb, var(--foreground) 90%, transparent);
+  --model-graphviz-related-stroke: color-mix(in srgb, var(--foreground) 42%, transparent);
+  --model-graphviz-edge-tag-bg: color-mix(in srgb, var(--surface-1) 94%, var(--background));
+  --model-graphviz-edge-tag-fg: var(--foreground-secondary);
+  --model-graphviz-edge-tag-border: var(--border-default);
 
   min-height: 100vh;
   margin: 0;
@@ -48,6 +56,14 @@
   --model-graphviz-code-string: var(--highlight-copy-blue-700);
   --model-graphviz-code-number: var(--highlight-l0a-violet-700);
   --model-graphviz-panel-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --model-graphviz-hover-bg: rgba(255, 255, 255, 0.98);
+  --model-graphviz-hover-border: rgba(0, 0, 0, 0.10);
+  --model-graphviz-hover-shadow: 0 12px 28px rgba(0, 0, 0, 0.10);
+  --model-graphviz-active-stroke: rgba(0, 0, 0, 0.72);
+  --model-graphviz-related-stroke: rgba(0, 0, 0, 0.30);
+  --model-graphviz-edge-tag-bg: rgba(255, 255, 255, 0.94);
+  --model-graphviz-edge-tag-fg: rgba(0, 0, 0, 0.62);
+  --model-graphviz-edge-tag-border: rgba(0, 0, 0, 0.10);
 }
 
 .pto-model-graphviz-pattern-main {
@@ -219,6 +235,10 @@
   dominant-baseline: middle;
   pointer-events: none;
   letter-spacing: 0;
+}
+
+.pto-model-graphviz-node.is-glyph .pto-model-graphviz-node-label {
+  font-size: calc(var(--font-size-title-sm) + 7px);
 }
 
 .pto-model-graphviz-node-type {
@@ -431,4 +451,223 @@
 
 .pto-model-graphviz-code-punctuation {
   color: var(--model-graphviz-code-punctuation);
+}
+
+.pto-model-graphviz-interactive {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--model-graphviz-stage-bg);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.pto-model-graphviz-interactive.is-panning {
+  cursor: grabbing;
+}
+
+.pto-model-graphviz-interactive > svg.pto-model-graphviz-interactive-svg {
+  display: block;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.pto-model-graphviz-interactive .pto-model-graphviz-node,
+.pto-model-graphviz-interactive .pto-model-graphviz-cluster {
+  cursor: pointer;
+}
+
+.pto-model-graphviz-interactive .pto-model-graphviz-node,
+.pto-model-graphviz-interactive .pto-model-graphviz-edge,
+.pto-model-graphviz-interactive .pto-model-graphviz-edge-tag {
+  transition: opacity var(--duration-fast, 100ms) var(--easing-default, ease),
+    stroke var(--duration-fast, 100ms) var(--easing-default, ease);
+}
+
+.pto-model-graphviz-node:focus,
+.pto-model-graphviz-node:focus-visible {
+  outline: none;
+}
+
+.pto-model-graphviz-node.is-model-selected rect {
+  stroke: var(--model-graphviz-active-stroke);
+  stroke-width: 3px;
+}
+
+.pto-model-graphviz-node.is-model-related rect {
+  stroke: var(--model-graphviz-related-stroke);
+  stroke-width: 1.4px;
+}
+
+.pto-model-graphviz-cluster.is-model-selected > rect {
+  fill: transparent;
+  stroke: var(--model-graphviz-active-stroke);
+  stroke-width: 2.4px;
+}
+
+.pto-model-graphviz-cluster.is-model-related > rect {
+  fill: transparent;
+  stroke: var(--model-graphviz-related-stroke);
+  stroke-width: 1.7px;
+}
+
+.pto-model-graphviz-edge.is-model-related {
+  stroke-width: 2.2px;
+}
+
+.pto-model-graphviz-node.has-model-evidence .pto-model-graphviz-node-label {
+  font-weight: var(--font-weight-bold, 700);
+}
+
+.pto-model-graphviz-node.is-parameter-object rect {
+  fill: var(--model-graphviz-tensor-fill);
+  stroke: var(--model-graphviz-tensor-stroke);
+  stroke-width: 0.8px;
+}
+
+.pto-model-graphviz-node.is-state-object rect {
+  fill: color-mix(in srgb, var(--surface-1) 88%, #ffffff);
+  stroke: color-mix(in srgb, var(--foreground) 22%, transparent);
+  stroke-width: 1px;
+}
+
+:root[data-theme='light'] .pto-model-graphviz-node.is-state-object rect {
+  fill: color-mix(in srgb, var(--surface-1) 92%, #ffffff);
+  stroke: rgba(0, 0, 0, 0.16);
+}
+
+.pto-model-graphviz-node.is-parameter-object .pto-model-graphviz-node-type,
+.pto-model-graphviz-node.is-state-object .pto-model-graphviz-node-type {
+  display: none;
+}
+
+.pto-model-graphviz-node.is-parameter-object .pto-model-graphviz-node-label,
+.pto-model-graphviz-node.is-state-object .pto-model-graphviz-node-label {
+  font-size: 13px;
+}
+
+.pto-model-graphviz-edge-tags {
+  pointer-events: none;
+}
+
+.pto-model-graphviz-edge-tag rect {
+  fill: var(--model-graphviz-edge-tag-bg);
+  stroke: var(--model-graphviz-edge-tag-border);
+  stroke-width: 0.75px;
+}
+
+.pto-model-graphviz-edge-tag text {
+  fill: var(--model-graphviz-edge-tag-fg);
+  font-family: var(--font-sans);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.pto-model-graphviz-edge-tag[data-edge-type='communication'] rect,
+.pto-model-graphviz-edge-tag[data-edge-type='comm'] rect,
+.pto-model-graphviz-edge-tag[data-edge-type='all-to-all'] rect {
+  fill: color-mix(in srgb, var(--highlight-copy-blue-300) 16%, var(--model-graphviz-edge-tag-bg));
+}
+
+.pto-model-graphviz-edge-tag[data-edge-type='parameter'] rect,
+.pto-model-graphviz-edge-tag[data-edge-type='weight'] rect {
+  fill: color-mix(in srgb, var(--highlight-l0a-violet-300) 14%, var(--model-graphviz-edge-tag-bg));
+}
+
+.pto-model-graphviz-edge-tag[data-edge-type='gradient'] rect,
+.pto-model-graphviz-edge-tag[data-edge-type='update'] rect {
+  fill: color-mix(in srgb, var(--warning) 16%, var(--model-graphviz-edge-tag-bg));
+}
+
+.pto-model-graphviz-edge-tag[data-edge-type='cache'] rect,
+.pto-model-graphviz-edge-tag[data-edge-type='state'] rect {
+  fill: color-mix(in srgb, var(--success) 12%, var(--model-graphviz-edge-tag-bg));
+}
+
+.pto-model-graphviz-hover {
+  position: absolute;
+  z-index: var(--z-overlay, 200);
+  display: none;
+  width: min(340px, calc(100% - 24px));
+  max-width: 340px;
+  padding: var(--space-3);
+  border: 1px solid var(--model-graphviz-hover-border);
+  border-radius: var(--radius-lg);
+  background: var(--model-graphviz-hover-bg);
+  box-shadow: var(--model-graphviz-hover-shadow);
+  color: var(--foreground);
+  pointer-events: none;
+  backdrop-filter: blur(12px);
+}
+
+.pto-model-graphviz-hover.is-visible {
+  display: block;
+}
+
+.pto-model-graphviz-hover-title {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.pto-model-graphviz-hover-title small {
+  display: block;
+  color: var(--foreground-muted);
+  font: var(--text-mono);
+}
+
+.pto-model-graphviz-hover-title strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--foreground);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.pto-model-graphviz-hover p {
+  margin: var(--space-2) 0 0;
+  color: var(--foreground-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.pto-model-graphviz-hover p b {
+  color: var(--foreground);
+  font-weight: var(--font-weight-semibold);
+}
+
+.pto-model-graphviz-hover ul {
+  margin: var(--space-2) 0 0;
+  padding-left: 17px;
+  color: var(--foreground-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.pto-model-graphviz-hover-chips,
+.pto-model-graphviz-hover-source {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+}
+
+.pto-model-graphviz-hover-chips span,
+.pto-model-graphviz-hover-source span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 0 7px;
+  border-radius: var(--radius-pill);
+  background: var(--state-muted);
+  color: var(--foreground-secondary);
+  font-size: 11px;
+  line-height: 1;
 }

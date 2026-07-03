@@ -7,6 +7,8 @@
     "visualContract": [
       "patterns/aic-core-object/pattern.js",
       "patterns/aiv-core-object/pattern.js",
+      "pto/ascend-950-workbench-demo/feature_taxonomy.html standard 950 frame source",
+      "pto/ascend-950-workbench-demo/hardware-frame.html iframe postMessage frame",
       "pto/ascend-hardware-map/ascend-hardware-map-v3.html hardware-focus hover",
       "pto/ascend-hardware-map/ascend-950b-hardware-frame.html is-path-focused focus states",
       "CANNVisual/910B-architecture-notes.md",
@@ -48,7 +50,7 @@
     "local on-chip buffer-block occupancy through setBufferBlocks payloads",
     "iframe/default zoom through createZoomController options, with 0.6 as the shared default for embedded architecture canvases",
     "optional external zoom buttons; graph-only embeds should rely on drag pan and Command-wheel zoom instead of visible pattern chrome",
-    "direct CV route lane anchors through explicit AIC/AIV node selectors such as data-aiv-node=\"exec:SIMD\"",
+    "direct CV route lane anchors through explicit visible AIC/AIV node selectors such as data-aiv-node=\"exec:SIMD\"",
     "container framing outside the pattern root"
   ],
   "forbiddenOverrides": [
@@ -57,7 +59,8 @@
     "using local product CSS or DOM traversal to recolor AIC/AIV buffer cells",
     "changing chip-level rail widths, route label treatment, or AIC/AIV internal chrome outside the shared patterns",
     "anchoring direct CV detour lanes to broad stack containers when a concrete AIC/AIV node can define the lane",
+    "anchoring route lanes to business-page-only or hidden elements such as .pto-mem950__notes",
     "using stroke-width changes for hover or playback focus; use opacity and glow so route thickness remains stable"
   ],
-  "agentReuseRule": "Read this JSON first. For a new 950-class architecture page, load aic-core-object and aiv-core-object first, then call memory-architecture/pattern.js to mount the full-stage shell. Use attachPathFocusInteractions or setPathFocus/clearPathFocus for flow-step hover like ascend-hardware-map-v3 instead of reimplementing is-path-focused, is-hardware-active, or route glow locally. For iframe or inspector embeds, consume the graph-only pattern surface: wrap the stage with the documented viewport/sizer/canvas classes, call createZoomController with defaultZoom 0.6, pan enabled, Command-wheel zoom enabled, centerTarget set to the visible graph body selectors such as .pto-mem950__rails, .pto-mem950__engine-stack, and .pto-mem950__stack, and call center() once after render when the viewport is wider than the scaled graph. Visible zoom buttons are optional product chrome, not part of the required iframe pattern. Extend presets, route data, and preset engines in pattern.js instead of cloning the rendered DOM. Anchor detour lanes to concrete rendered nodes, not whole core stacks, so route labels stay tied to the visible hardware unit."
+  "agentReuseRule": "Read this JSON first. For a new 950-class architecture page, treat pto/ascend-950-workbench-demo/feature_taxonomy.html and its hardware-frame.html iframe as the current standard source, load aic-core-object and aiv-core-object first, then call memory-architecture/pattern.js to mount the full-stage shell. Use attachPathFocusInteractions or setPathFocus/clearPathFocus for flow-step hover like ascend-hardware-map-v3 instead of reimplementing is-path-focused, is-hardware-active, or route glow locally. For iframe or inspector embeds, consume the graph-only pattern surface: wrap the stage with the documented viewport/sizer/canvas classes, call createZoomController with defaultZoom 0.6, pan enabled, Command-wheel zoom enabled, centerTarget set to the visible graph body selectors such as .pto-mem950__rails, .pto-mem950__engine-stack, and .pto-mem950__stack, and call center() once after render when the viewport is wider than the scaled graph. Visible zoom buttons are optional product chrome, not part of the required iframe pattern. Extend presets, route data, and preset engines in pattern.js instead of cloning the rendered DOM. Anchor detour lanes to concrete visible rendered nodes, not hidden notes, business-page-only elements, or whole core stacks, so route labels stay tied to the visible hardware unit."
 }

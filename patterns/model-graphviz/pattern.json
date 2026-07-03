@@ -2,7 +2,7 @@
   "id": "model-graphviz",
   "name": "Model Graphviz",
   "type": "svg",
-  "description": "Reusable SVG visual contract for TorchVista/Graphviz model architecture maps and report overlays. Captures the approved DeepSeek V3.2 graph style and bundles clean architecture schema assets for DeepSeek V3.2, Qwen7B, and Gemma. The contract keeps default depth-2 folding, no default selected operator, pill module/op nodes, rounded-rect tensor/state nodes, parent cluster shells with a fixed --radius-xl (16px) corner and 10% white expanded fill for every container including repeated layer templates, white edges, vertically centered node label+type stacks, semantic-first colormap defaults for common op roles with unknown keys expanded through the shared palette, red/green forbidden hue ranges in generated palettes, stronger light-mode node fills, strict semantic module hierarchy, explicit op semantic colors before parent fallback, folded representative edge dedupe, stable expand/collapse viewport anchoring, centered report-priority container title pills, no-extra-border priority tags, top-right corner fold controls, right-inset expand controls, no graph shadows, and no-border clicked-operator preview cards with dark code surfaces. New model graph pages should derive cluster boxes from the bounding box of their visible children, lay the decoder chain out as a single top-to-bottom column (Gate/Up the only parallel pair), use transform-based cursor-anchored pan/zoom, show a single white selection stroke with no browser focus ring only after user selection, and place a repeat-count badge at the cluster top-left under the title.",
+  "description": "Reusable SVG visual contract for TorchVista/Graphviz model architecture maps, report overlays, and evidence/focus overlays. Captures the approved DeepSeek V3.2 graph style and bundles clean architecture schema assets for DeepSeek V3.2, Qwen7B, and Gemma. The contract keeps default depth-2 folding, no default selected operator, pill module/op nodes, rounded-rect tensor/state nodes, parent cluster shells with a fixed --radius-xl (16px) corner and 10% white expanded fill for every container including repeated layer templates, white edges, vertically centered node label+type stacks, semantic-first colormap defaults for common op roles with unknown keys expanded through the shared palette, red/green forbidden hue ranges in generated palettes, stronger light-mode node fills, strict semantic module hierarchy, explicit op semantic colors before parent fallback, folded representative edge dedupe, stable expand/collapse viewport anchoring, centered report-priority container title pills, no-extra-border priority tags, top-right corner fold controls, right-inset expand controls, no graph shadows, and no-border clicked-operator preview cards with dark code surfaces. The base renderer also owns optional controller behavior formerly duplicated by model-training-graphviz: evidence hover panels, edge type tags, selected/related emphasis, hierarchy-aware focus, drag pan, Command-wheel zoom, and stable non-refitting phase/focus changes. New model graph pages should derive cluster boxes from the bounding box of their visible children, lay the decoder chain out as a single top-to-bottom column (Gate/Up the only parallel pair), use transform-based cursor-anchored pan/zoom through renderController when interaction is needed, show a single neutral selection stroke with no browser focus ring only after user selection, and place a repeat-count badge at the cluster top-left under the title.",
   "source": {
     "visualContract": [
       "graphviz/deepseek_v32_source_graph.html",
@@ -35,6 +35,13 @@
     "dotGraphPad": 0.38,
     "dotClusterMargin": 36,
     "notes": "Graphviz source pages should add graph margin/pad and expanded-cluster margin before rendering so container title pills and left-side node priority tags have enough breathing room."
+  },
+  "interactionContract": {
+    "renderController": "Call window.PtoModelGraphvizPattern.renderController(container, graph, options) when the product needs pan/zoom, focus, evidence hover, edge tags, or external phase/step linkage. The legacy render() API still returns an SVG and remains valid for static previews.",
+    "controllerMethods": ["selectNode(nodeId, options)", "setFocus({ nodeId, relatedNodeIds, source })", "setPhase({ nodeId, relatedNodeIds })", "clearSelection()", "fit()", "destroy()"],
+    "evidenceMap": "Pass options.evidenceMap or graph.trainingEvidence keyed by node id. Evidence may include dimension, metric, what, description, evidence, action, sources, and relatedNodeIds.",
+    "edgeTags": "Edges may define tag, edgeType, edgeTypeLabel, sourceAnchor, targetAnchor, curve, and tagPosition. The renderer places compact edge tags at a stable point along the rendered path.",
+    "hierarchyFocus": "Selected nodes include explicit relatedNodeIds, evidence relatedNodeIds, ancestors, descendants for selected clusters, and directly connected edge neighbors. Focus changes must not refit or recenter the viewport."
   },
   "reportOverlayContract": {
     "priorityColors": {
@@ -99,7 +106,10 @@
   ],
   "requiredApis": [
       "window.PtoModelGraphvizPattern.render(container, graph, options)",
+      "window.PtoModelGraphvizPattern.renderController(container, graph, options)",
       "window.PtoModelGraphvizPattern.buildColorMap(keys)",
+      "window.PtoModelGraphvizPattern.buildHierarchy(graph)",
+      "window.PtoModelGraphvizPattern.relationForNode(graph, evidenceMap, nodeId, relatedNodeIds)",
       "window.PtoModelGraphvizPattern.reportPriorityColors",
       "window.PtoModelGraphvizPattern.defaultDotLayout"
   ],
@@ -109,6 +119,7 @@
     "node semantic color keys, as long as colors are resolved through buildColorMap",
     "node fill colors only; light mode keeps semantic fills saturated enough for scanability, and all non-node UI colors, typography, spacing, radii, borders, and code surfaces must stay token-derived",
     "stage width, height, and viewport padding",
+    "optional controller behavior through renderController: evidenceMap, edge tags, external focus/phase linkage, hover rendering, selected/related classes, and pan/zoom fit options",
     "collapsed and expanded state data",
     "collapseDepth URL overrides, while the default remains depth 2",
     "report priority values P0, P1, or P2, using the documented red/orange/yellow fills",

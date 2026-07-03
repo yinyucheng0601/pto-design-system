@@ -2,7 +2,7 @@
   "id": "swimlane-task-bar",
   "name": "Swimlane Task Bar",
   "type": "canvas",
-  "description": "Canvas-rendered three-segment task bar and hover tooltip used for timed events in swimlane and timeline surfaces.",
+  "description": "Canvas-rendered task bar and hover tooltip for timed events in swimlane and timeline surfaces. Draws an IN/compute/OUT three-segment bar when the task carries raw input/output arrays; otherwise falls back to a single solid compute bar (no IN/OUT chips or side tints).",
   "source": {
     "visualContract": "pypto-swimlane-perf-tool/js/swimlane.js task-bar render block and PMU swimlane .sl-tooltip hover behavior",
     "renderScript": "patterns/swimlane-task/pattern.js",
@@ -11,8 +11,12 @@
   },
   "useWhen": [
     "Displaying a timed task in a swimlane, timeline, or execution trace surface.",
-    "Showing input, compute, and output subsegments inside one task duration.",
+    "Showing input, compute, and output subsegments inside one task duration when raw input/output arrays are present.",
+    "Drawing a single solid bar (no IN/OUT subsegments) for events that have no raw input/output arrays, such as pipeline forward/backward/communication/bubble timeline events.",
     "Showing a task hover tooltip with op, lane, timing, status, dominant counter, and wrap metadata."
+  ],
+  "rules": [
+    "Three-segment mode is opt-in via the data: IN and OUT segments are drawn only when task.inputRawMagic / task.outputRawMagic are non-empty arrays. When both are absent or empty, drawTaskBar renders one solid compute bar and omits the IN/OUT chips and side tints. Do not synthesize empty input/output arrays just to force the segmented style on events that have no in/out semantics."
   ],
   "requiredApis": [
     "window.PtoSwimlaneTaskPattern.drawTaskBar",
