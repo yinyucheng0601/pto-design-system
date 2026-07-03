@@ -3094,6 +3094,10 @@
           try {
             const iframePath = new URL(iframe.src, window.location.href).pathname;
             if (iframePath === pathname) {
+              if (iframe.dataset.patternPreview === 'memory-architecture' || iframe.dataset.patternPreview === 'model-graphviz') {
+                iframe.style.height = '';
+                return;
+              }
               const currentHeight = iframe.getBoundingClientRect().height || iframe.clientHeight || 0;
               const nextHeight = Math.max(40, Math.ceil(height));
               const delta = nextHeight - currentHeight;
