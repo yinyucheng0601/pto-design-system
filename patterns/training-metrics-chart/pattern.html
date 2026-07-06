@@ -1,9 +1,25 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pattern · training-metrics-chart</title>
+<script>
+  (() => {
+    const params = new URLSearchParams(window.location.search);
+    const applyTheme = (theme) => {
+      if (theme === 'light' || theme === 'dark' || theme === 'glass') {
+        document.documentElement.dataset.theme = theme;
+      }
+    };
+    applyTheme(params.get('theme') || 'dark');
+    window.addEventListener('message', (event) => {
+      if (event.data?.type === 'pto-preview-theme') {
+        applyTheme(event.data.theme);
+      }
+    });
+  })();
+</script>
 <link rel="stylesheet" href="../../tokens/foundation.css">
 <link rel="stylesheet" href="../../tokens/semantic.css">
 <link rel="stylesheet" href="../../tokens/components.css">

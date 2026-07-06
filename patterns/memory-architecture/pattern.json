@@ -2,7 +2,7 @@
   "id": "memory-architecture-layout",
   "name": "Memory Architecture Layout",
   "type": "hybrid",
-  "description": "Full-stage PTO memory architecture shell for 910B/950 diagrams. It composes the shared AIC/AIV internal renderers, chip-level memory rails, the AIV ND-DMA Cache input path into UB, detail rows including the 950 UB bank mini-grid, an SVG overlay for MTE/CV routes, shared hardware hover tips, path-focus hover highlighting, local buffer block occupancy, and a graph-only pan/zoom viewport for iframe embeds.",
+  "description": "Full-stage PTO memory architecture shell for 910B/950 diagrams. It composes the shared AIC/AIV internal renderers, uses the simplified Scalar + UB + Vector AIV object for 910B, uses the full ND-DMA Cache/SIMT/SIMD AIV object for 950B, includes chip-level memory rails, detail rows including the 950 UB bank mini-grid, an SVG overlay for MTE/CV routes, shared hardware hover tips, path-focus hover highlighting, local buffer block occupancy, and a graph-only pan/zoom viewport for iframe embeds.",
   "source": {
     "visualContract": [
       "patterns/aic-core-object/pattern.js",

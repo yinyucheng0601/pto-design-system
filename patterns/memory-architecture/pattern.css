@@ -209,6 +209,10 @@ html[data-embed-preview='true'] .pto-pattern-memory-arch__stage {
   min-width: 100%;
 }
 
+.pto-mem950[data-pto-mem-arch-stage='ascend910b'] .pto-mem950__layout {
+  gap: 112px;
+}
+
 .pto-mem950__rails {
   display: flex;
   gap: 24px;
@@ -304,6 +308,13 @@ html[data-embed-preview='true'] .pto-pattern-memory-arch__stage {
   position: relative;
   border-radius: 30px;
   flex: 0 0 auto;
+}
+
+.pto-mem950[data-pto-mem-arch-stage='ascend910b'] .pto-mem950__core-slot,
+.pto-mem950[data-pto-mem-arch-stage='ascend910b'] .pto-aiv-core,
+.pto-mem950[data-pto-mem-arch-stage='ascend910b'] .pto-aic-core {
+  width: 1080px;
+  max-width: 1080px;
 }
 
 .pto-mem950__engine-stack {
@@ -483,7 +494,10 @@ html[data-embed-preview='true'] .pto-pattern-memory-arch__stage {
 
 .pto-mem950__overlay {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: auto;
+  bottom: auto;
   overflow: visible;
   pointer-events: none;
   z-index: 5;

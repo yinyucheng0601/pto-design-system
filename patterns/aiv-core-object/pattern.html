@@ -26,32 +26,39 @@
   <link rel="stylesheet" href="../../tokens/foundation.css">
   <link rel="stylesheet" href="../../tokens/semantic.css">
   <link rel="stylesheet" href="../../tokens/components.css">
-  <link rel="stylesheet" href="./pattern.css?v=aiv-nd-dma-cache-v1">
+  <link rel="stylesheet" href="./pattern.css?v=aiv-variants-v1">
 </head>
 <body class="pto-aiv-core-pattern-page">
   <main class="pto-aiv-core-pattern-main">
     <h1 class="pto-aiv-core-pattern-title">AIV Core Object</h1>
     <p class="pto-aiv-core-pattern-subtitle">
-      Design-driven AIV internal object pattern based on the supplied layout draft, with routes aligned to official
-      Ascend documentation for shared ICache, shared Vector execution, ND-DMA Cache to Unified Buffer staging,
-      and SIMT DCache flow.
+      Design-driven AIV internal object pattern with separate 910B and 950B presets. 910B uses the simplified
+      Scalar + UB + Vector topology; 950B keeps the full DCache, ICache, ND-DMA Cache, SIMT, SIMD, and Vector topology.
     </p>
     <div class="pto-aiv-core-pattern-meta">
       <span class="pto-aiv-core-pattern-badge">pattern id: aiv-core-object</span>
-      <span class="pto-aiv-core-pattern-badge">preset: aivOfficialV1</span>
+      <span class="pto-aiv-core-pattern-badge">presets: ascend910b / ascend950b</span>
       <span class="pto-aiv-core-pattern-badge">contract: config-driven DOM + JS grid + SVG routes</span>
     </div>
-    <section class="pto-aiv-core-pattern-stage">
-      <div id="pattern-aiv-core-stage"></div>
+    <section class="pto-aiv-core-pattern-stage pto-aiv-core-pattern-variants">
+      <article class="pto-aiv-core-pattern-variant">
+        <h2 class="pto-aiv-core-pattern-variant-title">Ascend 910B AIV</h2>
+        <div id="pattern-aiv-core-stage-910"></div>
+      </article>
+      <article class="pto-aiv-core-pattern-variant">
+        <h2 class="pto-aiv-core-pattern-variant-title">Ascend 950B AIV</h2>
+        <div id="pattern-aiv-core-stage-950"></div>
+      </article>
     </section>
   </main>
 
-  <script src="./pattern.js?v=aiv-nd-dma-cache-v1"></script>
+  <script src="./pattern.js?v=aiv-variants-v1"></script>
   <script>
     (function renderAivCorePattern() {
       const helper = window.PtoAivCorePattern;
-      const mountNode = document.getElementById('pattern-aiv-core-stage');
-      if (!helper || !mountNode) return;
+      const mount910 = document.getElementById('pattern-aiv-core-stage-910');
+      const mount950 = document.getElementById('pattern-aiv-core-stage-950');
+      if (!helper || !mount910 || !mount950) return;
       const isEmbedPreview = document.documentElement.dataset.embedPreview === 'true';
 
       const embedRootNode = document.querySelector('.pto-aiv-core') || document.querySelector('.pto-aiv-core-pattern-main') || document.body;
@@ -77,8 +84,13 @@
         }
       };
 
-      helper.render(mountNode, 'aivOfficialV1');
-      helper.setBufferBlocks?.(mountNode, [
+      helper.render(mount910, 'ascend910b');
+      helper.setBufferBlocks?.(mount910, [
+        { buffer: 'UB', label: 'xLocal', state: 'enqueued', tone: 'input', cellRange: [0, 15], sourceTile: 'x[block0,:]' },
+      ]);
+
+      helper.render(mount950, 'ascend950b');
+      helper.setBufferBlocks?.(mount950, [
         { buffer: 'UB', label: 'xLocal', state: 'enqueued', tone: 'input', cellRange: [0, 15], sourceTile: 'x[block0,progress0,:]' },
         { buffer: 'UB', label: 'zLocal', state: 'committed', tone: 'output', cellRange: [38, 53], sourceTile: 'z[block0,progress0,:]' },
       ]);

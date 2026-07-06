@@ -46,12 +46,14 @@
 }
 
 :root[data-theme='light'] .pto-model-graphviz-pattern-page {
-  --model-graphviz-surface: var(--surface-1);
-  --model-graphviz-surface-soft: color-mix(in srgb, var(--surface-1) 76%, var(--surface-2));
-  --model-graphviz-stage-bg: var(--surface-1);
-  --model-graphviz-panel-bg: var(--surface-1);
-  --model-graphviz-panel-header-bg: var(--surface-1);
-  --model-graphviz-panel-body-bg: linear-gradient(180deg, var(--surface-1), var(--background-elevated));
+  --model-graphviz-surface: #F8F8F8;
+  --model-graphviz-surface-soft: color-mix(in srgb, #F8F8F8 76%, var(--surface-2));
+  --model-graphviz-stage-bg: #F8F8F8;
+  --model-graphviz-tensor-fill: #D1D1D1;
+  --model-graphviz-tensor-stroke: #B8B8B8;
+  --model-graphviz-panel-bg: #F8F8F8;
+  --model-graphviz-panel-header-bg: #F8F8F8;
+  --model-graphviz-panel-body-bg: linear-gradient(180deg, #F8F8F8, var(--background-elevated));
   --model-graphviz-code-bg: color-mix(in srgb, var(--surface-1) 88%, var(--surface-2));
   --model-graphviz-code-string: var(--highlight-copy-blue-700);
   --model-graphviz-code-number: var(--highlight-l0a-violet-700);
@@ -265,7 +267,7 @@
 .pto-model-graphviz-cluster-label {
   fill: var(--model-graphviz-cluster-label);
   font-family: var(--font-sans);
-  font-size: calc(var(--font-size-label-xs) - 2px);
+  font-size: 18px;
   font-weight: var(--font-weight-bold);
   dominant-baseline: middle;
   pointer-events: none;
@@ -526,19 +528,16 @@
 }
 
 .pto-model-graphviz-node.is-parameter-object rect {
-  fill: var(--model-graphviz-tensor-fill);
   stroke: var(--model-graphviz-tensor-stroke);
   stroke-width: 0.8px;
 }
 
 .pto-model-graphviz-node.is-state-object rect {
-  fill: color-mix(in srgb, var(--surface-1) 88%, #ffffff);
   stroke: color-mix(in srgb, var(--foreground) 22%, transparent);
   stroke-width: 1px;
 }
 
 :root[data-theme='light'] .pto-model-graphviz-node.is-state-object rect {
-  fill: color-mix(in srgb, var(--surface-1) 92%, #ffffff);
   stroke: rgba(0, 0, 0, 0.16);
 }
 

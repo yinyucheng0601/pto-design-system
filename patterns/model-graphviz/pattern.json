@@ -2,17 +2,20 @@
   "id": "model-graphviz",
   "name": "Model Graphviz",
   "type": "svg",
-  "description": "Reusable SVG visual contract for TorchVista/Graphviz model architecture maps, report overlays, and evidence/focus overlays. Captures the approved DeepSeek V3.2 graph style and bundles clean architecture schema assets for DeepSeek V3.2, Qwen7B, and Gemma. The contract keeps default depth-2 folding, no default selected operator, pill module/op nodes, rounded-rect tensor/state nodes, parent cluster shells with a fixed --radius-xl (16px) corner and 10% white expanded fill for every container including repeated layer templates, white edges, vertically centered node label+type stacks, semantic-first colormap defaults for common op roles with unknown keys expanded through the shared palette, red/green forbidden hue ranges in generated palettes, stronger light-mode node fills, strict semantic module hierarchy, explicit op semantic colors before parent fallback, folded representative edge dedupe, stable expand/collapse viewport anchoring, centered report-priority container title pills, no-extra-border priority tags, top-right corner fold controls, right-inset expand controls, no graph shadows, and no-border clicked-operator preview cards with dark code surfaces. The base renderer also owns optional controller behavior formerly duplicated by model-training-graphviz: evidence hover panels, edge type tags, selected/related emphasis, hierarchy-aware focus, drag pan, Command-wheel zoom, and stable non-refitting phase/focus changes. New model graph pages should derive cluster boxes from the bounding box of their visible children, lay the decoder chain out as a single top-to-bottom column (Gate/Up the only parallel pair), use transform-based cursor-anchored pan/zoom through renderController when interaction is needed, show a single neutral selection stroke with no browser focus ring only after user selection, and place a repeat-count badge at the cluster top-left under the title.",
+  "description": "Reusable SVG visual contract for TorchVista/Graphviz model architecture maps, report overlays, and evidence/focus overlays. Captures the approved DeepSeek V3.2 graph style and bundles clean architecture schema assets for DeepSeek V3.2, Qwen7B, Gemma, and openPangu-2.0-Flash. The contract keeps default depth-2 folding, no default selected operator, pill module/op nodes, rounded-rect tensor/state nodes, parent cluster shells with a fixed --radius-xl (16px) corner and 10% white expanded fill for every container including repeated layer templates, white edges, vertically centered node label+type stacks, semantic-first colormap defaults for common op roles with unknown keys expanded through the shared palette, red/green forbidden hue ranges in generated palettes, stronger light-mode node fills, strict semantic module hierarchy, explicit op semantic colors before parent fallback, folded representative edge dedupe, stable expand/collapse viewport anchoring, centered report-priority container title pills, no-extra-border priority tags, top-right corner fold controls, right-inset expand controls, no graph shadows, and no-border clicked-operator preview cards with dark code surfaces. The base renderer also owns optional controller behavior formerly duplicated by model-training-graphviz: evidence hover panels, edge type tags, selected/related emphasis, hierarchy-aware focus, drag pan, Command-wheel zoom, and stable non-refitting phase/focus changes. New model graph pages should derive cluster boxes from the bounding box of their visible children, lay the decoder chain out as a single top-to-bottom column (Gate/Up the only parallel pair), use transform-based cursor-anchored pan/zoom through renderController when interaction is needed, show a single neutral selection stroke with no browser focus ring only after user selection, and place a repeat-count badge at the cluster top-left under the title.",
   "source": {
     "visualContract": [
-      "graphviz/deepseek_v32_source_graph.html",
-      "graphviz/deepseek_v32_report_overlay_demo.html",
-      "graphviz/deepseek_v32_report_overlay_demo_v2.html",
+      "patterns/model-graphviz/graphviz/deepseek_v32_source_graph.html",
+      "patterns/model-graphviz/graphviz/deepseek_v32_report_overlay_demo.html",
+      "patterns/model-graphviz/graphviz/deepseek_v32_report_overlay_demo_v2.html",
       "patterns/model-graphviz/assets/deepseek_v32_modelviz.html",
       "patterns/model-graphviz/assets/deepseek_v32_model_architecture.json",
       "patterns/model-graphviz/assets/qwen7b_modelviz.html",
       "patterns/model-graphviz/assets/qwen7b_model_architecture.json",
       "patterns/model-graphviz/assets/gemma_model_architecture.json",
+      "patterns/model-graphviz/assets/openpangu_2_0_flash_modelviz.html",
+      "patterns/model-graphviz/assets/openpangu_2_0_flash_model_architecture.json",
+      "patterns/model-graphviz/assets/openpangu_2_0_flash_model_architecture_validation.md",
       "patterns/model-graphviz/pattern.html",
       "patterns/model-graphviz/pattern.css",
       "patterns/model-graphviz/pattern.js"
@@ -20,11 +23,12 @@
     "patternHtml": "patterns/model-graphviz/pattern.html",
     "patternCss": "patterns/model-graphviz/pattern.css",
     "renderScript": "patterns/model-graphviz/pattern.js",
-    "originalModule": "graphviz/deepseek_v32_source_graph.html",
+    "originalModule": "patterns/model-graphviz/graphviz/deepseek_v32_source_graph.html",
     "schemaAssets": {
       "deepseekV32": "patterns/model-graphviz/assets/deepseek_v32_model_architecture.json",
       "qwen7b": "patterns/model-graphviz/assets/qwen7b_model_architecture.json",
       "gemma": "patterns/model-graphviz/assets/gemma_model_architecture.json",
+      "openPanguFlash": "patterns/model-graphviz/assets/openpangu_2_0_flash_model_architecture.json",
       "index": "patterns/model-graphviz/assets/index.json"
     },
     "bundledPreview": "patterns/model-graphviz/assets/deepseek_v32_modelviz.html",
@@ -41,7 +45,8 @@
     "controllerMethods": ["selectNode(nodeId, options)", "setFocus({ nodeId, relatedNodeIds, source })", "setPhase({ nodeId, relatedNodeIds })", "clearSelection()", "fit()", "destroy()"],
     "evidenceMap": "Pass options.evidenceMap or graph.trainingEvidence keyed by node id. Evidence may include dimension, metric, what, description, evidence, action, sources, and relatedNodeIds.",
     "edgeTags": "Edges may define tag, edgeType, edgeTypeLabel, sourceAnchor, targetAnchor, curve, and tagPosition. The renderer places compact edge tags at a stable point along the rendered path.",
-    "hierarchyFocus": "Selected nodes include explicit relatedNodeIds, evidence relatedNodeIds, ancestors, descendants for selected clusters, and directly connected edge neighbors. Focus changes must not refit or recenter the viewport."
+    "hierarchyFocus": "Selected nodes include explicit relatedNodeIds, evidence relatedNodeIds, ancestors, descendants for selected clusters, and directly connected edge neighbors. Focus changes must not refit or recenter the viewport.",
+    "selectableClusters": "Set interaction.selectableClusters=false for pages where blank space inside expanded parent containers must pan only and must not open an inspector."
   },
   "reportOverlayContract": {
     "priorityColors": {
@@ -72,13 +77,13 @@
     },
     {
       "id": "deepseek-v32-report-overlay",
-      "sourcePage": "graphviz/deepseek_v32_report_overlay_demo.html",
+      "sourcePage": "patterns/model-graphviz/graphviz/deepseek_v32_report_overlay_demo.html",
       "defaultCollapseDepth": 2,
       "notes": "Infinite-canvas report overlay page using the source Graphviz iframe, transparent top header, right panel-shell inspector, Mapped Nodes graph focusing, red/orange/yellow priority fills, centered container title pills, and invisible-only enlarged border hit targets."
     },
     {
       "id": "deepseek-v32-report-overlay-v2",
-      "sourcePage": "graphviz/deepseek_v32_report_overlay_demo_v2.html",
+      "sourcePage": "patterns/model-graphviz/graphviz/deepseek_v32_report_overlay_demo_v2.html",
       "defaultCollapseDepth": 2,
       "notes": "IDE-frame three-pane report overlay page using inline source graph, profiling JSON, operator source annotations, clearable selection state, and selected-edge dimming."
     },
@@ -94,6 +99,14 @@
       "schemaFile": "patterns/model-graphviz/assets/gemma_model_architecture.json",
       "defaultCollapseDepth": 2,
       "notes": "Clean Gemma text-decoder source/config architecture schema: 30 decoder layers, folded attention/MLP/MoE structure, tensor facts on edges."
+    },
+    {
+      "id": "openpangu-2-0-flash-source-schema",
+      "sourcePage": "patterns/model-graphviz/assets/openpangu_2_0_flash_modelviz.html",
+      "schemaFile": "patterns/model-graphviz/assets/openpangu_2_0_flash_model_architecture.json",
+      "validationFile": "patterns/model-graphviz/assets/openpangu_2_0_flash_model_architecture_validation.md",
+      "defaultCollapseDepth": 2,
+      "notes": "Source-checked openPangu-2.0-Flash full architecture schema: 46 main decoder layers, dense 0-1, MoE 2-45, DSA/SWA sparse MLA attention split, MoME local context paths, MTP branch with 3 next-token predictor layers, 55 nodes, and 60 tensor edges. The light-mode page colormap keeps IO and state tensor nodes on the same raw neutral gray #D1D1D1 override so the newer shared renderer does not recolor io:state to its default semantic purple."
     }
   ],
   "useWhen": [
@@ -116,7 +129,9 @@
   "allowedOverrides": [
     "graph data: nodes, edges, clusters, labels, type labels, and fixed positions",
     "node dimensions when the Graphviz layout requires wider labels",
+    "glyph-only operation nodes via node.glyph and node.hideTypeLabel, for visual merge/add symbols that still retain canonical op semantics in the inspector",
     "node semantic color keys, as long as colors are resolved through buildColorMap",
+    "IO colormap entries may use { raw: '#RRGGBB' } only when the page intentionally needs an exact fill such as a true neutral gray that must bypass HSL normalization",
     "node fill colors only; light mode keeps semantic fills saturated enough for scanability, and all non-node UI colors, typography, spacing, radii, borders, and code surfaces must stay token-derived",
     "stage width, height, and viewport padding",
     "optional controller behavior through renderController: evidenceMap, edge tags, external focus/phase linkage, hover rendering, selected/related classes, and pan/zoom fit options",

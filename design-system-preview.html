@@ -1742,32 +1742,52 @@
     }
 
     #pattern-previews .preview-embed-frame[data-pattern-preview='swimlane-task'] {
-      height: 220px;
+      height: 220px !important;
     }
 
     #pattern-previews .preview-embed-frame[data-pattern-preview='memory-architecture'] {
-      height: 720px;
+      height: 720px !important;
+    }
+
+    #pattern-previews .preview-embed-frame[data-pattern-preview='hardware-architecture-viewport'] {
+      height: 960px !important;
+    }
+
+    #pattern-previews .preview-embed-frame[data-pattern-preview='aic-core-object'] {
+      height: 780px !important;
+    }
+
+    #pattern-previews .preview-embed-frame[data-pattern-preview='aiv-core-object'] {
+      height: 420px !important;
     }
 
     #pattern-previews .preview-embed-frame[data-pattern-preview='pass-ir-graph-node'] {
-      height: 720px;
+      height: 720px !important;
+    }
+
+    #pattern-previews .preview-embed-frame[data-pattern-preview='training-metrics-chart'] {
+      height: 640px !important;
+    }
+
+    #pattern-previews .preview-embed-frame[data-pattern-preview='workbench-shell'] {
+      height: 900px !important;
     }
 
     #pattern-previews .preview-embed-frame[data-pattern-preview='ide-frame'] {
-      height: 1680px;
+      height: 1680px !important;
       pointer-events: none;
     }
 
     #pattern-previews .preview-embed-frame[data-pattern-preview='floating-playback-control'] {
-      height: 320px;
+      height: 320px !important;
     }
 
     #pattern-previews .preview-embed-frame[data-pattern-preview='model-graphviz'] {
-      height: 1180px;
+      height: 1180px !important;
     }
 
     #pattern-previews .preview-embed-frame[data-pattern-preview='model-training-graphviz'] {
-      height: 860px;
+      height: 860px !important;
     }
 
     @media (max-width: 1040px) {
@@ -1947,13 +1967,16 @@
               <tr><td>Stable entry</td><td>Every pattern must expose a stable consumer entry. Static visual primitives use documented CSS classes; DOM/SVG/canvas generation, drag behavior, zoom, routing, persistence, or synchronized state must go through a <code>window.Pto*Pattern</code> or <code>window.Pto*</code> helper. Business pages must not copy generated DOM or restyle internal pattern classes.</td></tr>
               <tr><td><code>swimlane-task-bar</code></td><td>Use <code>patterns/swimlane-task/pattern.js</code> and call <code>window.PtoSwimlaneTaskPattern.drawTaskBar</code>, <code>createTaskColormap</code>, and <code>initHoverTooltip</code>. The canonical task bar is canvas-rendered, sourced from <code>pypto-swimlane-perf-tool/js/swimlane.js</code>, and the hover tip mirrors the PMU swimlane <code>.sl-tooltip</code> interaction. Do not rebuild it with DOM/CSS or rewrite segment math, colormap selection, or hover tip behavior locally.</td></tr>
               <tr><td><code>memory-architecture-layout</code></td><td>Use <code>patterns/memory-architecture/pattern.js</code>. Call <code>window.PtoMemoryArchitecturePattern.renderArchitecture</code> to build the stage, <code>createRouteOverlay</code> for MTE routes, <code>attachHoverInteractions</code> for hardware tips, and <code>attachPathFocusInteractions</code> or <code>setPathFocus</code> / <code>clearPathFocus</code> for <code>ascend-hardware-map-v3</code>-style flow-step hover. Extend preset data for 910B/950; do not copy raw <code>mem_viewer</code> HTML, redraw route geometry locally, reimplement <code>is-path-focused</code> route glow, or change route <code>stroke-width</code> for hover/playback focus.</td></tr>
+              <tr><td><code>hardware-architecture-viewport</code></td><td>Use <code>patterns/hardware-architecture-viewport/pattern.css</code> and <code>pattern.js</code>, then call <code>window.PtoHardwareArchitectureViewport.mount</code> for architecture-map host controls, detail visibility, zoom readout, iframe readiness, size sync, and the standard hardware postMessage protocol. Do not replace the shared dotted viewport, title toolbar, zoom cluster, or standard <code>hardware-ready</code> / <code>hardware-size</code> / <code>hardware-focus</code> messages with page-local variants.</td></tr>
               <tr><td><code>aic-core-object</code></td><td>Use <code>patterns/aic-core-object/pattern.js</code> and call <code>window.PtoAicCorePattern.render</code>. The shell is config-driven from the design draft; extend the preset data for 950B instead of cloning the generated DOM or restyling the chrome locally.</td></tr>
-              <tr><td><code>aiv-core-object</code></td><td>Use <code>patterns/aiv-core-object/pattern.js</code> and call <code>window.PtoAivCorePattern.render</code>. The shell is config-driven from the approved AIV draft; extend the preset data for later chip variants instead of copying the generated DOM or changing card geometry locally.</td></tr>
+              <tr><td><code>aiv-core-object</code></td><td>Use <code>patterns/aiv-core-object/pattern.js</code> and call <code>window.PtoAivCorePattern.render</code> with <code>ascend910b</code> or <code>ascend950b</code>. The 910B preset is the simplified Scalar + UB + Vector object; the 950B preset keeps DCache, ICache, ND-DMA Cache, SIMT, SIMD, and Vector topology. Extend preset data instead of copying generated DOM or changing card geometry locally.</td></tr>
+              <tr><td><code>pass-ir-graph-node</code></td><td>Use <code>patterns/pass-ir-graph-node/pattern.js</code> and build cards through <code>window.PtoPassIrGraphNodePattern</code>. The shared contract owns full/compact op, tensor, incast/outcast, selected, and JS-generated group cards. Do not rewrite node chrome or group shell geometry in page-local CSS/HTML.</td></tr>
               <tr><td><code>workbench-shell</code></td><td>Resize kernel only. Use <code>patterns/workbench-shell/pattern.css</code> and <code>patterns/workbench-shell/pattern.js</code>, then call <code>window.PtoWorkbenchShell.initResizablePanes</code>, <code>createSplitGutter</code>, or <code>initNestedResizablePanes</code> for horizontal / vertical / nested splits. Do not put page chrome, pane fills, topbars, titles, canvas controls, or IDE typography into this pattern.</td></tr>
               <tr><td><code>ide-frame</code></td><td>IDE framework shell. Use <code>patterns/ide-frame/pattern.css</code>, <code>patterns/ide-frame/pattern.js</code>, <code>patterns/floating-playback-control/pattern.css</code>, <code>patterns/floating-playback-control/pattern.js</code>, and optional <code>patterns/ide-frame/vscode.css</code>. Set <code>data-host="standalone"</code> or <code>data-host="vscode-webview"</code>. It owns IDE chrome, pane headers, pane-local preview tabs, generic slots, floating playback mounting, split initialization, and the standalone IDE skin: 100% multi-point gradient/aura background, 80% translucent blurred pane fill, pane header fill, pane shadow, and transparent top chrome. It must not ship business sample data, must not recreate playback chrome, must not locally replace the shared IDE skin, and must not override <code>.pto-workbench-shell__*</code> internals.</td></tr>
               <tr><td><code>floating-playback-control</code></td><td>Use <code>patterns/floating-playback-control/pattern.css</code> and <code>patterns/floating-playback-control/pattern.js</code>. Pages should use <code>.pto-floating-playback*</code> classes or call <code>window.PtoFloatingPlaybackControl.createControl</code>, then call <code>init</code> and <code>initScrubberHover</code>. Business pages own playback data and button handlers, but must not copy floating-shell chrome, collapse synchronization, or scrubber hover behavior locally.</td></tr>
-              <tr><td><code>model-graphviz</code></td><td>Use <code>patterns/model-graphviz/pattern.html</code> for parity preview; it iframes the real DeepSeek V3.2 Graphviz page directly. For new lightweight examples, use <code>patterns/model-graphviz/pattern.js</code> and call <code>window.PtoModelGraphvizPattern.render</code>. The contract preserves the DeepSeek V3.2 rules: default depth-2 folding, full-pill module/op nodes, rounded-rect tensor nodes for Input/Output/MTP/Constant/Parameter/Tensor, graph stage, graph edges, semantic-first colormap defaults for common op roles with unknown keys expanded through the shared palette, stronger light-mode node-fill opacity, 10% white expanded-cluster fill for every container (including repeated layer templates), <code>--radius-xl</code> (16px) cluster corners, vertically centered node label+type stacks, strict semantic module hierarchy, explicit <code>sem:*</code> op colors before parent fallback, folded representative edge dedupe, stable expand/collapse viewport anchoring, top-right corner fold controls, right-inset expand controls, no graph shadows, and no-border clicked-operator preview cards. New model graph pages additionally derive cluster boxes from their visible-child bounding boxes (so collapse reflows and shrinks the parent), lay the decoder chain out as a single top-to-bottom column (Gate/Up the only parallel pair), use transform-based cursor-anchored pan/zoom, show a single white selection stroke with no browser focus ring, and place the repeat-count badge at the cluster top-left under the title; <code>qwen7b_modelviz.html</code> is the reference implementation. Node fill colors are the only data-viz color exception; all other UI styling must remain token-derived. Do not render tensor nodes as ellipses or full pills, drift fold icons away from the cluster top-right corner anchor, use colored expanded-cluster fills, add graph shadows or operator-card borders, hard-code non-node UI styles, recenter/refit the whole graph after expand/collapse, or duplicate an expanded parent as a standalone node.</td></tr>
+              <tr><td><code>model-graphviz</code></td><td>Use <code>patterns/model-graphviz/pattern.html</code> for parity preview; it iframes the real DeepSeek V3.2 Graphviz page directly. Bundled source/config schema assets include DeepSeek V3.2, Qwen-7B, Gemma, and <code>openpangu_2_0_flash_modelviz.html</code>. For new lightweight examples, use <code>patterns/model-graphviz/pattern.js</code> and call <code>window.PtoModelGraphvizPattern.render</code>. The contract preserves the DeepSeek V3.2 rules: default depth-2 folding, full-pill module/op nodes, rounded-rect tensor nodes for Input/Output/MTP/Constant/Parameter/Tensor, graph stage, graph edges, semantic-first colormap defaults for common op roles with unknown keys expanded through the shared palette, stronger light-mode node-fill opacity, 10% white expanded-cluster fill for every container (including repeated layer templates), <code>--radius-xl</code> (16px) cluster corners, vertically centered node label+type stacks, strict semantic module hierarchy, explicit <code>sem:*</code> op colors before parent fallback, folded representative edge dedupe, stable expand/collapse viewport anchoring, top-right corner fold controls, right-inset expand controls, no graph shadows, and no-border clicked-operator preview cards. New model graph pages additionally derive cluster boxes from their visible-child bounding boxes (so collapse reflows and shrinks the parent), lay the decoder chain out as a single top-to-bottom column (Gate/Up the only parallel pair), use transform-based cursor-anchored pan/zoom, show a single white selection stroke with no browser focus ring, and place the repeat-count badge at the cluster top-left under the title; <code>qwen7b_modelviz.html</code> is the reference implementation. Node fill colors are the only data-viz color exception; all other UI styling must remain token-derived. Do not render tensor nodes as ellipses or full pills, drift fold icons away from the cluster top-right corner anchor, use colored expanded-cluster fills, add graph shadows or operator-card borders, hard-code non-node UI styles, recenter/refit the whole graph after expand/collapse, or duplicate an expanded parent as a standalone node.</td></tr>
               <tr><td><code>model-training-graphviz</code></td><td>Use <code>patterns/model-training-graphviz/pattern.js</code> after loading <code>model-graphviz</code>. Call <code>window.PtoModelTrainingGraphvizPattern.render</code> with graph, edge tags, and <code>trainingEvidence</code>; use <code>controller.setPhase({ nodeId, relatedNodeIds })</code> for training-step linkage. It owns hover evidence panels, edge type tags, selected/related emphasis, drag pan, and Command-wheel zoom. Do not iframe a second page shell, recenter the graph when phases advance, dim non-selected operators, create native title tooltips, draw source-file evidence columns inside the graph, or use saturated light-mode selection borders.</td></tr>
+              <tr><td><code>training-metrics-chart</code></td><td>Use <code>patterns/training-metrics-chart/pattern.css</code> and <code>pattern.js</code>, then call <code>window.PtoTrainingMetricsChart.render</code> for SVG metric series, dual axis, anomaly spikes, interest-window brushing, and step cursors. Series colors must come from viz highlight ramps; anomaly uses <code>--danger</code> and brush uses <code>--primary</code>. Do not rebuild line, axis, brush, or cursor geometry locally.</td></tr>
               <tr><td>Preview rule</td><td>Preview pages may wrap a pattern for layout, but must not redefine the pattern's internal class styles.</td></tr>
             </table>
           </div>
@@ -2251,7 +2274,7 @@
           </div>
         </article>
 
-        <article class="preview-card preview-card-full-row">
+        <article class="preview-card preview-card-full-row" hidden data-preview-hidden="covered-by-hardware-architecture-viewport">
           <div class="preview-card-head">
             <h3 class="preview-card-title">910B / 950 存储架构 Pattern</h3>
             <div class="preview-card-class">全画布对象：GM / L2 / AIC / AIV / UB / L0C；iframe graph-only，默认 60% 缩放，支持拖拽和 Command-wheel 缩放</div>
@@ -2268,6 +2291,69 @@
             <span class="token-badge">pattern id: memory-architecture-layout</span>
             <span class="token-badge">source: patterns/memory-architecture/pattern.js</span>
             <span class="token-badge">contract: shared presets + route overlay + hardware tips + path focus hover + graph-only pan/zoom viewport</span>
+            <span class="state-badge">Pattern</span>
+          </div>
+        </article>
+
+        <article class="preview-card preview-card-full-row">
+          <div class="preview-card-head">
+            <h3 class="preview-card-title">硬件架构视口 Pattern</h3>
+            <div class="preview-card-class">architecture-map 宿主控件 + 真实 910B/950B 架构图：架构切换 / detail / zoom / pan</div>
+          </div>
+          <div class="preview-stage preview-stack">
+            <div class="preview-inline">
+              <a class="btn btn-ghost" href="./patterns/hardware-architecture-viewport/pattern.html?arch=ascend910b&amp;v=stable-theme-toggle-13">查看完整示例</a>
+            </div>
+            <div class="preview-embed">
+              <iframe class="preview-embed-frame" data-pattern-preview="hardware-architecture-viewport" data-src="./patterns/hardware-architecture-viewport/pattern.html?embed=1&amp;arch=ascend910b&amp;v=stable-theme-toggle-13" src="about:blank" title="Ascend 910B Hardware Architecture Viewport Pattern Preview" loading="lazy"></iframe>
+            </div>
+          </div>
+          <div class="preview-meta">
+            <span class="token-badge">pattern id: hardware-architecture-viewport</span>
+            <span class="token-badge">source: patterns/hardware-architecture-viewport/pattern.js</span>
+            <span class="token-badge">contract: viewport toolbar + 910B/950B switch + memory architecture renderer</span>
+            <span class="state-badge">Pattern</span>
+          </div>
+        </article>
+
+        <article class="preview-card preview-card-full-row">
+          <div class="preview-card-head">
+            <h3 class="preview-card-title">AIC Core Object Pattern</h3>
+            <div class="preview-card-class">AIC 内部对象：L1 / micro-buffer stack / Cube / L0C，配置驱动 shell</div>
+          </div>
+          <div class="preview-stage preview-stack">
+            <div class="preview-inline">
+              <a class="btn btn-ghost" href="./patterns/aic-core-object/pattern.html">查看完整示例</a>
+            </div>
+            <div class="preview-embed">
+              <iframe class="preview-embed-frame" data-pattern-preview="aic-core-object" data-src="./patterns/aic-core-object/pattern.html?embed=1" src="about:blank" title="AIC Core Object Pattern Preview" loading="lazy"></iframe>
+            </div>
+          </div>
+          <div class="preview-meta">
+            <span class="token-badge">pattern id: aic-core-object</span>
+            <span class="token-badge">source: patterns/aic-core-object/pattern.js</span>
+            <span class="token-badge">contract: config-driven DOM + JS grid generator</span>
+            <span class="state-badge">Pattern</span>
+          </div>
+        </article>
+
+        <article class="preview-card preview-card-full-row">
+          <div class="preview-card-head">
+            <h3 class="preview-card-title">AIV Core Object Pattern</h3>
+            <div class="preview-card-class">AIV 内部对象：DCache / ICache / ND-DMA Cache / UB / SIMT / SIMD / Vector routes</div>
+          </div>
+          <div class="preview-stage preview-stack">
+            <div class="preview-inline">
+              <a class="btn btn-ghost" href="./patterns/aiv-core-object/pattern.html?v=aiv-variants-v1">查看完整示例</a>
+            </div>
+            <div class="preview-embed">
+              <iframe class="preview-embed-frame" data-pattern-preview="aiv-core-object" data-src="./patterns/aiv-core-object/pattern.html?embed=1&amp;v=aiv-variants-v1" src="about:blank" title="AIV Core Object Pattern Preview" loading="lazy"></iframe>
+            </div>
+          </div>
+          <div class="preview-meta">
+            <span class="token-badge">pattern id: aiv-core-object</span>
+            <span class="token-badge">source: patterns/aiv-core-object/pattern.js</span>
+            <span class="token-badge">contract: config-driven DOM + JS grid + SVG routes</span>
             <span class="state-badge">Pattern</span>
           </div>
         </article>
@@ -2293,7 +2379,28 @@
           </div>
         </article>
 
-        <article class="preview-card preview-card-full-row">
+        <article class="preview-card preview-card-full-row" hidden data-preview-hidden="low-level-kernel">
+          <div class="preview-card-head">
+            <h3 class="preview-card-title">Workbench Split Kernel Pattern</h3>
+            <div class="preview-card-class">低层 split / gutter / resize kernel：水平、垂直和嵌套 panes</div>
+          </div>
+          <div class="preview-stage preview-stack">
+            <div class="preview-inline">
+              <a class="btn btn-ghost" href="./patterns/workbench-shell/pattern.html">查看完整示例</a>
+            </div>
+            <div class="preview-embed">
+              <iframe class="preview-embed-frame" data-pattern-preview="workbench-shell" data-src="./patterns/workbench-shell/pattern.html?embed=1" src="about:blank" title="Workbench Split Kernel Pattern Preview" loading="lazy"></iframe>
+            </div>
+          </div>
+          <div class="preview-meta">
+            <span class="token-badge">pattern id: workbench-shell</span>
+            <span class="token-badge">source: patterns/workbench-shell/pattern.js</span>
+            <span class="token-badge">contract: resize kernel + split gutters + persistence + destroy lifecycle</span>
+            <span class="state-badge">Pattern</span>
+          </div>
+        </article>
+
+        <article class="preview-card preview-card-full-row" hidden data-preview-hidden="covered-by-workbench-shell-preview">
           <div class="preview-card-head">
             <h3 class="preview-card-title">PTO IDE 框架 Pattern</h3>
             <div class="preview-card-class">框架壳：独立宿主预览 + VS Code webview 适配契约 + 无内容插槽</div>
@@ -2305,6 +2412,12 @@
             <div class="preview-embed">
               <iframe class="preview-embed-frame" data-pattern-preview="ide-frame" data-src="./patterns/ide-frame/pattern.html?embed=1&amp;v=ide-frame-v7" src="about:blank" title="PTO IDE Frame Pattern Preview" loading="lazy"></iframe>
             </div>
+          </div>
+          <div class="preview-meta">
+            <span class="token-badge">pattern id: ide-frame</span>
+            <span class="token-badge">source: patterns/ide-frame/pattern.js</span>
+            <span class="token-badge">contract: IDE chrome + slots + shared split + floating playback mount</span>
+            <span class="state-badge">Pattern</span>
           </div>
         </article>
 
@@ -2332,14 +2445,14 @@
         <article class="preview-card preview-card-full-row">
           <div class="preview-card-head">
             <h3 class="preview-card-title">Model Graphviz Pattern</h3>
-            <div class="preview-card-class">torchvista graphviz：DeepSeek V3.2 模型图 SVG 渲染样式</div>
+            <div class="preview-card-class">torchvista graphviz：DeepSeek / Qwen / Gemma / openPangu 模型图 SVG 渲染样式</div>
           </div>
           <div class="preview-stage preview-stack">
             <div class="preview-inline">
               <a class="btn btn-ghost" href="./patterns/model-graphviz/pattern.html">查看完整示例</a>
             </div>
             <div class="preview-embed">
-              <iframe class="preview-embed-frame" data-pattern-preview="model-graphviz" data-src="./patterns/model-graphviz/pattern.html?embed=1" src="about:blank" title="Model Graphviz Pattern Preview" loading="lazy"></iframe>
+              <iframe class="preview-embed-frame" data-pattern-preview="model-graphviz" data-src="./patterns/model-graphviz/pattern.html?embed=1&amp;v=cmd-wheel-v1" src="about:blank" title="Model Graphviz Pattern Preview" loading="lazy"></iframe>
             </div>
           </div>
           <div class="preview-meta">
@@ -2360,7 +2473,7 @@
               <a class="btn btn-ghost" href="./patterns/model-training-graphviz/pattern.html">查看完整示例</a>
             </div>
             <div class="preview-embed">
-              <iframe class="preview-embed-frame" data-pattern-preview="model-training-graphviz" data-src="./patterns/model-training-graphviz/pattern.html?embed=1" src="about:blank" title="Model Training Graphviz Pattern Preview" loading="lazy"></iframe>
+              <iframe class="preview-embed-frame" data-pattern-preview="model-training-graphviz" data-src="./patterns/model-training-graphviz/pattern.html?embed=1&amp;v=cmd-wheel-v1" src="about:blank" title="Model Training Graphviz Pattern Preview" loading="lazy"></iframe>
             </div>
           </div>
           <div class="preview-meta">
@@ -2368,6 +2481,27 @@
             <span class="token-badge">source: patterns/model-training-graphviz/pattern.js</span>
             <span class="token-badge">example: Training Run Twin Qwen7B</span>
             <span class="token-badge">contract: base model graph + training overlay</span>
+            <span class="state-badge">Pattern</span>
+          </div>
+        </article>
+
+        <article class="preview-card preview-card-full-row">
+          <div class="preview-card-head">
+            <h3 class="preview-card-title">Training Metrics Chart Pattern</h3>
+            <div class="preview-card-class">训练指标 SVG：multi-series / dual axis / anomaly / brush / step cursor</div>
+          </div>
+          <div class="preview-stage preview-stack">
+            <div class="preview-inline">
+              <a class="btn btn-ghost" href="./patterns/training-metrics-chart/pattern.html">查看完整示例</a>
+            </div>
+            <div class="preview-embed">
+              <iframe class="preview-embed-frame" data-pattern-preview="training-metrics-chart" data-src="./patterns/training-metrics-chart/pattern.html?embed=1&amp;v=theme-sync-v1" src="about:blank" title="Training Metrics Chart Pattern Preview" loading="lazy"></iframe>
+            </div>
+          </div>
+          <div class="preview-meta">
+            <span class="token-badge">pattern id: training-metrics-chart</span>
+            <span class="token-badge">source: patterns/training-metrics-chart/pattern.js</span>
+            <span class="token-badge">contract: dependency-free SVG chart + brush + cursor + anomaly highlight</span>
             <span class="state-badge">Pattern</span>
           </div>
         </article>
@@ -2953,6 +3087,20 @@
       const paletteNeutralCard = document.getElementById('paletteNeutralCard');
       const paletteHighlightGrid = document.getElementById('paletteHighlightGrid');
       const patternPreviewFrames = Array.from(document.querySelectorAll('[data-pattern-preview]'));
+      const fixedPatternPreviewIds = new Set([
+        'swimlane-task',
+        'memory-architecture',
+        'hardware-architecture-viewport',
+        'aic-core-object',
+        'aiv-core-object',
+        'pass-ir-graph-node',
+        'training-metrics-chart',
+        'workbench-shell',
+        'ide-frame',
+        'floating-playback-control',
+        'model-graphviz',
+        'model-training-graphviz',
+      ]);
       let accentScope = 'accent';
 
       const THEME_MODES = new Set(['dark', 'light', 'glass']);
@@ -3094,7 +3242,7 @@
           try {
             const iframePath = new URL(iframe.src, window.location.href).pathname;
             if (iframePath === pathname) {
-              if (iframe.dataset.patternPreview === 'memory-architecture' || iframe.dataset.patternPreview === 'model-graphviz') {
+              if (fixedPatternPreviewIds.has(iframe.dataset.patternPreview)) {
                 iframe.style.height = '';
                 return;
               }
@@ -3127,7 +3275,12 @@
       };
 
       patternPreviewFrames.forEach((iframe) => {
-        iframe.addEventListener('load', () => syncPatternPreviewTheme(iframe));
+        iframe.addEventListener('load', () => {
+          if (fixedPatternPreviewIds.has(iframe.dataset.patternPreview)) {
+            iframe.style.height = '';
+          }
+          syncPatternPreviewTheme(iframe);
+        });
       });
 
       if ('IntersectionObserver' in window) {

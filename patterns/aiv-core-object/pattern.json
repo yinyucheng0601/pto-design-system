@@ -2,7 +2,7 @@
   "id": "aiv-core-object",
   "name": "AIV Core Object",
   "type": "hybrid",
-  "description": "Design-driven AIV internal object pattern with DCache, ICache, ND-DMA Cache, a Scalar bar, a Unified Buffer card, SIMT and SIMD execution cards, and a Vector compute block. Routes follow official Ascend AIV topology notes for shared ICache, shared Vector execution, ND-DMA Cache to Unified Buffer staging, and SIMT DCache flow.",
+  "description": "Design-driven AIV internal object pattern with separate Ascend 910B and 950B presets. 910B renders only the simplified internal Scalar + UB + Vector topology; chip-level MTE/MTE3 transport routes belong to memory-architecture. 950B renders DCache, ICache, ND-DMA Cache, Scalar, UB, SIMT, SIMD, and Vector topology.",
   "source": {
     "visualContract": [
       "user-supplied AIV draft in conversation",
@@ -14,7 +14,7 @@
     "patternHtml": "patterns/aiv-core-object/pattern.html",
     "patternCss": "patterns/aiv-core-object/pattern.css",
     "renderScript": "patterns/aiv-core-object/pattern.js",
-    "defaultPreset": "aivOfficialV1"
+    "defaultPreset": "ascend950b"
   },
   "useWhen": [
     "building an AIV internal memory and vector object in PTO",
@@ -22,12 +22,12 @@
     "reusing AIV shell layout and routes without hand-copying static HTML"
   ],
   "requiredApis": [
-    "window.PtoAivCorePattern.render(container, presetOrKey)",
+    "window.PtoAivCorePattern.render(container, presetOrKey) with presetOrKey = ascend910b | ascend950b",
     "window.PtoAivCorePattern.setBufferBlocks(root, blocks)",
     "window.PtoAivCorePattern.clearBufferBlocks(root)"
   ],
   "allowedOverrides": [
-    "title, labels, capacities, and card membership",
+    "title, variant, labels, capacities, and card membership",
     "per-card frame width and height",
     "grid rows, cols, cell size, gap, and highlighted band columns",
     "runtime local buffer-block state through setBufferBlocks payloads",
@@ -39,5 +39,5 @@
     "hard-coding a one-off copy of generated DOM instead of using the shared renderer",
     "mutating generated grid cells from product pages instead of calling setBufferBlocks"
   ],
-  "agentReuseRule": "Read this JSON first. For a new page, load pattern.js and call window.PtoAivCorePattern.render with a preset or config object. Extend the preset data for future chip variants instead of cloning the generated DOM."
+  "agentReuseRule": "Read this JSON first. For a new page, load pattern.js and call window.PtoAivCorePattern.render with ascend910b or ascend950b, or pass a config object. Use ascend910b for simplified 910B AIV diagrams and ascend950b for full 950B AIV diagrams. Extend preset data for future chip variants instead of cloning the generated DOM."
 }

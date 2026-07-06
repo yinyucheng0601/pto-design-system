@@ -72,6 +72,7 @@
             --graphviz-dim-text: var(--foreground-muted);
             --graphviz-line: var(--foreground);
             --graphviz-line-soft: var(--border-strong);
+            --graphviz-node-bg: var(--graphviz-surface);
             --graphviz-node-radius: var(--radius-lg);
             --graphviz-module-radius: var(--radius-pill);
             --graphviz-parent-radius: var(--radius-xl);
@@ -108,15 +109,16 @@
             --graphviz-logo-opacity: 0.6;
         }
         :root[data-theme='light'] {
-            --graphviz-surface: color-mix(in srgb, var(--panel-shell-bg) 96%, white);
-            --graphviz-surface-soft: color-mix(in srgb, var(--surface-1) 88%, white);
+            --graphviz-surface: #F8F8F8;
+            --graphviz-surface-soft: color-mix(in srgb, #F8F8F8 88%, white);
+            --graphviz-node-bg: #F8F8F8;
             --graphviz-line: color-mix(in srgb, var(--foreground-secondary) 72%, transparent);
             --graphviz-line-soft: color-mix(in srgb, var(--border-strong) 58%, transparent);
             --graphviz-toggle-bg: color-mix(in srgb, var(--highlight-copy-blue-300) 24%, white);
             --graphviz-toggle-bg-hover: color-mix(in srgb, var(--highlight-copy-blue-300) 32%, white);
             --graphviz-toggle-border: color-mix(in srgb, var(--border-strong) 58%, transparent);
-            --graphviz-tensor-fill: color-mix(in srgb, var(--highlight-copy-blue-300) 18%, white);
-            --graphviz-tensor-stroke: color-mix(in srgb, var(--border-strong) 58%, transparent);
+            --graphviz-tensor-fill: #D1D1D1;
+            --graphviz-tensor-stroke: #B8B8B8;
             --graphviz-code-bg: color-mix(in srgb, var(--surface-1) 94%, white);
             --graphviz-popup-section-bg: color-mix(in srgb, var(--surface-1) 82%, white);
         }
@@ -128,7 +130,7 @@
         .node_8738e552-e764-4a57-839a-6321bc3ae7d3 rect {
             stroke: var(--graphviz-line-soft);
             stroke-width: 0.6px;
-            fill: var(--graphviz-surface);
+            fill: var(--graphviz-node-bg);
             filter: var(--graphviz-node-shadow);
         }
         text.node-label_8738e552-e764-4a57-839a-6321bc3ae7d3 {
@@ -1041,7 +1043,6 @@ const PTO_CORE_COLORS = [
   "#06B6D4",
   "#EC4899",
   "#A855F7",
-  "#0EA5E9",
   "#3B82F6",
   "#8B5CF6",
   "#F59E0B",
@@ -1091,8 +1092,8 @@ function ptoNormalizeColormapColor(hex) {
 }
 
 const PTO_GRAPHVIZ_THEME = document.documentElement.dataset.theme || "dark";
-const PTO_COLORMAP_SATURATION = PTO_GRAPHVIZ_THEME === "light" ? 0.32 : 0.82;
-const PTO_COLORMAP_LIGHTNESS = PTO_GRAPHVIZ_THEME === "light" ? 0.84 : 0.40;
+const PTO_COLORMAP_SATURATION = PTO_GRAPHVIZ_THEME === "light" ? 0.74 : 0.82;
+const PTO_COLORMAP_LIGHTNESS = PTO_GRAPHVIZ_THEME === "light" ? 0.60 : 0.40;
 
 function ptoExpandPalette(baseHexes, targetCount) {
   const hues = baseHexes.map(c => ptoSnapToValidHue(ptoHexToHsl(c).h));
@@ -2271,6 +2272,20 @@ function ptoBuildColorMap(keys) {
             .text("Download SVG");
     }
 
+    function allowGraphWheelZoom(event) {
+        return event.type !== "wheel" || event.metaKey || event.ctrlKey;
+    }
+
+    function forwardPlainWheelToParent(event) {
+        if (event.metaKey || event.ctrlKey || window.parent === window) return;
+        event.preventDefault();
+        window.parent.postMessage({
+            type: "pto-pattern-preview-wheel",
+            deltaX: event.deltaX || 0,
+            deltaY: event.deltaY || 0,
+        }, "*");
+    }
+
     function createGraph(graphvizData) {
         const svg = d3.select("#graph_8738e552-e764-4a57-839a-6321bc3ae7d3")
         .append("svg")
@@ -2282,13 +2297,16 @@ function ptoBuildColorMap(keys) {
         const inner = svg.append("g");
 
         // Add zoom behavior
-        const zoom = d3.zoom().on("zoom", function(event) {
+        const zoom = d3.zoom().filter(allowGraphWheelZoom).on("zoom", function(event) {
             removeTooltip();
             inner.attr("transform", event.transform);
             closePopup();
         });
 
         svg.call(zoom);
+        svg.on("wheel.ptoParentScroll", function(event) {
+            forwardPlainWheelToParent(event);
+        });
 
         // Define arrowhead marker
         svg.append("defs").append("marker")
@@ -2338,7 +2356,7 @@ function ptoBuildColorMap(keys) {
             .attr("width", clusterWidth)
             .attr("height", clusterHeight)
             .attr("fill-opacity", isRepeat ? 0.12 : 0.10)
-            .attr("fill", isRepeat ? clusterColor : "#FFFFFF")
+            .attr("fill", isRepeat ? clusterColor : "var(--graphviz-node-bg)")
             .attr("stroke", isRepeat ? GRAPHVIZ_LINE_COLOR : GRAPHVIZ_LINE_SOFT_COLOR)
             .attr("stroke-dasharray", isRepeat ? "3 2" : null)
             .attr("stroke-width", isRepeat ? 1.2 : 1.6)
@@ -3545,12 +3563,12 @@ function ptoBuildColorMap(keys) {
         function colorForKind(kind) {
             const normalized = normalizeKind(kind);
             return {
-                module: "#2457E5",
-                op: "#1FAE8A",
-                state: "#7D56D9",
-                input: "#607080",
-                output: "#D06B28"
-            }[normalized] || "#607080";
+                module: ptoNormalizeColormapColor("#14B8A6"),
+                op: ptoNormalizeColormapColor("#06B6D4"),
+                state: ptoNormalizeColormapColor("#A855F7"),
+                input: ptoNormalizeColormapColor("#A855F7"),
+                output: ptoNormalizeColormapColor("#38BDF8")
+            }[normalized] || ptoNormalizeColormapColor("#64748B");
         }
 
         function tensorLabel(edge) {
@@ -3779,10 +3797,13 @@ function ptoBuildColorMap(keys) {
                     .attr("height", "100%")
                     .attr("viewBox", `0 0 ${layout.width} ${layout.height}`);
                 const inner = svg.append("g");
-                const zoom = d3.zoom().scaleExtent([0.18, 4]).on("zoom", (event) => {
+                const zoom = d3.zoom().scaleExtent([0.18, 4]).filter(allowGraphWheelZoom).on("zoom", (event) => {
                     inner.attr("transform", event.transform);
                 });
                 svg.call(zoom);
+                svg.on("wheel.ptoParentScroll", (event) => {
+                    forwardPlainWheelToParent(event);
+                });
 
                 inner.append("defs")
                     .append("marker")

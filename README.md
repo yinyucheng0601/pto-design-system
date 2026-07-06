@@ -37,7 +37,7 @@ design-system-share/
     ├── ide-frame/               ← PTO 典型 IDE 框架与默认皮肤：渐变背景 / 磨砂 pane / topbar / activity rail / 目录树 / 代码区 / View slot
     ├── workbench-shell/         ← 可拖拽分屏 resize kernel，只负责 split / gutter / localStorage
     ├── floating-playback-control/ ← 悬浮播放、step、scrubber 控制条
-    ├── model-graphviz/          ← TorchVista / DeepSeek V3.2 Graphviz / Qwen-7B model architecture / report overlay
+    ├── model-graphviz/          ← TorchVista / DeepSeek V3.2 Graphviz / Qwen-7B / openPangu-2.0-Flash model architecture / report overlay
     ├── memory-architecture/     ← 910B / 950 内存架构图与 route overlay
     ├── aic-core-object/         ← AIC core object 可配置结构图
     ├── aiv-core-object/         ← AIV core object 可配置结构图
@@ -54,7 +54,7 @@ design-system-share/
 | `ide-frame` | PTO IDE / 工作台 / 多视图分析页面的整体框架；默认套用 100% 强度多点渐变背景、80% 透明磨砂 pane、透明 top chrome | `patterns/ide-frame/pattern.html` |
 | `workbench-shell` | 任意需要拖拽调整大小的分屏 | `patterns/workbench-shell/pattern.js` |
 | `floating-playback-control` | step、播放、暂停、scrubber、回放控制 | `patterns/floating-playback-control/pattern.js` |
-| `model-graphviz` | TorchVista / 模型 Graphviz / Qwen-7B 架构页 / 报告 overlay | `patterns/model-graphviz/pattern.html` |
+| `model-graphviz` | TorchVista / 模型 Graphviz / Qwen-7B / openPangu-2.0-Flash 架构页 / 报告 overlay | `patterns/model-graphviz/pattern.html` |
 | `memory-architecture` | 910B / 950 内存层级、MTE route、AIC/AIV 组合图、graph-only iframe、60% 默认缩放、拖拽和 Command-wheel 缩放 | `patterns/memory-architecture/pattern.js` |
 | `aic-core-object` / `aiv-core-object` | 单独渲染 AIC / AIV 内部结构 | `patterns/aic-core-object/pattern.js` / `patterns/aiv-core-object/pattern.js` |
 | `pass-ir-graph-node` | Pass-IR 节点卡、group node、compact node | `patterns/pass-ir-graph-node/pattern.js` |
@@ -162,7 +162,7 @@ AI 应该先问清楚：
 | 可拖拽分屏 | `patterns/workbench-shell` |
 | 执行 trace / 时间线任务条 | `patterns/swimlane-task` |
 | Pass-IR graph 节点卡 | `patterns/pass-ir-graph-node` |
-| TorchVista / 模型 Graphviz / Qwen-7B 架构页 / 报告 overlay | `patterns/model-graphviz` |
+| TorchVista / 模型 Graphviz / Qwen-7B / openPangu-2.0-Flash 架构页 / 报告 overlay | `patterns/model-graphviz` |
 | AIC / AIV / 950B 内存架构图 | `patterns/memory-architecture`、`patterns/aic-core-object`、`patterns/aiv-core-object`；iframe/inspector 嵌入默认 graph-only，使用 `createZoomController` 的 60% zoom、拖拽和 Command-wheel 缩放 |
 | 底部播放和 step 控制 | `patterns/floating-playback-control` |
 

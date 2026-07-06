@@ -47,9 +47,9 @@
     </div>
 
     <style>
-        @import url("../tokens/foundation.css");
-        @import url("../tokens/semantic.css");
-        @import url("../tokens/components.css");
+        @import url("../../../tokens/foundation.css");
+        @import url("../../../tokens/semantic.css");
+        @import url("../../../tokens/components.css");
 
         :root {
             --graphviz-bg: var(--background);
@@ -1007,15 +1007,15 @@ function ptoHexToHsl(hex) {
 }
 
 const PTO_CORE_COLORS = [
-  "#34D399",
   "#14B8A6",
   "#06B6D4",
-  "#0EA5E9",
-  "#3B82F6",
-  "#6366F1",
-  "#8B5CF6",
+  "#EC4899",
   "#A855F7",
-  "#1E40AF",
+  "#3B82F6",
+  "#8B5CF6",
+  "#F59E0B",
+  "#F97316",
+  "#22D3EE",
 ];
 
 const PTO_FORBIDDEN_HUES = [
@@ -1390,7 +1390,7 @@ function ptoBuildColorMap(keys) {
             };
         }
 
-        const fallbackColor = nodeData?.node_type === "Module" || collapsedContainers.has(nodeName) ? "#14B8A6" : "#0EA5E9";
+        const fallbackColor = nodeData?.node_type === "Module" || collapsedContainers.has(nodeName) ? "#14B8A6" : "#06B6D4";
         const fill = architectureColorMap.get(colorKey) || fallbackColor;
         return {
             colorKey,
@@ -2305,7 +2305,7 @@ function ptoBuildColorMap(keys) {
             .attr("width", clusterWidth)
             .attr("height", clusterHeight)
             .attr("fill-opacity", isRepeat ? 0.12 : 0.10)
-            .attr("fill", isRepeat ? clusterColor : "#FFFFFF")
+            .attr("fill", isRepeat ? clusterColor : "var(--graphviz-surface)")
             .attr("stroke", isRepeat ? GRAPHVIZ_LINE_COLOR : GRAPHVIZ_LINE_SOFT_COLOR)
             .attr("stroke-dasharray", isRepeat ? "3 2" : null)
             .attr("stroke-width", isRepeat ? 1.2 : 1.6)
@@ -3512,12 +3512,12 @@ function ptoBuildColorMap(keys) {
         function colorForKind(kind) {
             const normalized = normalizeKind(kind);
             return {
-                module: "#2457E5",
-                op: "#1FAE8A",
-                state: "#7D56D9",
-                input: "#607080",
-                output: "#D06B28"
-            }[normalized] || "#607080";
+                module: ptoNormalizeColormapColor("#14B8A6"),
+                op: ptoNormalizeColormapColor("#06B6D4"),
+                state: ptoNormalizeColormapColor("#A855F7"),
+                input: ptoNormalizeColormapColor("#A855F7"),
+                output: ptoNormalizeColormapColor("#38BDF8")
+            }[normalized] || ptoNormalizeColormapColor("#64748B");
         }
 
         function tensorLabel(edge) {

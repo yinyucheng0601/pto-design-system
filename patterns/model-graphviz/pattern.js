@@ -7,7 +7,6 @@
     '#06B6D4',
     '#EC4899',
     '#A855F7',
-    '#0EA5E9',
     '#3B82F6',
     '#8B5CF6',
     '#F59E0B',
@@ -29,6 +28,18 @@
     'sem:moe': '#F97316',
     'sem:comm': '#22D3EE',
   };
+  const STANDARD_IO_COLORS = {
+    input: '#A855F7',
+    activation: '#14B8A6',
+    state: '#8B5CF6',
+    output: '#38BDF8',
+    parameter: '#3B82F6',
+    constant: '#64748B',
+  };
+  const STANDARD_COLORMAP = Object.freeze({
+    coreColors: Object.freeze([...CORE_COLORS]),
+    ioColors: Object.freeze({ ...STANDARD_IO_COLORS }),
+  });
   const COLORMAP_SATURATION = 0.82;
   const COLORMAP_LIGHTNESS = 0.40;
   const LIGHT_COLORMAP_SATURATION = 0.74;
@@ -449,7 +460,10 @@
         : CORE_COLORS,
       saturation,
       lightness,
-      ioColors: colormap.ioColors || {},
+      ioColors: {
+        ...STANDARD_IO_COLORS,
+        ...(colormap.ioColors || {}),
+      },
     };
   }
 
@@ -461,6 +475,19 @@
     const resolved = resolvedColormapOptions(options);
     const hsl = hexToHsl(hex);
     return hslToHex(snapToValidHue(hsl.h), resolved.saturation, resolved.lightness);
+  }
+
+  function isHexColor(value) {
+    return /^#[0-9a-f]{6}$/i.test(String(value || '').trim());
+  }
+
+  function resolveColormapColor(value, fallback, options) {
+    if (value && typeof value === 'object') {
+      const raw = String(value.raw || '').trim();
+      if (isHexColor(raw)) return raw.toUpperCase();
+      return normalizeColormapColor(value.color || fallback, options);
+    }
+    return normalizeColormapColor(value || fallback, options);
   }
 
   function expandPalette(baseHexes, targetCount, options) {
@@ -519,10 +546,12 @@
     const generatedKeys = semanticKeys.filter((key) => !SEMANTIC_COLOR_DEFAULTS[key]);
     const colors = expandPalette(resolved.coreColors, Math.max(semanticKeys.length, resolved.coreColors.length), resolved);
     const map = new Map();
-    map.set('io:input', normalizeColormapColor(resolved.ioColors.input || '#A855F7', resolved));
-    map.set('io:output', normalizeColormapColor(resolved.ioColors.output || '#38BDF8', resolved));
-    map.set('io:constant', normalizeColormapColor(resolved.ioColors.constant || '#64748B', resolved));
-    map.set('io:parameter', normalizeColormapColor(resolved.ioColors.parameter || '#3B82F6', resolved));
+    map.set('io:input', resolveColormapColor(resolved.ioColors.input, '#A855F7', resolved));
+    map.set('io:activation', resolveColormapColor(resolved.ioColors.activation, '#14B8A6', resolved));
+    map.set('io:state', resolveColormapColor(resolved.ioColors.state, '#8B5CF6', resolved));
+    map.set('io:output', resolveColormapColor(resolved.ioColors.output, '#38BDF8', resolved));
+    map.set('io:constant', resolveColormapColor(resolved.ioColors.constant, '#64748B', resolved));
+    map.set('io:parameter', resolveColormapColor(resolved.ioColors.parameter, '#3B82F6', resolved));
     Object.entries(SEMANTIC_COLOR_DEFAULTS).forEach(([key, color]) => {
       if (unique.includes(key)) map.set(key, normalizeColormapColor(color, resolved));
     });
@@ -1154,11 +1183,12 @@
       }
     });
 
+    const selectableClusters = selectable && interaction.selectableClusters !== false && opts.selectableClusters !== false;
     clusterEntries.forEach(({ el, cluster }) => {
       el.setAttribute('tabindex', '0');
       el.setAttribute('role', 'button');
       el.setAttribute('aria-label', cluster.label || cluster.id);
-      if (!selectable) return;
+      if (!selectableClusters) return;
       listen(el, 'click', () => {
         if (suppressClick) {
           suppressClick = false;
@@ -1176,7 +1206,16 @@
 
     if (panZoomEnabled) {
       listen(stage, 'wheel', (event) => {
-        if (!event.ctrlKey && !event.metaKey) return;
+        if (!event.ctrlKey && !event.metaKey) {
+          if (global.parent && global.parent !== global) {
+            global.parent.postMessage({
+              type: 'pto-pattern-preview-wheel',
+              deltaX: event.deltaX || 0,
+              deltaY: event.deltaY || 0,
+            }, '*');
+          }
+          return;
+        }
         event.preventDefault();
         const rect = stage.getBoundingClientRect();
         const px = event.clientX - rect.left;
@@ -1358,6 +1397,10 @@
     buildHierarchy,
     relationForNode,
     drawEdgeTags,
+    standardColormap: {
+      coreColors: [...STANDARD_COLORMAP.coreColors],
+      ioColors: { ...STANDARD_COLORMAP.ioColors },
+    },
     reportPriorityColors: { ...REPORT_PRIORITY_COLORS },
     defaultDotLayout: { ...DEFAULT_DOT_LAYOUT },
     sourcePages: {

@@ -38,8 +38,8 @@
   --model-graphviz-toggle-bg: rgba(255, 255, 255, 0.92);
   --model-graphviz-toggle-border: rgba(0, 0, 0, 0.18);
   --model-graphviz-toggle-icon: rgba(0, 0, 0, 0.70);
-  --model-graphviz-tensor-fill: color-mix(in srgb, #f3f4f6 82%, #000000);
-  --model-graphviz-tensor-stroke: rgba(0, 0, 0, 0.18);
+  --model-graphviz-tensor-fill: #D1D1D1;
+  --model-graphviz-tensor-stroke: #B8B8B8;
   --model-training-graphviz-hover-bg: rgba(255, 255, 255, 0.98);
   --model-training-graphviz-hover-border: rgba(0, 0, 0, 0.10);
   --model-training-graphviz-hover-shadow: 0 12px 28px rgba(0, 0, 0, 0.10);
@@ -129,19 +129,16 @@
 }
 
 .pto-model-training-graphviz .pto-model-graphviz-node.is-parameter-object rect {
-  fill: var(--model-graphviz-tensor-fill);
   stroke: var(--model-graphviz-tensor-stroke);
   stroke-width: 0.8px;
 }
 
 .pto-model-training-graphviz .pto-model-graphviz-node.is-state-object rect {
-  fill: color-mix(in srgb, var(--surface-1) 88%, #ffffff);
   stroke: color-mix(in srgb, var(--foreground) 22%, transparent);
   stroke-width: 1px;
 }
 
 :root[data-theme='light'] .pto-model-training-graphviz .pto-model-graphviz-node.is-state-object rect {
-  fill: color-mix(in srgb, var(--surface-1) 92%, #ffffff);
   stroke: rgba(0, 0, 0, 0.16);
 }
 

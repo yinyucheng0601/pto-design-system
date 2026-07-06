@@ -16,6 +16,16 @@
     if (!global.PtoModelGraphvizPattern?.renderController) return null;
     const opts = options || {};
     const evidenceMap = opts.evidenceMap || graph?.trainingEvidence || {};
+    const requestedColormap = opts.colormap || {};
+    const standardColormap = global.PtoModelGraphvizPattern?.standardColormap || {};
+    const standardIoColors = standardColormap.ioColors || {
+      input: '#A855F7',
+      activation: '#14B8A6',
+      state: '#8B5CF6',
+      output: '#38BDF8',
+      parameter: '#3B82F6',
+      constant: '#64748B',
+    };
     const data = cloneGraph(graph, evidenceMap);
     const className = [
       'pto-model-training-graphviz',
@@ -28,7 +38,9 @@
       className,
       reportOverlays: false,
       colormap: {
-        coreColors: [
+        ...standardColormap,
+        ...requestedColormap,
+        coreColors: requestedColormap.coreColors || standardColormap.coreColors || [
           '#14B8A6',
           '#06B6D4',
           '#EC4899',
@@ -40,12 +52,9 @@
           '#22D3EE',
         ],
         ioColors: {
-          input: '#A855F7',
-          output: '#38BDF8',
-          parameter: '#3B82F6',
-          constant: '#64748B',
+          ...standardIoColors,
+          ...(requestedColormap.ioColors || {}),
         },
-        ...(opts.colormap || {}),
       },
       evidenceMap,
       evidenceActionLabel: opts.evidenceActionLabel || '操作含义',

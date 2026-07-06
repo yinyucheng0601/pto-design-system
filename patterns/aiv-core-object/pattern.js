@@ -7,6 +7,7 @@
     compute: '#29c7a6',
     cache: '#a4b0bd',
     control: '#ff9a54',
+    transport: '#ffb414',
   };
 
   const PRESETS = {
@@ -105,100 +106,54 @@
           }
         ]
       }
-    },
-    aivLegacyV1: {
-      id: 'aivLegacyV1',
-      name: 'AIV Core Object (910B)',
-      title: 'AIV',
-      routes: [
-        { from: 'cache:DCache', to: 'buffer:UB', color: 'cache', style: 'elbow-h', fromSide: 'right', toSide: 'left', toBias: 0.60 },
-        { from: 'cache:ICache', to: 'exec:SIMD', color: 'cache', style: 'elbow-h', fromSide: 'right', toSide: 'top', fromBias: 0.62, toBias: 0.14, dashArray: '4 3', offset: -12 },
-        { from: 'scalar:Scalar', to: 'exec:SIMD', color: 'control', style: 'elbow-h', fromSide: 'right', toSide: 'top', fromBias: 0.5, toBias: 0.5 },
-        { from: 'buffer:UB', to: 'exec:SIMD', color: 'memory', style: 'elbow-h', fromSide: 'right', toSide: 'left', fromBias: 0.64, toBias: 0.6, offset: 6 },
-        { from: 'exec:SIMD', to: 'vector:Vector', color: 'compute', style: 'horizontal', fromSide: 'right', toSide: 'left', fromBias: 0.5 }
-      ],
-      layout: {
-        kind: 'group',
-        className: 'pto-aiv-core__layout',
-        children: [
-          {
-            kind: 'group',
-            className: 'pto-aiv-core__cache-stack',
-            children: [
-              { kind: 'cache', label: 'DCache', grid: { rows: 4, cols: 12, cellSize: 12, gap: 1 } },
-              { kind: 'cache', label: 'ICache', grid: { rows: 4, cols: 12, cellSize: 12, gap: 1 } }
-            ]
-          },
-          {
-            kind: 'group',
-            className: 'pto-aiv-core__center-stack',
-            children: [
-              { kind: 'scalar', label: 'Scalar', frame: { width: 286, height: 72 } },
-              { kind: 'buffer', key: 'UB', label: 'UB', capacity: '64kb', grid: { rows: 8, cols: 19, cellSize: 12, gap: 1, band: { from: 8, to: 9 } } }
-            ]
-          },
-          {
-            kind: 'group',
-            className: 'pto-aiv-core__exec-stack',
-            children: [
-              { kind: 'exec', label: 'SIMD', chipLabel: 'SIMD', chipTone: 'compute', grid: { rows: 3, cols: 13, cellSize: 12, gap: 1, band: { from: 5, to: 6 } } }
-            ]
-          },
-          {
-            kind: 'vector',
-            label: 'Vector',
-            frame: { width: 114, height: 232 }
-          }
-        ]
-      }
-    },
-    aivLegacyV1: {
-      id: 'aivLegacyV1',
-      name: 'AIV Core Object (910B)',
-      title: 'AIV',
-      routes: [
-        { from: 'cache:DCache', to: 'buffer:UB', color: 'cache', style: 'elbow-h', fromSide: 'right', toSide: 'left', toBias: 0.60 },
-        { from: 'cache:ICache', to: 'exec:SIMD', color: 'cache', style: 'elbow-h', fromSide: 'right', toSide: 'top', fromBias: 0.62, toBias: 0.14, dashArray: '4 3', offset: -12 },
-        { from: 'scalar:Scalar', to: 'exec:SIMD', color: 'control', style: 'elbow-h', fromSide: 'right', toSide: 'top', fromBias: 0.5, toBias: 0.5 },
-        { from: 'buffer:UB', to: 'exec:SIMD', color: 'memory', style: 'elbow-h', fromSide: 'right', toSide: 'left', fromBias: 0.64, toBias: 0.6, offset: 6 },
-        { from: 'exec:SIMD', to: 'vector:Vector', color: 'compute', style: 'horizontal', fromSide: 'right', toSide: 'left', fromBias: 0.5 }
-      ],
-      layout: {
-        kind: 'group',
-        className: 'pto-aiv-core__layout',
-        children: [
-          {
-            kind: 'group',
-            className: 'pto-aiv-core__cache-stack',
-            children: [
-              { kind: 'cache', label: 'DCache', grid: { rows: 4, cols: 12, cellSize: 12, gap: 1 } },
-              { kind: 'cache', label: 'ICache', grid: { rows: 4, cols: 12, cellSize: 12, gap: 1 } }
-            ]
-          },
-          {
-            kind: 'group',
-            className: 'pto-aiv-core__center-stack',
-            children: [
-              { kind: 'scalar', label: 'Scalar', frame: { width: 286, height: 72 } },
-              { kind: 'buffer', key: 'UB', label: 'UB', capacity: '64kb', grid: { rows: 8, cols: 19, cellSize: 12, gap: 1, band: { from: 8, to: 9 } } }
-            ]
-          },
-          {
-            kind: 'group',
-            className: 'pto-aiv-core__exec-stack',
-            children: [
-              { kind: 'exec', label: 'SIMD', chipLabel: 'SIMD', chipTone: 'compute', grid: { rows: 3, cols: 13, cellSize: 12, gap: 1, band: { from: 5, to: 6 } } }
-            ]
-          },
-          {
-            kind: 'vector',
-            label: 'Vector',
-            frame: { width: 114, height: 232 }
-          }
-        ]
-      }
     }
   };
+
+  PRESETS.ascend950b = {
+    ...PRESETS.aivOfficialV1,
+    id: 'ascend950b',
+    name: 'AIV Core Object (950B)',
+    variant: 'ascend950b',
+  };
+
+  PRESETS.ascend910b = {
+    id: 'ascend910b',
+    name: 'AIV Core Object (910B)',
+    title: 'AIV',
+    variant: 'ascend910b',
+    frame: { width: 1080 },
+    routes: [
+      { from: 'scalar:Scalar', to: 'buffer:UB', color: 'transport', style: 'straight', fromSide: 'bottom', toSide: 'top', fromBias: 0.5, toBias: 0.5, strokeWidth: '2.0' },
+      { from: 'buffer:UB', to: 'scalar:Scalar', color: 'transport', style: 'straight', fromSide: 'top', toSide: 'bottom', fromBias: 0.5, toBias: 0.5, strokeWidth: '2.0' },
+      { from: 'buffer:UB', to: 'vector:Vector', color: 'transport', style: 'horizontal', fromSide: 'right', toSide: 'left', fromBias: 0.50, toBias: 0.50, strokeWidth: '2.2' },
+      { from: 'vector:Vector', to: 'buffer:UB', color: 'transport', style: 'horizontal', fromSide: 'left', toSide: 'right', fromBias: 0.50, toBias: 0.50, strokeWidth: '2.2' },
+    ],
+    layout: {
+      kind: 'group',
+      className: 'pto-aiv-core__layout pto-aiv-core__layout--910',
+      children: [
+        {
+          kind: 'group',
+          className: 'pto-aiv-core__center-stack pto-aiv-core__center-stack--910',
+          children: [
+            { kind: 'scalar', label: 'Scalar', frame: { width: 424, height: 44 } },
+            {
+              kind: 'buffer',
+              key: 'UB',
+              label: 'UB',
+              capacity: '',
+              frame: { width: 424 },
+              grid: { rows: 8, cols: 32, cellSize: 10, gap: 2 },
+            },
+          ],
+        },
+        { kind: 'vector', label: 'Vector', frame: { width: 212, height: 212 } },
+      ],
+    },
+  };
+
+  PRESETS.aivOfficialV1 = PRESETS.ascend950b;
+  PRESETS.aivLegacyV1 = PRESETS.ascend910b;
 
   function resolvePreset(presetOrKey) {
     if (typeof presetOrKey === 'string') return PRESETS[presetOrKey] || null;
@@ -222,6 +177,15 @@
 
   function attrValue(value) {
     return String(value || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  }
+
+  function classToken(value) {
+    return String(value || '')
+      .trim()
+      .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+      .replace(/[^a-zA-Z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .toLowerCase();
   }
 
   function applyFrameStyle(el, frame) {
@@ -334,6 +298,20 @@
     applyFrameStyle(card, vectorConfig.frame);
     card.appendChild(node('span', 'pto-aiv-core__vector-label', vectorConfig.label || 'Vector'));
     return card;
+  }
+
+  function buildExternalAnchor(anchorConfig) {
+    const anchor = node('span', 'pto-aiv-core__external-anchor');
+    anchor.dataset.aivNode = `external:${anchorConfig.key || anchorConfig.label || 'anchor'}`;
+    applyFrameStyle(anchor, anchorConfig.frame);
+    if (anchorConfig.label) {
+      anchor.classList.add('has-label');
+      anchor.appendChild(node('span', 'pto-aiv-core__external-pill', anchorConfig.label));
+    } else {
+      anchor.classList.add('is-invisible');
+      anchor.setAttribute('aria-hidden', 'true');
+    }
+    return anchor;
   }
 
   function buildInstructionSlot() {
@@ -515,6 +493,7 @@
     if (columnConfig.kind === 'buffer') return buildBuffer(columnConfig);
     if (columnConfig.kind === 'exec') return buildExecCard(columnConfig);
     if (columnConfig.kind === 'vector') return buildVector(columnConfig);
+    if (columnConfig.kind === 'external-anchor') return buildExternalAnchor(columnConfig);
     if (columnConfig.kind === 'instruction-slot') return buildInstructionSlot(columnConfig);
     if (columnConfig.kind === 'group') return buildGroup(columnConfig);
     return node('div', '', '');
@@ -608,6 +587,13 @@
     container.innerHTML = '';
     const stage = node('section', 'pto-aiv-core');
     stage.dataset.ptoAivCore = preset.id;
+    if (preset.variant || preset.id) {
+      stage.classList.add(`is-${classToken(preset.variant || preset.id)}`);
+    }
+    if (preset.className) {
+      preset.className.split(/\s+/).filter(Boolean).forEach((className) => stage.classList.add(className));
+    }
+    applyFrameStyle(stage, preset.frame);
 
     stage.appendChild(node('h2', 'pto-aiv-core__title', preset.title || 'AIV'));
     stage.appendChild(buildColumn(preset.layout));

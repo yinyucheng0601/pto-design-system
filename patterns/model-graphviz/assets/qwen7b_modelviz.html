@@ -58,16 +58,16 @@
     }
 
     :root[data-theme='light'] {
-      --qwen-panel-bg: color-mix(in srgb, var(--panel-shell-bg) 96%, white);
-      --qwen-panel-soft: color-mix(in srgb, var(--surface-1) 88%, white);
+      --qwen-panel-bg: #F8F8F8;
+      --qwen-panel-soft: color-mix(in srgb, #F8F8F8 88%, white);
       --qwen-selected: #111827;
       --qwen-accent: color-mix(in srgb, var(--highlight-copy-blue-300) 54%, white);
       --model-graphviz-line: color-mix(in srgb, var(--qwen-muted) 72%, transparent);
       --model-graphviz-line-soft: color-mix(in srgb, var(--qwen-border-strong) 58%, transparent);
       --model-graphviz-toggle-bg: color-mix(in srgb, var(--qwen-accent) 42%, white);
       --model-graphviz-toggle-border: color-mix(in srgb, var(--qwen-border-strong) 58%, transparent);
-      --model-graphviz-tensor-fill: color-mix(in srgb, var(--qwen-accent) 22%, white);
-      --model-graphviz-tensor-stroke: color-mix(in srgb, var(--qwen-border-strong) 58%, transparent);
+      --model-graphviz-tensor-fill: #D1D1D1;
+      --model-graphviz-tensor-stroke: #B8B8B8;
     }
 
     * {
@@ -1170,9 +1170,6 @@
         state.graph,
         {
           ariaLabel: `${state.schema.model?.name || 'Model'} architecture graph`,
-          colormap: document.documentElement.dataset.theme === 'light'
-            ? { saturation: 0.32, lightness: 0.84 }
-            : undefined,
         }
       );
       if (options.preserveZoom) {
@@ -1189,10 +1186,18 @@
 
     const graphStage = document.getElementById('graphStage');
     graphStage.addEventListener('wheel', (event) => {
-      event.preventDefault();
-      if (event.metaKey || event.ctrlKey) {
-        zoomAtPoint(event.deltaY < 0 ? 1.12 : 1 / 1.12, event.clientX, event.clientY);
+      if (!event.metaKey && !event.ctrlKey) {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: 'pto-pattern-preview-wheel',
+            deltaX: event.deltaX || 0,
+            deltaY: event.deltaY || 0,
+          }, '*');
+        }
+        return;
       }
+      event.preventDefault();
+      zoomAtPoint(event.deltaY < 0 ? 1.12 : 1 / 1.12, event.clientX, event.clientY);
     }, { passive: false });
 
     graphStage.addEventListener('pointerdown', beginPan);

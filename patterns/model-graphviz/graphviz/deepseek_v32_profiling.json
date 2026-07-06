@@ -16,7 +16,7 @@
   },
   "sources": [
     {
-      "path": "/Users/yin/pto/graphviz/deepseek_v32_report_overlay_demo.html",
+      "path": "patterns/model-graphviz/graphviz/deepseek_v32_report_overlay_demo.html",
       "constants": [
         "REPORTS",
         "REPORT_ORDER",

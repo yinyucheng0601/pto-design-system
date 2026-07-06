@@ -20,6 +20,18 @@
     ), normalized[0]);
   }
 
+  function fitZoomLevel(levels, value) {
+    const normalized = Array.isArray(levels) && levels.length ? levels : DEFAULT_ZOOM_LEVELS;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return normalized.includes(1) ? 1 : normalized[0];
+    let candidate = normalized[0];
+    for (const level of normalized) {
+      if (level <= numeric) candidate = level;
+      else break;
+    }
+    return candidate;
+  }
+
   function zoomIndex(levels, value) {
     return Math.max(0, levels.indexOf(closestZoomLevel(levels, value)));
   }
@@ -96,12 +108,22 @@
         applyScale(1, true);
         return;
       }
-      const availableWidth = Math.max(1, elements.viewport.clientWidth - (options.fitPaddingX ?? 28));
-      const availableHeight = Math.max(1, elements.viewport.clientHeight - (options.fitPaddingY ?? 76));
+      const fitPaddingX = options.fitPaddingX ?? 28;
+      const fitPaddingY = options.fitPaddingY ?? 76;
+      const availableWidth = Math.max(1, elements.viewport.clientWidth - fitPaddingX);
+      const availableHeight = Math.max(1, elements.viewport.clientHeight - fitPaddingY);
       const naturalWidth = Math.max(1, state.frameSize.width);
       const naturalHeight = Math.max(1, state.frameSize.height);
+      const rawScale = Math.min(1, availableWidth / naturalWidth, availableHeight / naturalHeight);
+      const nextScale = fitZoomLevel(levels, rawScale);
       state.fitted = true;
-      applyScale(Math.min(1, availableWidth / naturalWidth, availableHeight / naturalHeight), true);
+      if (options.centerOnFit !== false) {
+        const originX = elements.scale?.offsetLeft || 0;
+        const originY = elements.scale?.offsetTop || 0;
+        state.pan.x = (elements.viewport.clientWidth - naturalWidth * nextScale) / 2 - originX;
+        state.pan.y = (elements.viewport.clientHeight - naturalHeight * nextScale) / 2 - originY;
+      }
+      applyScale(nextScale, true);
     }
 
     function actual() {
@@ -236,7 +258,7 @@
     }
 
     function handleWheel(event) {
-      if (options.wheelZoom === false || !event.metaKey) return;
+      if (options.wheelZoom === false || (!event.metaKey && !event.ctrlKey)) return;
       const target = event.target instanceof Element ? event.target : null;
       if (target?.closest?.('button, input, textarea, select, a')) return;
       const dominantDelta = Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;

@@ -131,7 +131,7 @@ architecture、graph、map pane 在 IDE frame 内时还要检查：
 | 可拖拽 horizontal / vertical / nested panes | `patterns/workbench-shell/pattern.json` |
 | execution trace、swimlane、timeline task bars | `patterns/swimlane-task/pattern.json` |
 | Pass-IR op、tensor、incast、outcast、group node cards | `patterns/pass-ir-graph-node/pattern.json` |
-| TorchVista、model Graphviz、折叠模型架构图、report overlays | `patterns/model-graphviz/pattern.json` |
+| TorchVista、model Graphviz、Qwen-7B / openPangu-2.0-Flash 折叠模型架构图、report overlays | `patterns/model-graphviz/pattern.json` |
 | 完整 memory architecture diagrams | `patterns/memory-architecture/pattern.json` |
 | AIC / AIV 内部对象壳 | `patterns/aic-core-object/pattern.json` 或 `patterns/aiv-core-object/pattern.json` |
 | Floating playback、step、pause、scrubber、collapsed playback chrome | 先问是否需要 playback；需要时再读 `patterns/floating-playback-control/pattern.json` |

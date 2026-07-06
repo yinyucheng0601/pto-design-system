@@ -528,9 +528,9 @@
         },
       },
     },
-    ascend910b: {
-      id: 'ascend910b',
-      name: 'Ascend 910B Memory Architecture',
+    ascend910bLegacyDuplicate: {
+      id: 'ascend910bLegacyDuplicate',
+      name: 'Ascend 910B Memory Architecture (legacy duplicate)',
       rails: [
         {
           key: 'GM',
@@ -550,7 +550,7 @@
           id: 'mem950-aiv1',
           kind: 'aiv',
           title: 'AIV',
-          presetKey: 'aivLegacyV1',
+          presetKey: 'ascend910b',
         },
         {
           id: 'mem950-aic',
@@ -561,12 +561,14 @@
       ],
       routes: [
         {
-          id: 'l2-to-aiv1-dcache',
-          label: 'MTE2',
+          id: 'l2-to-aiv1-scalar',
+          label: '',
           tone: 'transport',
           from: '[data-mem950-node="rail:L2"]',
-          to: '#mem950-aiv1 [data-aiv-node="cache:DCache"]',
+          to: '#mem950-aiv1 [data-aiv-node="scalar:Scalar"]',
           fromSide: 'right',
+          fromAnchorSelector: '.pto-mem950__rail-grid',
+          fromDx: -24,
           toSide: 'left',
           toBias: 0.50,
           style: 'lane-h-target',
@@ -579,10 +581,13 @@
           from: '[data-mem950-node="rail:L2"]',
           to: '#mem950-aiv1 [data-aiv-node="buffer:UB"]',
           fromSide: 'right',
+          fromAnchorSelector: '.pto-mem950__rail-grid',
+          fromDx: -24,
           toSide: 'left',
-          toBias: 0.58,
+          toAnchorSelector: '.pto-aiv-core__grid',
+          toBias: 0.40,
           style: 'lane-h-target',
-          labelDy: 0,
+          labelDy: -7,
         },
         {
           id: 'aiv1-to-l2',
@@ -592,9 +597,12 @@
           to: '[data-mem950-node="rail:L2"]',
           fromSide: 'left',
           toSide: 'right',
-          fromBias: 0.82,
+          fromAnchorSelector: '.pto-aiv-core__grid',
+          toAnchorSelector: '.pto-mem950__rail-grid',
+          toDx: -24,
+          fromBias: 0.60,
           style: 'lane-h-source',
-          labelDy: 0,
+          labelDy: 7,
         },
         {
           id: 'l2-to-aic',
@@ -604,7 +612,7 @@
           to: '#mem950-aic [data-aic-node="buffer:L1"]',
           fromSide: 'right',
           toSide: 'left',
-          toBias: 0.58,
+          toBias: 0.24,
           style: 'lane-h-target',
           labelDy: 0,
         },
@@ -619,13 +627,15 @@
           toBias: 0.50,
           style: 'lane-h-target',
           labelDy: 0,
+          defaultHidden: true,
         },
       ],
       notes: [
         '1 AIC + 1 AIV memory-stage layout (910B)',
-        'L2/GM → DCache, L1, or UB via MTE2',
+        'AIV is simplified to Scalar + UB + Vector',
+        'L2/GM → Scalar, UB, or AIC L1 via MTE2',
         'UB → L2/GM via MTE3',
-        'No 950 direct CV lanes; SIMD-only vector exec (no SIMT)',
+        'No 950 direct CV lanes; no separate SIMT/SIMD cards',
       ],
       details: [
         {
@@ -772,9 +782,9 @@
         },
       },
     },
-    ascend910b: {
-      id: 'ascend910b',
-      name: 'Ascend 910B Memory Architecture',
+    ascend910bObsoleteDuplicate: {
+      id: 'ascend910bObsoleteDuplicate',
+      name: 'Ascend 910B Memory Architecture (obsolete duplicate)',
       rails: [
         {
           key: 'GM',
@@ -824,7 +834,7 @@
           to: '#mem950-aiv1 [data-aiv-node="buffer:UB"]',
           fromSide: 'right',
           toSide: 'left',
-          toBias: 0.58,
+          toBias: 0.50,
           style: 'lane-h-target',
           labelDy: 0,
         },
@@ -878,11 +888,11 @@
         },
         'rail:L2': {
           title: 'L2 Cache',
-          body: 'Shared cache rail feeding AIV DCache or UB and AIC DCache or L1 through MTE2 paths.',
+          body: 'Shared cache rail feeding the simplified AIV Scalar/UB path and AIC DCache or L1 through MTE2 paths.',
         },
         'core:AIV': {
           title: 'AIV',
-          body: 'Vector-side core object with DCache, ICache, Scalar, UB, SIMD, and Vector lanes (no SIMT on 910B).',
+          body: '910B vector-side core object simplified to Scalar, UB, and Vector lanes.',
         },
         'core:AIC': {
           title: 'AIC',
@@ -955,6 +965,16 @@
       },
     },
   };
+
+  if (PRESETS.ascend910bLegacyDuplicate) {
+    PRESETS.ascend910b = {
+      ...PRESETS.ascend910bLegacyDuplicate,
+      id: 'ascend910b',
+      name: 'Ascend 910B Memory Architecture',
+    };
+    delete PRESETS.ascend910bLegacyDuplicate;
+    delete PRESETS.ascend910bObsoleteDuplicate;
+  }
 
   function resolvePreset(presetOrKey) {
     if (typeof presetOrKey === 'string') return PRESETS[presetOrKey] || null;
@@ -1447,6 +1467,25 @@
     };
   }
 
+  function coreFocusForTarget(target, preset, exactSelector) {
+    const coreSlot = target?.closest?.('.pto-mem950__core-slot') || target;
+    const coreId = coreSlot?.id || '';
+    const nodeSelector = coreSlot?.classList?.contains('is-aiv') ? '[data-aiv-node]' : '[data-aic-node]';
+    const routeIds = (preset?.routes || [])
+      .filter((route) => !route.defaultHidden && (
+        String(route.from || '').includes(`#${coreId}`) ||
+        String(route.to || '').includes(`#${coreId}`)
+      ))
+      .map((route) => route.id);
+
+    return {
+      selectors: [
+        coreId ? `#${attrValue(coreId)} ${nodeSelector}` : '',
+      ].filter(Boolean),
+      routes: routeIds,
+    };
+  }
+
   function scalarFocusForCore(coreId, exactSelector) {
     if (coreId.includes('aiv')) {
       const prefix = coreId === 'mem950-aiv2' ? '#mem950-aiv2' : '#mem950-aiv1';
@@ -1481,6 +1520,10 @@
     const key = target?.dataset?.mem950Node || target?.dataset?.aicNode || target?.dataset?.aivNode || '';
     const coreId = target?.closest?.('.pto-mem950__core-slot')?.id || '';
     const exactSelector = selectorForHardwareTarget(target);
+
+    if (key.startsWith('core:')) {
+      return coreFocusForTarget(target, preset, exactSelector);
+    }
 
     if (key === 'rail:L2') {
       return {
@@ -1921,7 +1964,36 @@
     };
   }
 
+  function layoutRectInRootSpace(root, element) {
+    if (!(root instanceof HTMLElement) || !(element instanceof HTMLElement)) return null;
+
+    let left = 0;
+    let top = 0;
+    let current = element;
+    while (current && current !== root) {
+      left += current.offsetLeft || 0;
+      top += current.offsetTop || 0;
+      current = current.offsetParent;
+      if (current && current !== root && !root.contains(current)) return null;
+    }
+
+    if (current !== root) return null;
+    const width = elementLayoutSize(element, 'x', element.getBoundingClientRect().width);
+    const height = elementLayoutSize(element, 'y', element.getBoundingClientRect().height);
+    return {
+      left,
+      top,
+      width,
+      height,
+      right: left + width,
+      bottom: top + height,
+    };
+  }
+
   function rectInRootSpace(root, element, metrics = overlayMetrics(root)) {
+    const layoutRect = layoutRectInRootSpace(root, element);
+    if (layoutRect) return layoutRect;
+
     const rect = element.getBoundingClientRect();
     const left = (rect.left - metrics.rootRect.left) / metrics.scaleX;
     const top = (rect.top - metrics.rootRect.top) / metrics.scaleY;
@@ -1950,6 +2022,13 @@
     return {
       x: rect.left + rect.width / 2,
       y: rect.top + rect.height / 2,
+    };
+  }
+
+  function shiftPoint(point, dx, dy) {
+    return {
+      x: point.x + (Number.isFinite(dx) ? dx : 0),
+      y: point.y + (Number.isFinite(dy) ? dy : 0),
     };
   }
 
@@ -2146,6 +2225,8 @@
       if (destroyed) return;
       const metrics = overlayMetrics(root);
       svg.setAttribute('viewBox', `0 0 ${metrics.width} ${metrics.height}`);
+      svg.style.width = `${metrics.width}px`;
+      svg.style.height = `${metrics.height}px`;
 
       routeEls.forEach((entry) => {
         const fromBaseEl = root.querySelector(entry.route.from);
@@ -2158,8 +2239,16 @@
 
         const fromEl = endpointElement(fromBaseEl, entry.route.fromAnchorSelector);
         const toEl = endpointElement(toBaseEl, entry.route.toAnchorSelector);
-        const fromPoint = edgePoint(root, fromEl, entry.route.fromSide || 'right', entry.route.fromBias, metrics);
-        const toPoint = edgePoint(root, toEl, entry.route.toSide || 'left', entry.route.toBias, metrics);
+        const fromPoint = shiftPoint(
+          edgePoint(root, fromEl, entry.route.fromSide || 'right', entry.route.fromBias, metrics),
+          entry.route.fromDx,
+          entry.route.fromDy,
+        );
+        const toPoint = shiftPoint(
+          edgePoint(root, toEl, entry.route.toSide || 'left', entry.route.toBias, metrics),
+          entry.route.toDx,
+          entry.route.toDy,
+        );
         const geometry = routeGeometry(root, entry.route, fromPoint, toPoint, metrics);
         const tone = ROUTE_TONES[entry.route.tone] || ROUTE_TONES.transport;
 
