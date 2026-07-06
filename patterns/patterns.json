@@ -12,6 +12,11 @@
       "preview": "patterns/memory-architecture/pattern.html"
     },
     {
+      "id": "memory-reuse-viewer",
+      "path": "patterns/memory-reuse-viewer/pattern.json",
+      "preview": "patterns/memory-reuse-viewer/pattern.html"
+    },
+    {
       "id": "hardware-architecture-viewport",
       "path": "patterns/hardware-architecture-viewport/pattern.json",
       "preview": "patterns/hardware-architecture-viewport/pattern.html"

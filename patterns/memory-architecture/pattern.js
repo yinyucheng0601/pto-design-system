@@ -100,6 +100,7 @@
           to: '#mem950-aiv1 [data-aiv-node="cache:DCache"]',
           fromSide: 'right',
           toSide: 'left',
+          toAnchorSelector: '.pto-aiv-core__grid',
           toBias: 0.50,
           style: 'lane-h-target',
           labelDy: 0,
@@ -112,6 +113,7 @@
           to: '#mem950-aiv1 [data-aiv-node="cache:ND-DMA Cache"]',
           fromSide: 'right',
           toSide: 'left',
+          toAnchorSelector: '.pto-aiv-core__grid',
           toBias: 0.50,
           style: 'lane-h-target',
           labelDy: 0,
@@ -124,7 +126,10 @@
           to: '[data-mem950-node="rail:L2"]',
           fromSide: 'left',
           toSide: 'right',
+          fromAnchorSelector: '.pto-aiv-core__grid',
           fromBias: 0.82,
+          sourceLaneBelowSelector: '#mem950-aiv1 [data-aiv-node="cache:ICache"]',
+          sourceLaneOffset: 14,
           style: 'lane-h-source',
           labelDy: 0,
         },
@@ -136,6 +141,7 @@
           to: '#mem950-aiv1 [data-aiv-node="cache:ND-DMA Cache"]',
           fromSide: 'right',
           toSide: 'left',
+          toAnchorSelector: '.pto-aiv-core__grid',
           toBias: 0.48,
           style: 'lane-h-target',
           labelDy: -12,
@@ -149,7 +155,10 @@
           to: '[data-mem950-node="rail:GM"]',
           fromSide: 'left',
           toSide: 'right',
+          fromAnchorSelector: '.pto-aiv-core__grid',
           fromBias: 0.82,
+          sourceLaneBelowSelector: '#mem950-aiv1 [data-aiv-node="cache:ICache"]',
+          sourceLaneOffset: 14,
           style: 'lane-h-source',
           labelDy: 14,
           defaultHidden: true,
@@ -226,6 +235,7 @@
           fromSide: 'right',
           toSide: 'right',
           fromBias: 0.24,
+          toAnchorSelector: '.pto-aiv-core__grid',
           toBias: 0.70,
           style: 'elbow-h',
           corridorRight: 40,
@@ -239,6 +249,7 @@
           to: '#mem950-aic [data-aic-node="buffer:L1"]',
           fromSide: 'right',
           toSide: 'right',
+          fromAnchorSelector: '.pto-aiv-core__grid',
           fromBias: 0.30,
           toBias: 0.74,
           style: 'elbow-h',
@@ -264,6 +275,7 @@
           to: '#mem950-aiv2 [data-aiv-node="cache:ND-DMA Cache"]',
           fromSide: 'right',
           toSide: 'left',
+          toAnchorSelector: '.pto-aiv-core__grid',
           toBias: 0.66,
           style: 'lane-h-target',
           labelDy: 10,
@@ -276,6 +288,7 @@
           to: '#mem950-aiv2 [data-aiv-node="cache:ND-DMA Cache"]',
           fromSide: 'right',
           toSide: 'left',
+          toAnchorSelector: '.pto-aiv-core__grid',
           toBias: 0.48,
           style: 'lane-h-target',
           labelDy: -12,
@@ -289,7 +302,10 @@
           to: '[data-mem950-node="rail:GM"]',
           fromSide: 'left',
           toSide: 'right',
+          fromAnchorSelector: '.pto-aiv-core__grid',
           fromBias: 0.82,
+          sourceLaneBelowSelector: '#mem950-aiv2 [data-aiv-node="cache:ICache"]',
+          sourceLaneOffset: 14,
           style: 'lane-h-source',
           labelDy: 14,
           defaultHidden: true,
@@ -315,6 +331,7 @@
           to: '#mem950-aiv2 [data-aiv-node="cache:DCache"]',
           fromSide: 'right',
           toSide: 'left',
+          toAnchorSelector: '.pto-aiv-core__grid',
           toBias: 0.82,
           style: 'lane-h-target',
           labelDy: 10,
@@ -327,7 +344,10 @@
           to: '[data-mem950-node="rail:L2"]',
           fromSide: 'left',
           toSide: 'right',
+          fromAnchorSelector: '.pto-aiv-core__grid',
           fromBias: 0.82,
+          sourceLaneBelowSelector: '#mem950-aiv2 [data-aiv-node="cache:ICache"]',
+          sourceLaneOffset: 14,
           style: 'lane-h-source',
           labelDy: 0,
         },
@@ -1590,6 +1610,88 @@
     };
   }
 
+  function activationDetailForTarget(target, preset) {
+    const coreSlot = target?.closest?.('.pto-mem950__core-slot');
+    const key = target?.dataset?.mem950Node || target?.dataset?.aicNode || target?.dataset?.aivNode || '';
+    return {
+      node: key,
+      preset: preset?.id || '',
+      coreId: coreSlot?.id || '',
+      coreKind: coreSlot?.classList?.contains('is-aiv') ? 'aiv' : (coreSlot?.classList?.contains('is-aic') ? 'aic' : ''),
+      coreTitle: coreSlot?.dataset?.coreTitle || coreSlot?.querySelector?.('.pto-mem950__core-title')?.textContent?.trim?.() || '',
+      buffer: key.startsWith('buffer:') ? key.slice('buffer:'.length) : '',
+    };
+  }
+
+  function attachNodeActivation(container, presetOrKey, options = {}) {
+    const preset = resolvePreset(presetOrKey);
+    const root = rootFor(container);
+    if (!root || !preset) return null;
+
+    const selector = options.selector || '[data-mem950-node], [data-aic-node], [data-aiv-node]';
+    const onActivate = typeof options.onActivate === 'function' ? options.onActivate : null;
+    const targets = Array.from(root.querySelectorAll(selector));
+    const previous = new Map();
+
+    targets.forEach((target) => {
+      previous.set(target, {
+        tabindex: target.getAttribute('tabindex'),
+        role: target.getAttribute('role'),
+        ariaLabel: target.getAttribute('aria-label'),
+        title: target.getAttribute('title'),
+      });
+      target.classList.add('is-node-activatable');
+      if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '0');
+      if (!target.hasAttribute('role')) target.setAttribute('role', 'button');
+      const detail = activationDetailForTarget(target, preset);
+      const label = options.label?.(target, detail) || `Open ${detail.buffer || detail.node} details`;
+      if (!target.hasAttribute('aria-label')) target.setAttribute('aria-label', label);
+      if (!target.hasAttribute('title')) target.setAttribute('title', label);
+    });
+
+    const targetFromEvent = (event) => {
+      const target = event.target?.closest?.(selector);
+      return target && root.contains(target) ? target : null;
+    };
+
+    const activate = (event) => {
+      const target = targetFromEvent(event);
+      if (!target) return;
+      onActivate?.(target, activationDetailForTarget(target, preset), event);
+    };
+
+    const onClick = (event) => activate(event);
+    const onKeyDown = (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const target = targetFromEvent(event);
+      if (!target) return;
+      event.preventDefault();
+      activate(event);
+    };
+
+    root.addEventListener('click', onClick);
+    root.addEventListener('keydown', onKeyDown);
+
+    return {
+      targets,
+      destroy() {
+        root.removeEventListener('click', onClick);
+        root.removeEventListener('keydown', onKeyDown);
+        previous.forEach((attrs, target) => {
+          target.classList.remove('is-node-activatable');
+          if (attrs.tabindex == null) target.removeAttribute('tabindex');
+          else target.setAttribute('tabindex', attrs.tabindex);
+          if (attrs.role == null) target.removeAttribute('role');
+          else target.setAttribute('role', attrs.role);
+          if (attrs.ariaLabel == null) target.removeAttribute('aria-label');
+          else target.setAttribute('aria-label', attrs.ariaLabel);
+          if (attrs.title == null) target.removeAttribute('title');
+          else target.setAttribute('title', attrs.title);
+        });
+      },
+    };
+  }
+
   function svgNode(tagName, attrs) {
     const el = document.createElementNS(SVG_NS, tagName);
     Object.entries(attrs || {}).forEach(([key, value]) => {
@@ -1652,6 +1754,7 @@
     const slot = node('section', `pto-mem950__core-slot is-${coreConfig.kind}`);
     slot.id = coreConfig.id;
     slot.dataset.mem950Node = `core:${coreConfig.title.replace(/\s+/g, '')}`;
+    slot.dataset.coreTitle = coreConfig.title || '';
     const mount = node('div', 'pto-mem950__core-mount');
     slot.appendChild(mount);
     return { slot, mount };
@@ -1850,6 +1953,11 @@
     };
   }
 
+  function endpointElement(baseEl, anchorSelector) {
+    if (!baseEl || !anchorSelector) return baseEl;
+    return baseEl.querySelector?.(anchorSelector) || baseEl;
+  }
+
   function pointsToPath(points) {
     return points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
   }
@@ -1909,13 +2017,19 @@
     }
 
     if (route.style === 'lane-h-source') {
+      const laneY = resolveSourceLaneY(root, route, fromPoint, metrics);
       const start = { x: fromPoint.x, y: fromPoint.y };
-      const end = { x: toPoint.x, y: fromPoint.y };
+      const end = { x: toPoint.x, y: laneY };
+      const points = [start];
+      if (Math.abs(laneY - fromPoint.y) > 0.5) {
+        points.push({ x: fromPoint.x, y: laneY });
+      }
+      points.push(end);
       return {
-        points: [start, end],
+        points,
         labelPoint: {
-          x: (start.x + end.x) / 2 + (route.labelDx || 0),
-          y: start.y + (route.labelDy || 0),
+          x: (fromPoint.x + toPoint.x) / 2 + (route.labelDx || 0),
+          y: laneY + (route.labelDy || 0),
         },
       };
     }
@@ -2034,14 +2148,16 @@
       svg.setAttribute('viewBox', `0 0 ${metrics.width} ${metrics.height}`);
 
       routeEls.forEach((entry) => {
-        const fromEl = root.querySelector(entry.route.from);
-        const toEl = root.querySelector(entry.route.to);
-        if (!fromEl || !toEl) {
+        const fromBaseEl = root.querySelector(entry.route.from);
+        const toBaseEl = root.querySelector(entry.route.to);
+        if (!fromBaseEl || !toBaseEl) {
           entry.path.style.display = 'none';
           entry.labelGroup.style.display = 'none';
           return;
         }
 
+        const fromEl = endpointElement(fromBaseEl, entry.route.fromAnchorSelector);
+        const toEl = endpointElement(toBaseEl, entry.route.toAnchorSelector);
         const fromPoint = edgePoint(root, fromEl, entry.route.fromSide || 'right', entry.route.fromBias, metrics);
         const toPoint = edgePoint(root, toEl, entry.route.toSide || 'left', entry.route.toBias, metrics);
         const geometry = routeGeometry(root, entry.route, fromPoint, toPoint, metrics);
@@ -2304,6 +2420,7 @@
     createRouteOverlay,
     attachHoverInteractions,
     attachPathFocusInteractions,
+    attachNodeActivation,
     setDetailVisibility,
     setAivFolded,
     setPathFocus,

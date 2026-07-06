@@ -368,6 +368,15 @@ html[data-embed-preview='true'] .pto-pattern-memory-arch__stage {
   z-index: 2;
 }
 
+.pto-mem950 .is-node-activatable {
+  cursor: pointer;
+}
+
+.pto-mem950 .is-node-activatable:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--warning) 84%, var(--foreground));
+  outline-offset: 3px;
+}
+
 .detail-spec-list {
   display: grid;
   gap: 2px;

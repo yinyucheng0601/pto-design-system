@@ -34,6 +34,7 @@
     "window.PtoMemoryArchitecturePattern.createRouteOverlay(container, presetOrKey) returning { render, update, schedule, destroy }",
     "window.PtoMemoryArchitecturePattern.attachHoverInteractions(container, presetOrKey, options)",
     "window.PtoMemoryArchitecturePattern.attachPathFocusInteractions(container, presetOrKey, options)",
+    "window.PtoMemoryArchitecturePattern.attachNodeActivation(container, presetOrKey, { selector, label, onActivate })",
     "window.PtoMemoryArchitecturePattern.setDetailVisibility(container, visible)",
     "window.PtoMemoryArchitecturePattern.setAivFolded(container, folded)",
     "window.PtoMemoryArchitecturePattern.setPathFocus(container, presetOrKey, { selectors, routes, errorSelectors })",
