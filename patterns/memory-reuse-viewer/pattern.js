@@ -11,11 +11,111 @@
     return JSON.parse(JSON.stringify(value));
   }
 
+  function createDemoSourceFile() {
+    const lines = Array.from({ length: 96 }, () => '');
+    lines[0] = '#include "kernel_operator.h"';
+    lines[1] = 'using namespace AscendC;';
+    lines[3] = 'class MatMulAddReluMixAicKernel {';
+    lines[4] = 'public:';
+    lines[5] = '  __aicore__ inline void Init(GM_ADDR x, GM_ADDR w, GM_ADDR bias, GM_ADDR y) {';
+    lines[6] = '    xGm.SetGlobalBuffer((__gm__ half*)x);';
+    lines[7] = '    wGm.SetGlobalBuffer((__gm__ half*)w);';
+    lines[8] = '    biasGm.SetGlobalBuffer((__gm__ float*)bias);';
+    lines[9] = '    yGm.SetGlobalBuffer((__gm__ half*)y);';
+    lines[10] = '  }';
+    lines[12] = '  __aicore__ inline void Process(uint32_t tileId) {';
+    lines[13] = '    uint32_t offset = tileId * TILE_M * TILE_K;';
+    lines[14] = '    uint32_t woff = tileId * TILE_K * TILE_N;';
+    lines[16] = '    LoadL1(tileId, woff);';
+    lines[17] = '    LoadUbInputs(offset, woff);';
+    lines[18] = '    ComputeMatMul();';
+    lines[19] = '    AddBiasAndRelu(offset);';
+    lines[20] = '    StoreOutput(offset);';
+    lines[21] = '  }';
+    lines[23] = 'private:';
+    lines[24] = '  GlobalTensor<half> xGm;';
+    lines[25] = '  GlobalTensor<half> wGm;';
+    lines[26] = '  GlobalTensor<float> biasGm;';
+    lines[27] = '  GlobalTensor<half> yGm;';
+    lines[29] = '  __aicore__ inline void LoadL1(uint32_t tileId, uint32_t woff) {';
+    lines[30] = '    LocalTensor<half> wL1 = l1Buf.Get<half>();';
+    lines[31] = '    DataCopy(wL1, wGm[woff], {TILE_K, TILE_N, 0, 0});';
+    lines[32] = '    l1Buf.EnQue(wL1);';
+    lines[33] = '    LocalTensor<half> wReady = l1Buf.DeQue<half>();';
+    lines[34] = '  }';
+    lines[35] = '  __aicore__ inline void ReloadL1(uint32_t aOff) {';
+    lines[36] = '    LocalTensor<half> aL1 = l1Buf.Get<half>();';
+    lines[37] = '    DataCopy(aL1, xGm[aOff], {TILE_M, TILE_K, 0, 0});';
+    lines[38] = '    l1Buf.EnQue(aL1);';
+    lines[39] = '  }';
+    lines[40] = '  __aicore__ inline void LoadUbInputs(uint32_t offset, uint32_t woff) {';
+    lines[41] = '    LocalTensor<half> xUb = inQueueX.AllocTensor<half>();';
+    lines[42] = '    DataCopy(xUb, xGm[offset], {1, blockLen, 0, 0});';
+    lines[43] = '    inQueueX.EnQue(xUb);';
+    lines[44] = '    xUb = inQueueX.DeQue<half>();';
+    lines[45] = '    Mmad(cMatrix, xUb, wUb, mmolParams);';
+    lines[46] = '    inQueueX.FreeTensor(xUb);';
+    lines[47] = '';
+    lines[48] = '    LocalTensor<half> wUb = inQueueW.AllocTensor<half>();';
+    lines[49] = '    DataCopy(wUb, wGm[woff], {nBlk, blockLen, 0, 0});';
+    lines[50] = '    inQueueW.EnQue(wUb);';
+    lines[51] = '    wUb = inQueueW.DeQue<half>();';
+    lines[52] = '    inQueueW.FreeTensor(wUb);';
+    lines[53] = '  }';
+    lines[54] = '  __aicore__ inline void ComputeMatMul() {';
+    lines[55] = '    LocalTensor<float> cMatrix = l0cBuf.Get<float>();';
+    lines[56] = '    Mmad(cMatrix, xUb, wUb, {TILE_M, TILE_K, TILE_N, true});';
+    lines[57] = '    l0cBuf.EnQue(cMatrix);';
+    lines[58] = '  }';
+    lines[59] = '  __aicore__ inline void LoadBias() {';
+    lines[60] = '    LocalTensor<float> biasUb = biasBuf.Get<float>();';
+    lines[61] = '    DataCopy(biasUb, biasGm, n);';
+    lines[62] = '    pipe_barrier(PIPE_V);';
+    lines[63] = '  }';
+    lines[64] = '';
+    lines[65] = '  __aicore__ inline void AddBiasAndRelu(uint32_t offset) {';
+    lines[66] = '    LocalTensor<float> cUb = ubBuf.Get<float>();';
+    lines[67] = '    DataCopy(cUb, cMatrix, {TILE_M, TILE_N, 0, 0});';
+    lines[68] = '    Add(cUb, cUb, biasUb, mask);';
+    lines[69] = '    ubBuf.EnQue(cUb);';
+    lines[70] = '    LocalTensor<float> cUbReady = ubBuf.DeQue<float>();';
+    lines[71] = '';
+    lines[72] = '    LocalTensor<float> reluUb = ubBuf.Get<float>();';
+    lines[73] = '    Relu(reluUb, cUbReady);';
+    lines[74] = '    ubBuf.EnQue(reluUb);';
+    lines[75] = '  }';
+    lines[76] = '';
+    lines[77] = '  __aicore__ inline void StoreOutput(uint32_t offset) {';
+    lines[78] = '    LocalTensor<half> yUb = outQueue.AllocTensor<half>();';
+    lines[79] = '    Cast(yUb, reluUb, RoundMode::CAST_RINT, len);';
+    lines[80] = '    DataCopy(yGm[offset], yUb, {1, blockLen, 0, 0});';
+    lines[81] = '    outQueue.FreeTensor(yUb);';
+    lines[82] = '  }';
+    lines[83] = '  __aicore__ inline void LoopScale() {';
+    lines[84] = '    LocalTensor<float> scratch = ubBuf.Get<float>();';
+    lines[85] = '    for (int i = 0; i < nLoop; ++i) {';
+    lines[86] = '      Muls(scratch, yUb, scaleArr[i]);';
+    lines[87] = '    }';
+    lines[88] = '  }';
+    lines[89] = '};';
+    lines[91] = 'extern "C" __global__ __aicore__ void MatMulAddRelu_mix_aic__kernel0(GM_ADDR x, GM_ADDR w, GM_ADDR bias, GM_ADDR y) {';
+    lines[92] = '  MatMulAddReluMixAicKernel op;';
+    lines[93] = '  op.Init(x, w, bias, y);';
+    lines[94] = '  op.Process(GetBlockIdx());';
+    lines[95] = '}';
+    return {
+      path: 'matmul_add_relu.cce',
+      language: 'cpp',
+      text: lines.join('\n'),
+    };
+  }
+
   function createDemoData(options = {}) {
     const coreLabel = options.coreTitle || options.coreId || 'AIV UB';
     return {
       kernel: `${coreLabel} · MatMulAddRelu_mix_aic__kernel0`,
       ticks: 120,
+      sourceFiles: [createDemoSourceFile()],
       buffers: [
         { name: 'UB', capacity: 290816 },
         { name: 'L1', capacity: 524288 },
@@ -290,6 +390,7 @@
                 <button class="pto-memory-reuse-viewer__button" type="button" data-reuse-reset>重置视图</button>
               </div>
             </details>
+            <button class="pto-memory-reuse-viewer__button" type="button" data-reuse-open-source>打开源码</button>
             <button class="pto-memory-reuse-viewer__icon-button" type="button" data-reuse-info aria-expanded="false" aria-label="视图说明" title="视图说明">i</button>
           </div>
           <div class="pto-memory-reuse-viewer__metrics">
@@ -300,7 +401,7 @@
           </div>
           <div class="pto-memory-reuse-viewer__info-popover" data-reuse-info-popover hidden>
             <strong>视图说明</strong>
-            <p>横轴为 Buffer offset，纵轴为 kernel 指令生命周期。矩形宽度表示占用大小，高度表示 tensor 存活区间；同一地址段在不同 tick 被不同 tensor 占用时表示复用。按住 Command + 滚轮缩放图表。</p>
+            <p>横轴为当前 buffer 的地址 offset / 容量范围，矩形宽度表示 tensor 地址区间和占用大小。纵轴为 kernel 生命周期 tick，时间从上到下推进，矩形高度表示 alloc 到 free 的存活区间。红色曲线是每个 tick 的 live usage 峰值投影。按住 Command + 滚轮缩放图表。</p>
             <div class="pto-memory-reuse-viewer__legend">
               <span><i class="pto-memory-reuse-viewer__swatch" style="background:#58a6ff"></i>常驻</span>
               <span><i class="pto-memory-reuse-viewer__swatch" style="background:#3fb950"></i>临时</span>
@@ -331,6 +432,7 @@
       this.tip = this.root.querySelector('[data-reuse-tip]');
       this.bufferSelect = this.root.querySelector('[data-reuse-buffer]');
       this.optionsMenu = this.root.querySelector('[data-reuse-options]');
+      this.openSourceButton = this.root.querySelector('[data-reuse-open-source]');
       this.infoButton = this.root.querySelector('[data-reuse-info]');
       this.infoPopover = this.root.querySelector('[data-reuse-info-popover]');
       this.detailPopover = this.root.querySelector('[data-reuse-detail-popover]');
@@ -339,8 +441,40 @@
     }
 
     listen(target, type, handler, options) {
+      if (!target) return;
       target.addEventListener(type, handler, options);
       this.listeners.push(() => target.removeEventListener(type, handler, options));
+    }
+
+    cssVar(name, fallback) {
+      return getComputedStyle(this.root).getPropertyValue(name).trim() || fallback;
+    }
+
+    selectedTensor() {
+      return this.data.tensors.find((tensor) => tensor.id === this.state.selected) || null;
+    }
+
+    emit(name, detail = {}) {
+      this.container.dispatchEvent(new CustomEvent(name, {
+        detail,
+        bubbles: true,
+      }));
+    }
+
+    emitTensorSelect(tensor) {
+      this.emit('pto-memory-reuse-tensor-select', {
+        tensor,
+        buffer: this.state.buffer,
+        data: this.data,
+      });
+    }
+
+    requestSourceOpen() {
+      this.emit('pto-memory-reuse-open-source', {
+        tensor: this.selectedTensor() || this.visibleTensors()[0] || null,
+        buffer: this.state.buffer,
+        data: this.data,
+      });
     }
 
     populateControls() {
@@ -373,6 +507,7 @@
         this.draw();
       });
       this.listen(this.root.querySelector('[data-reuse-reset]'), 'click', () => this.resetView());
+      this.listen(this.openSourceButton, 'click', () => this.requestSourceOpen());
       this.listen(this.infoButton, 'click', (event) => {
         event.stopPropagation();
         this.toggleInfoPopover();
@@ -405,9 +540,12 @@
         if (this.suppressClick) return;
         const point = this.eventPoint(event);
         const tensor = this.hitTest(point.x, point.y);
-        this.state.selected = tensor ? tensor.id : null;
-        if (tensor) this.showDetailPopover(tensor, point);
-        else this.hideDetailPopover(false);
+        if (tensor) {
+          this.selectTensor(tensor.id, point);
+          return;
+        }
+        this.state.selected = null;
+        this.hideDetailPopover(false);
         this.draw();
       });
       this.listen(this.stage, 'mousedown', (event) => {
@@ -479,6 +617,24 @@
       this.detailPopover.hidden = true;
       this.detailPopover.innerHTML = '';
       if (redraw) this.draw();
+    }
+
+    selectTensor(tensorId, point = null) {
+      const tensor = this.data.tensors.find((item) => item.id === tensorId);
+      if (!tensor) return;
+      if (tensor.buffer !== this.state.buffer) {
+        this.state.buffer = tensor.buffer;
+        if (this.bufferSelect) this.bufferSelect.value = tensor.buffer;
+        this.resetView(false);
+      }
+      this.state.selected = tensor.id;
+      const rect = this.rects.find((item) => item.tensor.id === tensor.id);
+      const popPoint = point || (rect
+        ? { x: rect.x + Math.min(rect.w, 28), y: rect.y + Math.min(rect.h, 28) }
+        : { x: this.margin.left + 18, y: this.margin.top + 18 });
+      this.showDetailPopover(tensor, popPoint);
+      this.emitTensorSelect(tensor);
+      this.draw();
     }
 
     showDetailPopover(tensor, point) {
@@ -588,9 +744,9 @@
       const buffer = this.currentBuffer();
       const capacity = buffer?.capacity || 1;
       ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = getComputedStyle(this.root).getPropertyValue('--background') || '#101010';
+      ctx.fillStyle = this.cssVar('--reuse-viewer-canvas-bg', '#101010');
       ctx.fillRect(0, 0, width, height);
-      ctx.fillStyle = '#0b0d10';
+      ctx.fillStyle = this.cssVar('--reuse-viewer-plot-bg', '#0b0d10');
       ctx.fillRect(plot.x, plot.y, plot.w, plot.h);
       this.drawGrid(ctx, plot, capacity);
       this.drawTensors(ctx, plot);
@@ -602,8 +758,8 @@
     drawGrid(ctx, plot, capacity) {
       if (!this.state.showGrid) return;
       ctx.save();
-      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-      ctx.fillStyle = 'rgba(255,255,255,0.46)';
+      ctx.strokeStyle = this.cssVar('--reuse-viewer-grid', 'rgba(255,255,255,0.08)');
+      ctx.fillStyle = this.cssVar('--reuse-viewer-grid-text', 'rgba(255,255,255,0.46)');
       ctx.font = '10px sans-serif';
       const stepX = this.rulerStep(plot, capacity);
       for (let bytes = 0; bytes <= capacity; bytes += stepX) {
@@ -648,13 +804,17 @@
         this.roundRect(ctx, x + 1, y + 1, Math.max(1, w - 2), Math.max(1, h - 2), 3);
         ctx.fill();
         ctx.globalAlpha = dim ? 0.16 : 1;
-        ctx.strokeStyle = selected ? '#ffaa3b' : hovered ? '#f5f5f5' : '#0b0d10';
+        ctx.strokeStyle = selected
+          ? this.cssVar('--reuse-viewer-tensor-selected', '#ffaa3b')
+          : hovered
+            ? this.cssVar('--reuse-viewer-tensor-hover', '#f5f5f5')
+            : this.cssVar('--reuse-viewer-tensor-stroke', '#0b0d10');
         ctx.lineWidth = selected ? 2.4 : hovered ? 2 : 1;
         this.roundRect(ctx, x + 1, y + 1, Math.max(1, w - 2), Math.max(1, h - 2), 3);
         ctx.stroke();
         if (tensor.reuseOf && !dim) {
           ctx.globalAlpha = 0.9;
-          ctx.strokeStyle = '#0b0d10';
+          ctx.strokeStyle = this.cssVar('--reuse-viewer-tensor-stroke', '#0b0d10');
           ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.moveTo(x + 3, y + 4);
@@ -663,7 +823,7 @@
         }
         if (w > 50 && h > 17 && !dim) {
           ctx.globalAlpha = 1;
-          ctx.fillStyle = '#0b0d10';
+          ctx.fillStyle = this.cssVar('--reuse-viewer-tensor-label', '#0b0d10');
           ctx.font = '11px sans-serif';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'top';
@@ -683,7 +843,7 @@
     drawPeak(ctx) {
       const { usage, peak, peakTick } = this.computePeak();
       ctx.save();
-      ctx.strokeStyle = '#ff4b7b';
+      ctx.strokeStyle = this.cssVar('--reuse-viewer-peak', '#ff4b7b');
       ctx.lineWidth = 1.5;
       ctx.globalAlpha = 0.92;
       ctx.beginPath();
@@ -697,7 +857,7 @@
       const peakX = this.xOf(peak);
       const peakY = this.yOf(peakTick);
       ctx.globalAlpha = 1;
-      ctx.fillStyle = '#ff4b7b';
+      ctx.fillStyle = this.cssVar('--reuse-viewer-peak', '#ff4b7b');
       ctx.beginPath();
       ctx.arc(peakX, peakY, 4, 0, Math.PI * 2);
       ctx.fill();
@@ -710,12 +870,12 @@
 
     drawMasksAndRuler(ctx, plot, capacity, width, height) {
       ctx.save();
-      ctx.fillStyle = getComputedStyle(this.root).getPropertyValue('--background') || '#101010';
+      ctx.fillStyle = this.cssVar('--reuse-viewer-canvas-bg', '#101010');
       ctx.fillRect(0, 0, plot.x, height);
       ctx.fillRect(plot.x + plot.w, 0, width, height);
       ctx.fillRect(0, 0, width, plot.y);
       ctx.fillRect(0, plot.y + plot.h, width, height);
-      ctx.strokeStyle = 'rgba(255,255,255,0.24)';
+      ctx.strokeStyle = this.cssVar('--reuse-viewer-plot-stroke', 'rgba(255,255,255,0.24)');
       ctx.beginPath();
       ctx.moveTo(plot.x, plot.y - 0.5);
       ctx.lineTo(plot.x + plot.w, plot.y - 0.5);
@@ -725,19 +885,19 @@
       for (let bytes = 0; bytes <= capacity; bytes += step) {
         const x = this.xOf(Math.min(bytes, capacity));
         if (x < plot.x - 2 || x > plot.x + plot.w + 2) continue;
-        ctx.strokeStyle = 'rgba(255,255,255,0.38)';
+        ctx.strokeStyle = this.cssVar('--reuse-viewer-ruler', 'rgba(255,255,255,0.38)');
         ctx.beginPath();
         ctx.moveTo(x, plot.y);
         ctx.lineTo(x, plot.y - 7);
         ctx.stroke();
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
-        ctx.fillStyle = 'rgba(255,255,255,0.48)';
+        ctx.fillStyle = this.cssVar('--reuse-viewer-grid-text', 'rgba(255,255,255,0.48)');
         ctx.fillText(fmtHex(bytes), x, plot.y - 9);
-        ctx.fillStyle = 'rgba(255,255,255,0.72)';
+        ctx.fillStyle = this.cssVar('--reuse-viewer-ruler-text', 'rgba(255,255,255,0.72)');
         ctx.fillText(fmtKB(bytes), x, plot.y - 21);
       }
-      ctx.fillStyle = 'rgba(255,255,255,0.58)';
+      ctx.fillStyle = this.cssVar('--reuse-viewer-axis-text', 'rgba(255,255,255,0.58)');
       ctx.font = '11px sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText('地址 / Buffer offset ->', plot.x, plot.y - 35);
