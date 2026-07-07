@@ -547,16 +547,16 @@
       ],
       cores: [
         {
-          id: 'mem950-aiv1',
-          kind: 'aiv',
-          title: 'AIV',
-          presetKey: 'ascend910b',
-        },
-        {
           id: 'mem950-aic',
           kind: 'aic',
           title: 'AIC',
           presetKey: 'aicDraftV1',
+        },
+        {
+          id: 'mem950-aiv1',
+          kind: 'aiv',
+          title: 'AIV',
+          presetKey: 'ascend910b',
         },
       ],
       routes: [

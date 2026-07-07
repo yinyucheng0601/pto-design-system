@@ -17,7 +17,7 @@
 }
 
 :root[data-theme='light'] {
-  --pto-aic-core-bg: var(--surface-2);
+  --pto-aic-core-bg: #f8f8f8;
   --pto-aic-core-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86), 0 1px 2px rgba(0, 0, 0, 0.05);
   --pto-aic-buffer-bg: color-mix(in srgb, var(--primary) 11%, var(--surface-1));
   --pto-aic-buffer-border: color-mix(in srgb, var(--primary) 28%, var(--border-default));

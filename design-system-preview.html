@@ -1790,6 +1790,167 @@
       height: 860px !important;
     }
 
+    #model-architecture-gallery.preview-section {
+      padding: 0;
+      border-radius: 16px;
+      border: 0;
+      background: var(--preview-section-bg);
+      box-shadow: none;
+    }
+
+    .model-architecture-floor {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 18px;
+    }
+
+    .model-architecture-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .model-architecture-tabs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      overflow-x: auto;
+    }
+
+    .model-architecture-tab {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: max-content;
+      height: 32px;
+      padding: 0 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-default);
+      background: transparent;
+      color: var(--foreground-secondary);
+      font: 600 12px / 1 var(--font-sans);
+      cursor: pointer;
+    }
+
+    .model-architecture-tab:hover,
+    .model-architecture-tab:focus-visible {
+      color: var(--foreground);
+      background: var(--state-hover);
+    }
+
+    .model-architecture-tab.is-active {
+      color: var(--foreground);
+      border-color: color-mix(in srgb, var(--foreground) 36%, transparent);
+      background: color-mix(in srgb, var(--foreground) 10%, transparent);
+    }
+
+    .model-architecture-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .model-architecture-panel[hidden] {
+      display: none;
+    }
+
+    .model-architecture-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      min-height: 32px;
+    }
+
+    .model-architecture-summary-main {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .model-architecture-frame-shell {
+      width: 100%;
+      min-height: 900px;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      overflow: visible;
+    }
+
+    .model-architecture-frame {
+      display: block;
+      width: 100%;
+      height: 1040px;
+      border: 0;
+      outline: 0;
+      background: transparent;
+    }
+
+    .model-architecture-frame[data-model-frame='deepseek-v32'] {
+      height: 1120px;
+    }
+
+    .model-architecture-frame[data-model-frame='openpangu-2-0-flash'] {
+      height: 1120px;
+    }
+
+    .model-architecture-schema {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+      min-height: 520px;
+      padding: 18px 0 0;
+      border-top: 1px solid var(--preview-section-border);
+    }
+
+    .model-architecture-schema-title {
+      margin: 0;
+      color: var(--foreground);
+      font: 700 18px / 1.2 var(--font-sans);
+      letter-spacing: 0;
+    }
+
+    .model-architecture-schema-copy {
+      max-width: 780px;
+      margin: 0;
+      color: var(--foreground-secondary);
+      font: 13px / 1.6 var(--font-sans);
+    }
+
+    .model-architecture-schema-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin: 0;
+    }
+
+    .model-architecture-schema-grid div {
+      min-width: 0;
+      padding: 12px 0;
+      border-top: 1px solid var(--preview-section-border);
+    }
+
+    .model-architecture-schema-grid dt {
+      margin: 0 0 6px;
+      color: var(--foreground-muted);
+      font: 600 11px / 1 var(--font-sans);
+      text-transform: uppercase;
+    }
+
+    .model-architecture-schema-grid dd {
+      margin: 0;
+      color: var(--foreground);
+      font: 700 20px / 1.1 var(--font-sans);
+    }
+
     @media (max-width: 1040px) {
       .preview-shell {
         grid-template-columns: 1fr;
@@ -1827,6 +1988,25 @@
       .palette-ramp {
         grid-template-columns: 1fr;
       }
+
+      .model-architecture-floor {
+        padding: 14px 0;
+      }
+
+      .model-architecture-toolbar,
+      .model-architecture-summary {
+        padding-inline: 0;
+      }
+
+      .model-architecture-frame-shell {
+        min-height: 760px;
+      }
+
+      .model-architecture-frame,
+      .model-architecture-frame[data-model-frame='deepseek-v32'],
+      .model-architecture-frame[data-model-frame='openpangu-2-0-flash'] {
+        height: 820px;
+      }
     }
   </style>
 </head>
@@ -1837,6 +2017,7 @@
       <span class="toolbar-sep" aria-hidden="true"></span>
       <nav class="blocks-nav" aria-label="Primary">
         <a class="is-active" href="./design-system-preview.html">组件</a>
+        <a href="#model-architecture-gallery">模型架构</a>
         <a href="#pattern-previews">模式</a>
         <a href="./DESIGN.md">Design.md</a>
       </nav>
@@ -2032,6 +2213,7 @@
     <aside class="preview-nav" aria-label="Component categories">
       <div class="preview-nav-title">PTO UI Kit</div>
       <a class="preview-nav-link is-active" href="#overview" data-filter="featured">精选</a>
+      <a class="preview-nav-link" href="#model-architecture-gallery" data-filter="models">模型架构</a>
       <a class="preview-nav-link" href="#pattern-previews" data-filter="patterns">模式库</a>
       <a class="preview-nav-link" href="#color-palette" data-filter="foundations">基础色板</a>
       <a class="preview-nav-link" href="#buttons" data-filter="actions">操作按钮</a>
@@ -2249,6 +2431,108 @@
       </div>
     </section>
 
+    <section class="preview-section block-card" id="model-architecture-gallery" data-categories="featured patterns visualization models">
+      <h2 class="preview-section-title">模型架构</h2>
+      <div class="model-architecture-floor">
+        <div class="model-architecture-toolbar">
+          <div class="model-architecture-tabs" role="tablist" aria-label="Model architecture tabs">
+            <button class="model-architecture-tab is-active" type="button" role="tab" id="model-architecture-tab-deepseek-v32" aria-selected="true" aria-controls="model-architecture-panel-deepseek-v32" data-model-architecture-tab="deepseek-v32">DeepSeek V3.2</button>
+            <button class="model-architecture-tab" type="button" role="tab" id="model-architecture-tab-qwen7b" aria-selected="false" aria-controls="model-architecture-panel-qwen7b" data-model-architecture-tab="qwen7b">Qwen-7B</button>
+            <button class="model-architecture-tab" type="button" role="tab" id="model-architecture-tab-gemma" aria-selected="false" aria-controls="model-architecture-panel-gemma" data-model-architecture-tab="gemma">Gemma</button>
+            <button class="model-architecture-tab" type="button" role="tab" id="model-architecture-tab-openpangu-2-0-flash" aria-selected="false" aria-controls="model-architecture-panel-openpangu-2-0-flash" data-model-architecture-tab="openpangu-2-0-flash">openPangu-2.0-Flash</button>
+          </div>
+          <div class="preview-meta">
+            <span class="token-badge">pattern id: model-graphviz</span>
+            <span class="token-badge">assets: index.json</span>
+            <span class="state-badge">Rendered Pattern</span>
+          </div>
+        </div>
+
+        <article class="model-architecture-panel is-active" id="model-architecture-panel-deepseek-v32" role="tabpanel" aria-labelledby="model-architecture-tab-deepseek-v32" data-model-architecture-panel="deepseek-v32">
+          <div class="model-architecture-summary">
+            <div class="model-architecture-summary-main">
+              <span class="token-badge">nodes: 26</span>
+              <span class="token-badge">edges: 28</span>
+              <span class="token-badge">main layers: 61</span>
+              <span class="token-badge">dense 0-2 / MoE 3-60</span>
+            </div>
+            <a class="btn btn-ghost" href="./patterns/model-graphviz/assets/deepseek_v32_modelviz.html?theme=dark&amp;embed=1&amp;v=model-gallery-v1">查看完整示例</a>
+          </div>
+          <div class="model-architecture-frame-shell">
+            <iframe class="model-architecture-frame" data-pattern-preview="model-architecture-deepseek-v32" data-model-frame="deepseek-v32" data-sync-theme-param="true" data-src="./patterns/model-graphviz/assets/deepseek_v32_modelviz.html?embed=1&amp;v=model-gallery-v1" src="about:blank" title="DeepSeek V3.2 Model Architecture" loading="lazy"></iframe>
+          </div>
+        </article>
+
+        <article class="model-architecture-panel" id="model-architecture-panel-qwen7b" role="tabpanel" aria-labelledby="model-architecture-tab-qwen7b" data-model-architecture-panel="qwen7b" hidden>
+          <div class="model-architecture-summary">
+            <div class="model-architecture-summary-main">
+              <span class="token-badge">nodes: 22</span>
+              <span class="token-badge">edges: 22</span>
+              <span class="token-badge">main layers: 32</span>
+              <span class="token-badge">schema: qwen7b_model_architecture.json</span>
+            </div>
+            <a class="btn btn-ghost" href="./patterns/model-graphviz/assets/qwen7b_modelviz.html?theme=dark&amp;embed=1&amp;v=model-gallery-v1">查看完整示例</a>
+          </div>
+          <div class="model-architecture-frame-shell">
+            <iframe class="model-architecture-frame" data-pattern-preview="model-architecture-qwen7b" data-model-frame="qwen7b" data-sync-theme-param="true" data-src="./patterns/model-graphviz/assets/qwen7b_modelviz.html?embed=1&amp;v=model-gallery-v1" src="about:blank" title="Qwen-7B Model Architecture" loading="lazy"></iframe>
+          </div>
+        </article>
+
+        <article class="model-architecture-panel" id="model-architecture-panel-gemma" role="tabpanel" aria-labelledby="model-architecture-tab-gemma" data-model-architecture-panel="gemma" hidden>
+          <div class="model-architecture-summary">
+            <div class="model-architecture-summary-main">
+              <span class="token-badge">nodes: 37</span>
+              <span class="token-badge">edges: 37</span>
+              <span class="token-badge">main layers: 30</span>
+              <span class="token-badge">schema-only asset</span>
+            </div>
+            <a class="btn btn-ghost" href="./patterns/model-graphviz/assets/gemma_model_architecture.json">打开 Schema JSON</a>
+          </div>
+          <div class="model-architecture-schema" aria-label="Gemma architecture schema summary">
+            <h3 class="model-architecture-schema-title">Gemma-4-26B-A4B Text Decoder</h3>
+            <p class="model-architecture-schema-copy">Clean text-decoder source/config architecture schema with folded attention, MLP, and MoE structure. This asset currently ships as canonical JSON for renderer ingestion.</p>
+            <dl class="model-architecture-schema-grid">
+              <div>
+                <dt>Nodes</dt>
+                <dd>37</dd>
+              </div>
+              <div>
+                <dt>Tensor Edges</dt>
+                <dd>37</dd>
+              </div>
+              <div>
+                <dt>Main Layers</dt>
+                <dd>30</dd>
+              </div>
+              <div>
+                <dt>Repeats</dt>
+                <dd>4</dd>
+              </div>
+              <div>
+                <dt>Branches</dt>
+                <dd>2</dd>
+              </div>
+            </dl>
+          </div>
+        </article>
+
+        <article class="model-architecture-panel" id="model-architecture-panel-openpangu-2-0-flash" role="tabpanel" aria-labelledby="model-architecture-tab-openpangu-2-0-flash" data-model-architecture-panel="openpangu-2-0-flash" hidden>
+          <div class="model-architecture-summary">
+            <div class="model-architecture-summary-main">
+              <span class="token-badge">nodes: 55</span>
+              <span class="token-badge">edges: 60</span>
+              <span class="token-badge">main layers: 46</span>
+              <span class="token-badge">MTP: 3 layers</span>
+            </div>
+            <a class="btn btn-ghost" href="./patterns/model-graphviz/assets/openpangu_2_0_flash_modelviz.html?theme=dark&amp;v=model-gallery-v1">查看完整示例</a>
+          </div>
+          <div class="model-architecture-frame-shell">
+            <iframe class="model-architecture-frame" data-pattern-preview="model-architecture-openpangu-2-0-flash" data-model-frame="openpangu-2-0-flash" data-sync-theme-param="true" data-src="./patterns/model-graphviz/assets/openpangu_2_0_flash_modelviz.html?v=model-gallery-v1" src="about:blank" title="openPangu-2.0-Flash Model Architecture" loading="lazy"></iframe>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <section class="preview-section block-card" id="pattern-previews" data-categories="featured patterns layout visualization">
       <h2 class="preview-section-title">模式库</h2>
       <div class="preview-grid">
@@ -2302,10 +2586,10 @@
           </div>
           <div class="preview-stage preview-stack">
             <div class="preview-inline">
-              <a class="btn btn-ghost" href="./patterns/hardware-architecture-viewport/pattern.html?arch=ascend910b&amp;v=stable-theme-toggle-13">查看完整示例</a>
+              <a class="btn btn-ghost" href="./patterns/hardware-architecture-viewport/pattern.html?arch=ascend910b&amp;v=stable-theme-toggle-16">查看完整示例</a>
             </div>
             <div class="preview-embed">
-              <iframe class="preview-embed-frame" data-pattern-preview="hardware-architecture-viewport" data-src="./patterns/hardware-architecture-viewport/pattern.html?embed=1&amp;arch=ascend910b&amp;v=stable-theme-toggle-13" src="about:blank" title="Ascend 910B Hardware Architecture Viewport Pattern Preview" loading="lazy"></iframe>
+              <iframe class="preview-embed-frame" data-pattern-preview="hardware-architecture-viewport" data-src="./patterns/hardware-architecture-viewport/pattern.html?embed=1&amp;arch=ascend910b&amp;v=stable-theme-toggle-16" src="about:blank" title="Ascend 910B Hardware Architecture Viewport Pattern Preview" loading="lazy"></iframe>
             </div>
           </div>
           <div class="preview-meta">
@@ -3087,6 +3371,8 @@
       const paletteNeutralCard = document.getElementById('paletteNeutralCard');
       const paletteHighlightGrid = document.getElementById('paletteHighlightGrid');
       const patternPreviewFrames = Array.from(document.querySelectorAll('[data-pattern-preview]'));
+      const modelArchitectureTabs = Array.from(document.querySelectorAll('[data-model-architecture-tab]'));
+      const modelArchitecturePanels = Array.from(document.querySelectorAll('[data-model-architecture-panel]'));
       const fixedPatternPreviewIds = new Set([
         'swimlane-task',
         'memory-architecture',
@@ -3100,6 +3386,9 @@
         'floating-playback-control',
         'model-graphviz',
         'model-training-graphviz',
+        'model-architecture-deepseek-v32',
+        'model-architecture-qwen7b',
+        'model-architecture-openpangu-2-0-flash',
       ]);
       let accentScope = 'accent';
 
@@ -3266,12 +3555,57 @@
         }, '*');
       };
 
+      const resolvePatternPreviewSource = (iframe, source) => {
+        if (iframe?.dataset.syncThemeParam !== 'true') return source;
+        try {
+          const url = new URL(source, window.location.href);
+          url.searchParams.set('theme', root.dataset.theme || 'dark');
+          return url.href;
+        } catch (_error) {
+          return source;
+        }
+      };
+
+      const refreshPatternPreviewThemeParam = (iframe) => {
+        if (!iframe || iframe.dataset.loaded !== 'true' || iframe.dataset.syncThemeParam !== 'true') return;
+        const source = iframe.dataset.src;
+        if (!source) return;
+        const nextSource = resolvePatternPreviewSource(iframe, source);
+        if (iframe.src !== nextSource) {
+          iframe.src = nextSource;
+        }
+      };
+
       const loadPatternPreviewFrame = (iframe) => {
         if (!iframe || iframe.dataset.loaded === 'true') return;
         const source = iframe.dataset.src;
         if (!source) return;
         iframe.dataset.loaded = 'true';
-        iframe.src = source;
+        iframe.src = resolvePatternPreviewSource(iframe, source);
+      };
+
+      const selectModelArchitecture = (id) => {
+        modelArchitectureTabs.forEach((tab) => {
+          const active = tab.dataset.modelArchitectureTab === id;
+          tab.classList.toggle('is-active', active);
+          tab.setAttribute('aria-selected', String(active));
+          tab.tabIndex = active ? 0 : -1;
+        });
+        modelArchitecturePanels.forEach((panel) => {
+          const active = panel.dataset.modelArchitecturePanel === id;
+          panel.hidden = !active;
+          panel.classList.toggle('is-active', active);
+          if (!active) return;
+          panel.querySelectorAll('[data-pattern-preview]').forEach(loadPatternPreviewFrame);
+        });
+      };
+
+      const focusModelArchitectureTab = (index) => {
+        if (!modelArchitectureTabs.length) return;
+        const nextIndex = (index + modelArchitectureTabs.length) % modelArchitectureTabs.length;
+        const tab = modelArchitectureTabs[nextIndex];
+        tab.focus();
+        selectModelArchitecture(tab.dataset.modelArchitectureTab);
       };
 
       patternPreviewFrames.forEach((iframe) => {
@@ -3280,6 +3614,28 @@
             iframe.style.height = '';
           }
           syncPatternPreviewTheme(iframe);
+        });
+      });
+
+      modelArchitectureTabs.forEach((tab, index) => {
+        tab.tabIndex = tab.classList.contains('is-active') ? 0 : -1;
+        tab.addEventListener('click', () => {
+          selectModelArchitecture(tab.dataset.modelArchitectureTab);
+        });
+        tab.addEventListener('keydown', (event) => {
+          if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            focusModelArchitectureTab(index + 1);
+          } else if (event.key === 'ArrowLeft') {
+            event.preventDefault();
+            focusModelArchitectureTab(index - 1);
+          } else if (event.key === 'Home') {
+            event.preventDefault();
+            focusModelArchitectureTab(0);
+          } else if (event.key === 'End') {
+            event.preventDefault();
+            focusModelArchitectureTab(modelArchitectureTabs.length - 1);
+          }
         });
       });
 
@@ -3332,6 +3688,7 @@
           button.setAttribute('aria-pressed', String(isActive));
         });
         patternPreviewFrames.forEach(syncPatternPreviewTheme);
+        patternPreviewFrames.forEach(refreshPatternPreviewThemeParam);
       };
 
       const getInitialTheme = () => {

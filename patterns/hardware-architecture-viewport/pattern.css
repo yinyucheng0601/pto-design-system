@@ -28,6 +28,12 @@
   background-position: 0 0, 0 0, 0 0;
 }
 
+:root[data-theme='light'] .pto-hw-viewport {
+  --pto-hw-viewport-bg: #ffffff;
+  --pto-hw-viewport-dot: rgba(17, 24, 39, 0.13);
+  --pto-hw-viewport-top-glow: transparent;
+}
+
 .pto-hw-viewport__toolbar {
   box-sizing: border-box;
   height: var(--pto-hw-viewport-toolbar-height);
