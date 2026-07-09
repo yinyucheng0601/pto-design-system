@@ -28,6 +28,43 @@
     'sem:moe': '#F97316',
     'sem:comm': '#22D3EE',
   };
+  const MODEL_ARCHITECTURE_NEUTRAL = '#D1D1D1';
+  const MODEL_ARCHITECTURE_LIGHT_HSL = Object.freeze({ hue: 2, saturation: 79, lightness: 76 });
+  const MODEL_ARCHITECTURE_COLOR_KEY_ALIASES = Object.freeze({
+    'sem:embedding': 'opv:embedding',
+    'sem:norm': 'opv:norm',
+    'sem:attention': 'opv:attention',
+    'sem:position': 'opv:rope',
+    'sem:rope': 'opv:rope',
+    'sem:qknorm': 'opv:norm',
+    'sem:linear': 'opv:linear',
+    'sem:head': 'opv:linear',
+    'sem:mlp': 'opv:mlp',
+    'sem:act': 'opv:act',
+    'sem:gate': 'opv:gate',
+    'sem:moe': 'opv:moe',
+    'sem:comm': 'opv:comm',
+    'module:model': 'opv:model',
+    'module:decoder': 'opv:decoder',
+    'module:mhc': 'opv:attention',
+    'module:ffn': 'opv:mlp',
+    'module:mtp': 'opv:linear',
+  });
+  const MODEL_ARCHITECTURE_BASE_COLORS = Object.freeze({
+    'opv:act': '#8B5CF6',
+    'opv:attention': '#EC4899',
+    'opv:comm': '#22D3EE',
+    'opv:decoder': '#14B8A6',
+    'opv:embedding': '#14B8A6',
+    'opv:gate': '#F59E0B',
+    'opv:linear': '#3B82F6',
+    'opv:mlp': '#8B5CF6',
+    'opv:model': '#64748B',
+    'opv:moe': '#F97316',
+    'opv:norm': '#06B6D4',
+    'opv:op': '#14B8A6',
+    'opv:rope': '#A855F7',
+  });
   const STANDARD_IO_COLORS = {
     input: '#A855F7',
     activation: '#14B8A6',
@@ -464,6 +501,10 @@
         ...STANDARD_IO_COLORS,
         ...(colormap.ioColors || {}),
       },
+      semanticColors: {
+        ...SEMANTIC_COLOR_DEFAULTS,
+        ...(colormap.semanticColors || {}),
+      },
     };
   }
 
@@ -488,6 +529,69 @@
       return normalizeColormapColor(value.color || fallback, options);
     }
     return normalizeColormapColor(value || fallback, options);
+  }
+
+  function modelArchitectureLightColor(baseHex, lightHsl) {
+    const base = hexToHsl(baseHex);
+    const hue = base.h + (Number(lightHsl.hue) || 0) / 360;
+    const saturation = (Number(lightHsl.saturation) || MODEL_ARCHITECTURE_LIGHT_HSL.saturation) / 100;
+    const lightness = (Number(lightHsl.lightness) || MODEL_ARCHITECTURE_LIGHT_HSL.lightness) / 100;
+    return hslToHex(hue, saturation, lightness);
+  }
+
+  function normalizeModelArchitectureKey(key) {
+    const normalized = String(key || '');
+    if (!normalized || normalized.startsWith('io:')) return normalized;
+    if (MODEL_ARCHITECTURE_COLOR_KEY_ALIASES[normalized]) return MODEL_ARCHITECTURE_COLOR_KEY_ALIASES[normalized];
+    if (MODEL_ARCHITECTURE_BASE_COLORS[normalized]) return normalized;
+    return 'opv:op';
+  }
+
+  function modelArchitectureColormap(graph, options = {}) {
+    const theme = options.theme || global.document?.documentElement?.dataset?.theme || 'dark';
+    const lightHsl = {
+      ...MODEL_ARCHITECTURE_LIGHT_HSL,
+      ...(options.lightHsl || {}),
+    };
+    const semanticColors = {};
+    const allKeys = new Set([
+      ...Object.keys(SEMANTIC_COLOR_DEFAULTS),
+      ...Object.keys(MODEL_ARCHITECTURE_COLOR_KEY_ALIASES),
+      ...Object.values(MODEL_ARCHITECTURE_COLOR_KEY_ALIASES),
+      ...Object.keys(MODEL_ARCHITECTURE_BASE_COLORS),
+      ...collectColorKeys(graph || {}),
+    ]);
+
+    allKeys.forEach((sourceKey) => {
+      if (!sourceKey || String(sourceKey).startsWith('io:')) return;
+      const profileKey = normalizeModelArchitectureKey(sourceKey);
+      const baseColor = MODEL_ARCHITECTURE_BASE_COLORS[profileKey] || MODEL_ARCHITECTURE_BASE_COLORS['opv:op'];
+      semanticColors[sourceKey] = theme === 'light'
+        ? modelArchitectureLightColor(baseColor, lightHsl)
+        : baseColor;
+    });
+
+    const profileKeys = Array.from(new Set(Array.from(allKeys).map(normalizeModelArchitectureKey)))
+      .filter((key) => key && !key.startsWith('io:'));
+    const coreColors = profileKeys.map((key) => {
+      const baseColor = MODEL_ARCHITECTURE_BASE_COLORS[key] || MODEL_ARCHITECTURE_BASE_COLORS['opv:op'];
+      return theme === 'light' ? modelArchitectureLightColor(baseColor, lightHsl) : baseColor;
+    });
+
+    return {
+      coreColors,
+      saturation: theme === 'light' ? lightHsl.saturation / 100 : COLORMAP_SATURATION,
+      lightness: theme === 'light' ? lightHsl.lightness / 100 : COLORMAP_LIGHTNESS,
+      ioColors: theme === 'light' ? {
+        input: { raw: MODEL_ARCHITECTURE_NEUTRAL },
+        activation: { raw: MODEL_ARCHITECTURE_NEUTRAL },
+        state: { raw: MODEL_ARCHITECTURE_NEUTRAL },
+        output: { raw: MODEL_ARCHITECTURE_NEUTRAL },
+        parameter: { raw: MODEL_ARCHITECTURE_NEUTRAL },
+        constant: { raw: MODEL_ARCHITECTURE_NEUTRAL },
+      } : { ...STANDARD_IO_COLORS },
+      semanticColors,
+    };
   }
 
   function expandPalette(baseHexes, targetCount, options) {
@@ -543,7 +647,7 @@
     const resolved = resolvedColormapOptions(options);
     const unique = Array.from(new Set(keys || []));
     const semanticKeys = unique.filter((key) => !String(key).startsWith('io:')).sort();
-    const generatedKeys = semanticKeys.filter((key) => !SEMANTIC_COLOR_DEFAULTS[key]);
+    const generatedKeys = semanticKeys.filter((key) => !resolved.semanticColors[key]);
     const colors = expandPalette(resolved.coreColors, Math.max(semanticKeys.length, resolved.coreColors.length), resolved);
     const map = new Map();
     map.set('io:input', resolveColormapColor(resolved.ioColors.input, '#A855F7', resolved));
@@ -552,8 +656,8 @@
     map.set('io:output', resolveColormapColor(resolved.ioColors.output, '#38BDF8', resolved));
     map.set('io:constant', resolveColormapColor(resolved.ioColors.constant, '#64748B', resolved));
     map.set('io:parameter', resolveColormapColor(resolved.ioColors.parameter, '#3B82F6', resolved));
-    Object.entries(SEMANTIC_COLOR_DEFAULTS).forEach(([key, color]) => {
-      if (unique.includes(key)) map.set(key, normalizeColormapColor(color, resolved));
+    Object.entries(resolved.semanticColors).forEach(([key, color]) => {
+      if (unique.includes(key)) map.set(key, resolveColormapColor(color, color, resolved));
     });
     generatedKeys.forEach((key, index) => map.set(key, colors[index]));
     return map;
@@ -626,6 +730,69 @@
     };
   }
 
+  function roundedRoutePath(points, radius) {
+    const cleanPoints = points.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+    if (cleanPoints.length < 2) return '';
+    const cornerRadius = Math.max(0, Number(radius) || 0);
+    const parts = [`M ${cleanPoints[0].x} ${cleanPoints[0].y}`];
+    if (cleanPoints.length === 2 || cornerRadius === 0) {
+      cleanPoints.slice(1).forEach((point) => parts.push(`L ${point.x} ${point.y}`));
+      return parts.join(' ');
+    }
+
+    function pointAtDistance(from, to, distance) {
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const length = Math.hypot(dx, dy);
+      if (!length) return { ...from };
+      const ratio = Math.min(1, Math.max(0, distance / length));
+      return { x: from.x + dx * ratio, y: from.y + dy * ratio };
+    }
+
+    for (let index = 1; index < cleanPoints.length - 1; index += 1) {
+      const prev = cleanPoints[index - 1];
+      const point = cleanPoints[index];
+      const next = cleanPoints[index + 1];
+      const inLength = Math.hypot(point.x - prev.x, point.y - prev.y);
+      const outLength = Math.hypot(next.x - point.x, next.y - point.y);
+      const r = Math.min(cornerRadius, inLength / 2, outLength / 2);
+      if (r <= 0.5) {
+        parts.push(`L ${point.x} ${point.y}`);
+        continue;
+      }
+      const before = pointAtDistance(point, prev, r);
+      const after = pointAtDistance(point, next, r);
+      parts.push(`L ${before.x} ${before.y}`);
+      parts.push(`Q ${point.x} ${point.y} ${after.x} ${after.y}`);
+    }
+    const last = cleanPoints[cleanPoints.length - 1];
+    parts.push(`L ${last.x} ${last.y}`);
+    return parts.join(' ');
+  }
+
+  function smoothRoutePath(points, tension) {
+    const cleanPoints = points.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+    if (cleanPoints.length < 2) return '';
+    const t = Math.max(0.05, Math.min(0.5, Number(tension) || 0.18));
+    const parts = [`M ${cleanPoints[0].x} ${cleanPoints[0].y}`];
+    for (let index = 0; index < cleanPoints.length - 1; index += 1) {
+      const p0 = cleanPoints[index - 1] || cleanPoints[index];
+      const p1 = cleanPoints[index];
+      const p2 = cleanPoints[index + 1];
+      const p3 = cleanPoints[index + 2] || p2;
+      const c1 = {
+        x: p1.x + (p2.x - p0.x) * t,
+        y: p1.y + (p2.y - p0.y) * t,
+      };
+      const c2 = {
+        x: p2.x - (p3.x - p1.x) * t,
+        y: p2.y - (p3.y - p1.y) * t,
+      };
+      parts.push(`C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`);
+    }
+    return parts.join(' ');
+  }
+
   function edgePath(source, target, edge) {
     const vertical = Math.abs(source.y - target.y) >= Math.abs(source.x - target.x);
     const sourceAnchor = edge?.sourceAnchor || (vertical
@@ -636,7 +803,22 @@
       : source.x < target.x ? 'left' : 'right');
     const start = nodeAnchor(source, sourceAnchor);
     const end = nodeAnchor(target, targetAnchor);
+    if (Array.isArray(edge?.waypoints) && edge.waypoints.length) {
+      const points = [
+        start,
+        ...edge.waypoints.map((point) => ({ x: Number(point.x), y: Number(point.y) })),
+        end,
+      ];
+      if (edge.route === 'smooth' || edge.curve === 'smooth') {
+        return smoothRoutePath(points, edge.tension);
+      }
+      return roundedRoutePath(points, edge.cornerRadius ?? 32);
+    }
     const curve = edge?.curve || (vertical ? 'vertical' : 'horizontal');
+
+    if (curve === 'straight' || curve === 'line') {
+      return `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
+    }
 
     if (curve === 'vertical') {
       const midY = (start.y + end.y) / 2;
@@ -678,8 +860,8 @@
       height: cluster.height,
       rx: radius,
       ry: radius,
-      fill: '#FFFFFF',
-      'fill-opacity': '0.10',
+      fill: 'transparent',
+      'fill-opacity': '0',
       stroke: isRepeat ? LINE_COLOR : 'var(--model-graphviz-line-soft)',
       'stroke-width': isRepeat ? '1.2' : '1.6',
       'stroke-dasharray': isRepeat ? '3 2' : null,
@@ -1394,12 +1576,19 @@
     render,
     renderController,
     buildColorMap,
+    modelArchitectureColormap,
     buildHierarchy,
     relationForNode,
     drawEdgeTags,
     standardColormap: {
       coreColors: [...STANDARD_COLORMAP.coreColors],
       ioColors: { ...STANDARD_COLORMAP.ioColors },
+    },
+    modelArchitectureColorProfile: {
+      neutral: MODEL_ARCHITECTURE_NEUTRAL,
+      lightHsl: { ...MODEL_ARCHITECTURE_LIGHT_HSL },
+      keyAliases: { ...MODEL_ARCHITECTURE_COLOR_KEY_ALIASES },
+      baseColors: { ...MODEL_ARCHITECTURE_BASE_COLORS },
     },
     reportPriorityColors: { ...REPORT_PRIORITY_COLORS },
     defaultDotLayout: { ...DEFAULT_DOT_LAYOUT },

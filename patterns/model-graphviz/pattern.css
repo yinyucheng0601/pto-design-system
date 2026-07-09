@@ -37,6 +37,7 @@
   --model-graphviz-edge-tag-bg: color-mix(in srgb, var(--surface-1) 94%, var(--background));
   --model-graphviz-edge-tag-fg: var(--foreground-secondary);
   --model-graphviz-edge-tag-border: var(--border-default);
+  --model-architecture-selected-stroke: #FFFFFF;
 
   min-height: 100vh;
   margin: 0;
@@ -66,6 +67,7 @@
   --model-graphviz-edge-tag-bg: rgba(255, 255, 255, 0.94);
   --model-graphviz-edge-tag-fg: rgba(0, 0, 0, 0.62);
   --model-graphviz-edge-tag-border: rgba(0, 0, 0, 0.10);
+  --model-architecture-selected-stroke: #111827;
 }
 
 .pto-model-graphviz-pattern-main {
@@ -332,6 +334,88 @@
   text-anchor: middle;
   dominant-baseline: central;
   pointer-events: none;
+}
+
+.pto-model-architecture-stage {
+  background: var(--model-graphviz-stage-bg);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.pto-model-architecture-stage.is-panning {
+  cursor: grabbing;
+}
+
+.pto-model-architecture-stage svg {
+  display: block;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.pto-model-architecture-stage .pto-model-graphviz-node {
+  cursor: pointer;
+}
+
+.pto-model-architecture-stage .pto-model-graphviz-cluster {
+  cursor: default;
+}
+
+.pto-model-architecture-stage [tabindex]:focus,
+.pto-model-architecture-stage [tabindex]:focus-visible {
+  outline: none;
+}
+
+.pto-model-architecture-stage .pto-model-graphviz-cluster > rect:first-child {
+  fill: transparent;
+  fill-opacity: 0;
+}
+
+.pto-model-architecture-stage .pto-model-graphviz-node.is-selected rect,
+.pto-model-architecture-stage .pto-model-graphviz-node.is-model-selected rect,
+.pto-model-architecture-stage .pto-model-graphviz-node.is-training-selected rect {
+  stroke: var(--model-architecture-selected-stroke);
+  stroke-width: 3px;
+}
+
+.pto-model-architecture-stage .pto-model-graphviz-cluster.is-selected > rect:first-child,
+.pto-model-architecture-stage .pto-model-graphviz-cluster.is-model-selected > rect:first-child,
+.pto-model-architecture-stage .pto-model-graphviz-cluster.is-training-selected > rect:first-child {
+  stroke: var(--model-architecture-selected-stroke);
+  stroke-width: 2.4px;
+}
+
+.pto-model-architecture-stage .pto-model-graphviz-toggle,
+.pto-model-architecture-stage .pto-model-graphviz-toggle-icon {
+  display: none;
+}
+
+.pto-model-architecture-stage .pto-model-graphviz-edge {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+:root[data-theme='light'] .pto-model-architecture-stage .pto-model-graphviz-edge {
+  stroke: var(--model-graphviz-line);
+  stroke-width: 1.05px;
+}
+
+:root[data-theme='light'] .pto-model-architecture-stage .pto-model-graphviz-node rect {
+  fill-opacity: 1;
+  stroke: var(--model-graphviz-line-soft);
+  stroke-width: 0.9px;
+}
+
+:root[data-theme='light'] .pto-model-architecture-stage .pto-model-graphviz-node-label {
+  fill: var(--model-graphviz-node-label);
+  font-size: var(--font-size-title-sm);
+  font-weight: 650;
+}
+
+:root[data-theme='light'] .pto-model-architecture-stage .pto-model-graphviz-node-type {
+  fill: var(--model-graphviz-node-type);
+  font-size: calc(var(--font-size-label-xs) - 4px);
+  font-weight: 500;
 }
 
 :root[data-embed-preview='true'] .pto-model-graphviz-pattern-page {
