@@ -121,6 +121,32 @@
       min-width: 0;
     }
 
+    .pangu-actions .btn {
+      appearance: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      border: 1px solid var(--pangu-border);
+      border-radius: var(--radius-sm);
+      padding: 0 10px;
+      background: color-mix(in srgb, var(--pangu-panel) 88%, var(--foreground) 6%);
+      color: var(--pangu-text);
+      font: 650 12px / 1 var(--font-sans);
+      letter-spacing: 0;
+      cursor: pointer;
+    }
+
+    .pangu-actions .btn:hover {
+      border-color: color-mix(in srgb, var(--pangu-accent) 42%, var(--pangu-border));
+      background: color-mix(in srgb, var(--pangu-panel) 80%, var(--pangu-accent) 12%);
+    }
+
+    .pangu-actions .btn:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--pangu-accent) 72%, transparent);
+      outline-offset: 2px;
+    }
+
     .pangu-facts {
       padding: 9px 12px;
       border-top: 1px solid var(--pangu-border);
@@ -225,7 +251,7 @@
     <div class="pangu-status" id="statusText">Loading Pangu graph.</div>
   </main>
 
-  <script src="../pattern.js?v=model-gallery-category-colors-1"></script>
+  <script src="../pattern.js?v=model-gallery-category-colors-3"></script>
   <script src="./pangu_ultramoe_718b_graph.js?v=model-gallery-consistency-2"></script>
   <script src="./pangu_pro_moe_72ba16b_graph.js?v=model-gallery-consistency-2"></script>
   <script>

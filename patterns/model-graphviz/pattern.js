@@ -4,29 +4,30 @@
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const CORE_COLORS = [
     '#14B8A6',
-    '#38BDF8',
+    '#06B6D4',
+    '#0EA5E9',
     '#3B82F6',
-    '#2563EB',
-    '#6366F1',
-    '#8B5CF6',
+    '#4F46E5',
+    '#7C3AED',
     '#A855F7',
     '#F59E0B',
     '#EA580C',
   ];
   const SEMANTIC_COLOR_DEFAULTS = {
-    'sem:embedding': '#10B981',
-    'sem:norm': '#38BDF8',
+    'sem:embedding': '#14B8A6',
+    'sem:norm': '#0EA5E9',
     'sem:attention': '#3B82F6',
     'sem:position': '#A855F7',
     'sem:rope': '#A855F7',
-    'sem:qknorm': '#38BDF8',
-    'sem:linear': '#2563EB',
-    'sem:head': '#6366F1',
+    'sem:qknorm': '#0EA5E9',
+    'sem:linear': '#4F46E5',
+    'sem:head': '#7C3AED',
     'sem:mlp': '#A855F7',
     'sem:act': '#8B5CF6',
+    'sem:activation': '#8B5CF6',
     'sem:gate': '#F59E0B',
     'sem:moe': '#EA580C',
-    'sem:comm': '#14B8A6',
+    'sem:comm': '#06B6D4',
   };
   const MODEL_ARCHITECTURE_NEUTRAL = '#D1D1D1';
   const MODEL_ARCHITECTURE_LIGHT_HSL = Object.freeze({ hue: 2, saturation: 79, lightness: 76 });
@@ -41,6 +42,7 @@
     'sem:head': 'opv:head',
     'sem:mlp': 'opv:mlp',
     'sem:act': 'opv:act',
+    'sem:activation': 'opv:act',
     'sem:gate': 'opv:gate',
     'sem:moe': 'opv:moe',
     'sem:comm': 'opv:comm',
@@ -53,12 +55,12 @@
   const MODEL_ARCHITECTURE_BASE_COLORS = Object.freeze({
     'opv:act': '#8B5CF6',
     'opv:attention': '#3B82F6',
-    'opv:comm': '#14B8A6',
-    'opv:decoder': '#0F766E',
-    'opv:embedding': '#10B981',
+    'opv:comm': '#06B6D4',
+    'opv:decoder': '#0D9488',
+    'opv:embedding': '#14B8A6',
     'opv:gate': '#F59E0B',
-    'opv:head': '#6366F1',
-    'opv:linear': '#2563EB',
+    'opv:head': '#7C3AED',
+    'opv:linear': '#4F46E5',
     'opv:mlp': '#A855F7',
     'opv:model': '#475569',
     'opv:moe': '#EA580C',
@@ -1079,9 +1081,84 @@
     return group;
   }
 
+  function nodeRect(node, padding = 0) {
+    return {
+      left: node.x - node.width / 2 - padding,
+      top: node.y - node.height / 2 - padding,
+      right: node.x + node.width / 2 + padding,
+      bottom: node.y + node.height / 2 + padding,
+    };
+  }
+
+  function rectsOverlap(a, b) {
+    return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  }
+
+  function tagRectAt(point, width, height) {
+    return {
+      left: point.x - width / 2,
+      top: point.y - height / 2,
+      right: point.x + width / 2,
+      bottom: point.y + height / 2,
+    };
+  }
+
+  function uniqueTagPositions(basePosition) {
+    const base = Math.min(0.92, Math.max(0.08, Number.isFinite(basePosition) ? basePosition : 0.52));
+    const candidates = [
+      base,
+      base - 0.16,
+      base + 0.16,
+      base - 0.28,
+      base + 0.28,
+      0.22,
+      0.34,
+      0.66,
+      0.78,
+    ];
+    const seen = new Set();
+    return candidates
+      .map((value) => Math.min(0.92, Math.max(0.08, value)))
+      .filter((value) => {
+        const key = value.toFixed(3);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }
+
+  function edgeTagOverlapsNode(point, width, height, entry, padding) {
+    const tagRect = tagRectAt(point, width, height);
+    return (entry.avoidNodes || [entry.sourceNode, entry.targetNode])
+      .filter(Boolean)
+      .some((node) => rectsOverlap(tagRect, nodeRect(node, padding)));
+  }
+
+  function resolveEdgeTagPoint(entry, length, width, height, options) {
+    const opts = options || {};
+    const edge = entry.edge || {};
+    const explicitPosition = Number(edge.tagPosition);
+    const basePosition = Number.isFinite(explicitPosition) ? explicitPosition : 0.52;
+    const avoidNodes = edge.tagAvoidNodes !== false && opts.edgeTagAvoidNodes !== false;
+    const endpointPadding = Number.isFinite(Number(opts.edgeTagNodePadding))
+      ? Number(opts.edgeTagNodePadding)
+      : 6;
+
+    let fallbackPoint = null;
+    for (const position of uniqueTagPositions(basePosition)) {
+      const point = entry.el.getPointAtLength(length * position);
+      if (!fallbackPoint) fallbackPoint = point;
+      if (!avoidNodes || !edgeTagOverlapsNode(point, width, height, entry, endpointPadding)) {
+        return point;
+      }
+    }
+    return fallbackPoint;
+  }
+
   function drawEdgeTags(svg, edgeEntries, options) {
-    const layerClass = options.edgeTagLayerClass || 'pto-model-graphviz-edge-tags';
-    const tagClass = options.edgeTagClass || 'pto-model-graphviz-edge-tag';
+    const opts = options || {};
+    const layerClass = opts.edgeTagLayerClass || 'pto-model-graphviz-edge-tags';
+    const tagClass = opts.edgeTagClass || 'pto-model-graphviz-edge-tag';
     const old = svg.querySelector(`.${layerClass}`);
     if (old) old.remove();
     const layer = createSvgElement('g', { class: layerClass });
@@ -1094,37 +1171,37 @@
       try {
         const length = entry.el.getTotalLength();
         if (!length) return;
-        point = entry.el.getPointAtLength(length * (Number(edge.tagPosition) || 0.52));
+        const width = edgeTagWidth(label);
+        const height = 18;
+        point = resolveEdgeTagPoint(entry, length, width, height, opts);
+        if (!point) return;
+        const group = createSvgElement('g', {
+          class: tagClass,
+          transform: `translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`,
+          'data-edge-type': normalizeEdgeType(edge),
+          'aria-label': label,
+        });
+        group.appendChild(createSvgElement('rect', {
+          x: -width / 2,
+          y: -height / 2,
+          width,
+          height,
+          rx: height / 2,
+          ry: height / 2,
+        }));
+        const text = createSvgElement('text', {
+          x: 0,
+          y: 0.4,
+          'text-anchor': 'middle',
+          'dominant-baseline': 'central',
+        });
+        text.textContent = label;
+        group.appendChild(text);
+        layer.appendChild(group);
+        entry.tagEl = group;
       } catch (_) {
         return;
       }
-
-      const width = edgeTagWidth(label);
-      const height = 18;
-      const group = createSvgElement('g', {
-        class: tagClass,
-        transform: `translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`,
-        'data-edge-type': normalizeEdgeType(edge),
-        'aria-label': label,
-      });
-      group.appendChild(createSvgElement('rect', {
-        x: -width / 2,
-        y: -height / 2,
-        width,
-        height,
-        rx: height / 2,
-        ry: height / 2,
-      }));
-      const text = createSvgElement('text', {
-        x: 0,
-        y: 0.4,
-        'text-anchor': 'middle',
-        'dominant-baseline': 'central',
-      });
-      text.textContent = label;
-      group.appendChild(text);
-      layer.appendChild(group);
-      entry.tagEl = group;
     });
 
     svg.appendChild(layer);
@@ -1540,7 +1617,7 @@
         'data-target': edge.target,
       });
       svg.appendChild(el);
-      edgeEntries.push({ el, edge, source: edge.source, target: edge.target, tagEl: null });
+      edgeEntries.push({ el, edge, source: edge.source, target: edge.target, sourceNode: source, targetNode, avoidNodes: data.nodes, tagEl: null });
     });
 
     (data.nodes || []).forEach((node) => {

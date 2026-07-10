@@ -341,7 +341,7 @@
     </section>
   </main>
 
-  <script src="../pattern.js?v=model-gallery-category-colors-1"></script>
+  <script src="../pattern.js?v=model-gallery-category-colors-3"></script>
   <script>
     const DEFAULT_SCHEMA = {
       schema_version: 'model_architecture.v1',
@@ -462,7 +462,7 @@
       silu_multiply:      { w: 196, h: 54, colorKey: 'sem:activation', parent: 'mlp-block' },
       mlp_down_linear:    { w: 224, h: 54, colorKey: 'sem:linear', parent: 'mlp-block' },
       final_norm:         { w: 196, h: 56, colorKey: 'sem:norm', parent: 'transformer-core' },
-      lm_head:            { w: 210, h: 56, colorKey: 'sem:linear' },
+      lm_head:            { w: 210, h: 56, colorKey: 'sem:head' },
       lm_head_weight:     { w: 196, h: 50, colorKey: 'io:parameter', lane: 300 },
       output_logits:      { w: 166, h: 48, colorKey: 'io:output' },
     };
@@ -601,7 +601,8 @@
       if (text.includes('attention') || text.includes('qkv')) return 'sem:attention';
       if (text.includes('mlp') || text.includes('swiglu') || text.includes('silu')) return 'sem:mlp';
       if (text.includes('norm')) return 'sem:norm';
-      if (text.includes('linear') || text.includes('head')) return 'sem:linear';
+      if (text.includes('head')) return 'sem:head';
+      if (text.includes('linear')) return 'sem:linear';
       if (node.kind === 'input') return 'io:input';
       if (node.kind === 'output') return 'io:output';
       if (node.kind === 'module') return 'module:model';
