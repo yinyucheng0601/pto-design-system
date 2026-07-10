@@ -123,7 +123,7 @@
       "schemaFile": "patterns/model-graphviz/assets/openpangu_ultramoe_718b_model_architecture.json",
       "validationFile": "patterns/model-graphviz/assets/openpangu_ultramoe_718b_model_architecture_validation.md",
       "defaultCollapseDepth": 2,
-      "notes": "Local Pangu MoE preview adapter for openPangu-R-72B and Pangu Pro MoE 72BA16B in the gallery. The 718B source schema remains bundled for direct inspection but is intentionally excluded from the tabbed preview because its expert-pool drill-down silhouette is not yet aligned with the other gallery models. The adapter reuses the shared model-graphviz renderer, preserves dashed parameter edges and tensor-style Parameter nodes on the left input lane, and uses the shared model-architecture op-category color profile with communication operators in the blue-green lane."
+      "notes": "Local Pangu MoE preview adapter for openPangu-R-72B and Pangu Pro MoE 72BA16B in the gallery. The 718B source schema remains bundled for direct inspection but is intentionally excluded from the tabbed preview because its expert-pool drill-down silhouette is not yet aligned with the other gallery models. The adapter reuses the shared model-graphviz renderer, preserves dashed parameter edges and tensor-style Parameter nodes on the left input lane, keeps the expanded routed-expert detail cluster sized through the terminal All-to-All Combine communication operator, and uses the shared model-architecture op-category color profile with communication operators in the blue-green lane."
     }
   ],
   "useWhen": [

@@ -653,8 +653,19 @@
         });
       }
       if (expertsExpanded) {
-        clusters.push({ id: 'r72b_expert_detail', label: 'Routed Expert Detail', x: cx - 175, y: expertStartY - 72, width: 350, height: 330, colorKey: 'sem:moe', parent: 'moe' });
-        ['expert_groups', 'swift_gmm', 'expert_outputs'].forEach((id) => {
+        const expertDetailY = expertStartY - 72;
+        const expertDetailBottom = combineY + 60;
+        clusters.push({
+          id: 'r72b_expert_detail',
+          label: 'Routed Expert Detail',
+          x: cx - 175,
+          y: expertDetailY,
+          width: 350,
+          height: expertDetailBottom - expertDetailY,
+          colorKey: 'sem:moe',
+          parent: 'moe'
+        });
+        ['expert_groups', 'swift_gmm', 'expert_outputs', 'combine'].forEach((id) => {
           const node = nodes.find((item) => item.id === id);
           if (node) node.parent = 'r72b_expert_detail';
         });
