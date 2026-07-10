@@ -397,12 +397,13 @@
     const MODULE_BY_CLUSTER = {"decoder-stack": "decoder_layer", "attention-block": "sparse_mla_attention", "ffn-block": "ffn_choice", "moe-block": "moe_ffn", "mtp-stack": "mtp_module"};
     const CLUSTER_BY_MODULE = Object.fromEntries(Object.entries(MODULE_BY_CLUSTER).map(([clusterId, moduleId]) => [moduleId, clusterId]));
     const COLLAPSIBLE = {"decoder_layer": ["mhc_attention", "input_layernorm", "sparse_mla_attention", "q_a_proj", "q_causal_conv", "q_residual_add", "q_a_norm", "q_b_proj", "kv_a_proj", "kv_causal_conv", "kv_residual_add", "kv_a_norm", "kv_b_proj", "rope_apply", "dsa_indexer", "attention_core", "o_causal_conv", "o_residual_add", "o_proj", "post_attention_norm", "mhc_attention_post", "pre_mlp_norm", "ffn_choice", "dense_mlp", "dense_gate_up", "dense_silu", "dense_down", "moe_ffn", "router_gate", "route_topk", "routed_expert_bank", "shared_expert_mlp", "moe_combine", "post_mlp_norm", "block_post_norm", "rope_cache", "kv_cache", "param_sink_state", "mome_state", "expert_parallel_state"], "sparse_mla_attention": ["q_a_proj", "q_causal_conv", "q_residual_add", "q_a_norm", "q_b_proj", "kv_a_proj", "kv_causal_conv", "kv_residual_add", "kv_a_norm", "kv_b_proj", "rope_apply", "dsa_indexer", "attention_core", "o_causal_conv", "o_residual_add", "o_proj", "rope_cache", "kv_cache", "param_sink_state", "mome_state"], "ffn_choice": ["dense_mlp", "dense_gate_up", "dense_silu", "dense_down", "moe_ffn", "router_gate", "route_topk", "routed_expert_bank", "shared_expert_mlp", "moe_combine", "expert_parallel_state"], "moe_ffn": ["router_gate", "route_topk", "routed_expert_bank", "shared_expert_mlp", "moe_combine", "expert_parallel_state"], "mtp_module": ["mtp_input_norms", "mtp_eh_proj", "mtp_decoder_layer", "mtp_shared_head", "mtp_logits"]};
+    COLLAPSIBLE.decoder_layer.push('attention_all_gather', 'attention_reduce_scatter', 'ffn_all_gather', 'ffn_reduce_scatter', 'moe_all_to_all_dispatch', 'moe_all_to_all_combine');
     COLLAPSIBLE.decoder_layer.push('query_tensor', 'key_tensor', 'value_tensor');
     COLLAPSIBLE.sparse_mla_attention.push('query_tensor', 'key_tensor', 'value_tensor');
     COLLAPSIBLE.decoder_layer.push('attention_projection_weights', 'dense_mlp_weights', 'router_weight', 'expert_bank_weights', 'shared_expert_weights');
     COLLAPSIBLE.sparse_mla_attention.push('attention_projection_weights');
-    COLLAPSIBLE.ffn_choice.push('dense_mlp_weights', 'router_weight', 'expert_bank_weights', 'shared_expert_weights');
-    COLLAPSIBLE.moe_ffn.push('router_weight', 'expert_bank_weights', 'shared_expert_weights');
+    COLLAPSIBLE.ffn_choice.push('dense_mlp_weights', 'router_weight', 'expert_bank_weights', 'shared_expert_weights', 'ffn_all_gather', 'ffn_reduce_scatter', 'moe_all_to_all_dispatch', 'moe_all_to_all_combine');
+    COLLAPSIBLE.moe_ffn.push('router_weight', 'expert_bank_weights', 'shared_expert_weights', 'moe_all_to_all_dispatch', 'moe_all_to_all_combine');
     COLLAPSIBLE.mtp_module.push('mtp_head_weight');
     const DEFAULT_COLLAPSED = new Set(["mtp_module"]);
     const DEFAULT_DETAIL_MODULES = new Set();
@@ -467,6 +468,50 @@
         attrs: { source: 'kv_b_proj', target: 'attention_core', tensor_edge: 'compressed_kv.value' },
       },
     };
+    Object.assign(OPENPANGU_VIRTUAL_NODES, {
+      attention_all_gather: {
+        id: 'attention_all_gather',
+        kind: 'op',
+        label: 'AllGather',
+        op_type: 'Communication',
+        attrs: { collective: 'all_gather', scope: 'tensor_parallel', stage: 'attention_input' },
+      },
+      attention_reduce_scatter: {
+        id: 'attention_reduce_scatter',
+        kind: 'op',
+        label: 'Reduce-Scatter',
+        op_type: 'Communication',
+        attrs: { collective: 'reduce_scatter', scope: 'tensor_parallel', stage: 'attention_output' },
+      },
+      ffn_all_gather: {
+        id: 'ffn_all_gather',
+        kind: 'op',
+        label: 'AllGather',
+        op_type: 'Communication',
+        attrs: { collective: 'all_gather', scope: 'tensor_parallel', stage: 'ffn_input' },
+      },
+      ffn_reduce_scatter: {
+        id: 'ffn_reduce_scatter',
+        kind: 'op',
+        label: 'Reduce-Scatter',
+        op_type: 'Communication',
+        attrs: { collective: 'reduce_scatter', scope: 'tensor_parallel', stage: 'ffn_output' },
+      },
+      moe_all_to_all_dispatch: {
+        id: 'moe_all_to_all_dispatch',
+        kind: 'op',
+        label: 'All-to-All Dispatch',
+        op_type: 'Communication',
+        attrs: { collective: 'all_to_all', scope: 'expert_parallel', stage: 'expert_dispatch' },
+      },
+      moe_all_to_all_combine: {
+        id: 'moe_all_to_all_combine',
+        kind: 'op',
+        label: 'All-to-All Combine',
+        op_type: 'Communication',
+        attrs: { collective: 'all_to_all', scope: 'expert_parallel', stage: 'expert_combine' },
+      },
+    });
     const OPENPANGU_WIDTHS = Object.freeze({
       mainSpine: 480,
       attentionLane: 470,
@@ -529,14 +574,16 @@
       decoder_layer: { ...NODE_SPEC.decoder_layer, w: OPENPANGU_WIDTHS.mainSpine, h: 64 },
       mhc_attention: { ...NODE_SPEC.mhc_attention, w: OPENPANGU_WIDTHS.mainSpine, h: 62 },
       input_layernorm: { ...NODE_SPEC.input_layernorm, w: OPENPANGU_WIDTHS.mainSpine, h: 66, colorKey: 'sem:norm' },
+      attention_all_gather: { w: OPENPANGU_WIDTHS.mainSpine, h: 58, colorKey: 'sem:comm', parent: 'decoder-stack' },
       sparse_mla_attention: { ...NODE_SPEC.sparse_mla_attention, w: OPENPANGU_WIDTHS.mainSpine, h: 66, colorKey: 'sem:attention', parent: 'attention-block' },
+      attention_reduce_scatter: { w: OPENPANGU_WIDTHS.mainSpine, h: 58, colorKey: 'sem:comm', parent: 'decoder-stack' },
       attention_projection_weights: { w: 282, h: 50, colorKey: 'io:parameter', parent: 'attention-block', lane: OPENPANGU_WIDTHS.leftParameterLane },
       q_a_proj: { ...NODE_SPEC.q_a_proj, w: OPENPANGU_WIDTHS.attentionLane, h: 62, lane: 390 },
       kv_a_proj: { ...NODE_SPEC.kv_a_proj, w: OPENPANGU_WIDTHS.attentionLane, h: 62, lane: 1050 },
       q_causal_conv: { ...NODE_SPEC.q_causal_conv, w: OPENPANGU_WIDTHS.attentionLane, h: 62, colorKey: 'sem:act', lane: 390 },
       kv_causal_conv: { ...NODE_SPEC.kv_causal_conv, w: OPENPANGU_WIDTHS.attentionLane, h: 62, colorKey: 'sem:act', lane: 1050 },
-      q_residual_add: { ...NODE_SPEC.q_residual_add, w: OPENPANGU_WIDTHS.addGlyph, h: OPENPANGU_WIDTHS.addGlyph, lane: 390, glyph: true, hideTypeLabel: true },
-      kv_residual_add: { ...NODE_SPEC.kv_residual_add, w: OPENPANGU_WIDTHS.addGlyph, h: OPENPANGU_WIDTHS.addGlyph, lane: 1050, glyph: true, hideTypeLabel: true },
+      q_residual_add: { ...NODE_SPEC.q_residual_add, w: OPENPANGU_WIDTHS.addGlyph, h: OPENPANGU_WIDTHS.addGlyph, colorKey: 'sem:act', lane: 390, glyph: true, hideTypeLabel: true },
+      kv_residual_add: { ...NODE_SPEC.kv_residual_add, w: OPENPANGU_WIDTHS.addGlyph, h: OPENPANGU_WIDTHS.addGlyph, colorKey: 'sem:act', lane: 1050, glyph: true, hideTypeLabel: true },
       q_a_norm: { ...NODE_SPEC.q_a_norm, w: OPENPANGU_WIDTHS.attentionLane, h: 62, colorKey: 'sem:norm', lane: 390 },
       kv_a_norm: { ...NODE_SPEC.kv_a_norm, w: OPENPANGU_WIDTHS.attentionLane, h: 62, colorKey: 'sem:norm', lane: 1050 },
       q_b_proj: { ...NODE_SPEC.q_b_proj, w: OPENPANGU_WIDTHS.attentionLane, h: 62, lane: 390 },
@@ -546,12 +593,13 @@
       value_tensor: { w: OPENPANGU_WIDTHS.attentionTensor, h: 62, colorKey: 'sem:linear', parent: 'attention-block', lane: 1180 },
       attention_core: { ...NODE_SPEC.attention_core, w: OPENPANGU_WIDTHS.mainSpine, h: 64, colorKey: 'sem:attention', lane: 720 },
       o_causal_conv: { ...NODE_SPEC.o_causal_conv, w: OPENPANGU_WIDTHS.mainSpine, h: 62, colorKey: 'sem:act', lane: 720 },
-      o_residual_add: { ...NODE_SPEC.o_residual_add, w: OPENPANGU_WIDTHS.addGlyph, h: OPENPANGU_WIDTHS.addGlyph, lane: 720, glyph: true, hideTypeLabel: true },
+      o_residual_add: { ...NODE_SPEC.o_residual_add, w: OPENPANGU_WIDTHS.addGlyph, h: OPENPANGU_WIDTHS.addGlyph, colorKey: 'sem:act', lane: 720, glyph: true, hideTypeLabel: true },
       o_proj: { ...NODE_SPEC.o_proj, w: OPENPANGU_WIDTHS.mainSpine, h: 62, lane: 720 },
       post_attention_norm: { ...NODE_SPEC.post_attention_norm, w: OPENPANGU_WIDTHS.mainSpine, h: 62, colorKey: 'sem:norm' },
       mhc_attention_post: { ...NODE_SPEC.mhc_attention_post, w: OPENPANGU_WIDTHS.mainSpine, h: 62 },
       pre_mlp_norm: { ...NODE_SPEC.pre_mlp_norm, w: OPENPANGU_WIDTHS.mainSpine, h: 62, colorKey: 'sem:norm' },
       ffn_choice: { ...NODE_SPEC.ffn_choice, w: OPENPANGU_WIDTHS.mainSpine, h: 64, colorKey: 'module:ffn' },
+      ffn_all_gather: { w: OPENPANGU_WIDTHS.mainSpine, h: 58, colorKey: 'sem:comm', parent: 'ffn-block' },
       dense_mlp_weights: { w: 238, h: 50, colorKey: 'io:parameter', parent: 'ffn-block', lane: OPENPANGU_WIDTHS.leftParameterLane },
       dense_mlp: { ...NODE_SPEC.dense_mlp, w: OPENPANGU_WIDTHS.denseLane, h: 62, colorKey: 'sem:mlp', lane: 420 },
       dense_gate_up: { ...NODE_SPEC.dense_gate_up, w: OPENPANGU_WIDTHS.denseLane, h: 62, lane: 420 },
@@ -561,12 +609,15 @@
       router_weight: { w: 218, h: 50, colorKey: 'io:parameter', parent: 'moe-block', lane: OPENPANGU_WIDTHS.moeParameterLane },
       router_gate: { ...NODE_SPEC.router_gate, w: OPENPANGU_WIDTHS.moeLane, h: 62, lane: OPENPANGU_WIDTHS.moeCoreLane },
       route_topk: { ...NODE_SPEC.route_topk, w: OPENPANGU_WIDTHS.moeLane, h: 62, lane: OPENPANGU_WIDTHS.moeCoreLane },
+      moe_all_to_all_dispatch: { w: OPENPANGU_WIDTHS.moeLane, h: 58, colorKey: 'sem:comm', parent: 'moe-block', lane: OPENPANGU_WIDTHS.moeCoreLane },
       expert_bank_weights: { w: 238, h: 50, colorKey: 'io:parameter', parent: 'moe-block', lane: OPENPANGU_WIDTHS.moeParameterLane },
       routed_expert_bank: { ...NODE_SPEC.routed_expert_bank, w: OPENPANGU_WIDTHS.moeLane, h: 62, colorKey: 'sem:moe', lane: OPENPANGU_WIDTHS.moeCoreLane },
       shared_expert_weights: { w: 238, h: 50, colorKey: 'io:parameter', parent: 'moe-block', lane: OPENPANGU_WIDTHS.moeParameterLane },
       shared_expert_mlp: { ...NODE_SPEC.shared_expert_mlp, w: OPENPANGU_WIDTHS.moeLane, h: 62, lane: OPENPANGU_WIDTHS.moeSharedLane },
-      moe_combine: { ...NODE_SPEC.moe_combine, w: OPENPANGU_WIDTHS.moeLane, h: 62, lane: OPENPANGU_WIDTHS.moeCombineLane },
+      moe_all_to_all_combine: { w: OPENPANGU_WIDTHS.moeLane, h: 58, colorKey: 'sem:comm', parent: 'moe-block', lane: OPENPANGU_WIDTHS.moeCombineLane },
+      moe_combine: { ...NODE_SPEC.moe_combine, w: OPENPANGU_WIDTHS.moeLane, h: 62, colorKey: 'sem:moe', lane: OPENPANGU_WIDTHS.moeCombineLane },
       expert_parallel_state: { ...NODE_SPEC.expert_parallel_state, w: OPENPANGU_WIDTHS.state, h: 54, lane: OPENPANGU_WIDTHS.moeStateLane },
+      ffn_reduce_scatter: { w: OPENPANGU_WIDTHS.mainSpine, h: 58, colorKey: 'sem:comm', parent: 'ffn-block' },
       post_mlp_norm: { ...NODE_SPEC.post_mlp_norm, w: OPENPANGU_WIDTHS.mainSpine, h: 62, colorKey: 'sem:norm' },
       block_post_norm: { ...NODE_SPEC.block_post_norm, w: OPENPANGU_WIDTHS.mainSpine, h: 62, colorKey: 'sem:norm' },
       final_norm: { ...NODE_SPEC.final_norm, w: OPENPANGU_WIDTHS.mainSpine, h: 58, colorKey: 'sem:norm' },
@@ -733,6 +784,7 @@
 
     function typeLabel(kind, node = null) {
       if (kind === 'parameter' || node?.state_type === 'parameter') return 'Parameter';
+      if (node?.op_type === 'Communication') return 'Comm';
       return { input: 'Input', output: 'Output', state: 'State', tensor: 'Tensor', module: 'Module', op: 'Op' }[kind] || 'Node';
     }
 
@@ -857,47 +909,51 @@
 
       place('mhc_attention', cx, 364);
       place('input_layernorm', cx, 466);
-      place('sparse_mla_attention', cx, 560);
+      place('attention_all_gather', cx, 560);
+      place('sparse_mla_attention', cx, 654);
 
-      let tailY = 654;
+      let tailY = 748;
       if (c.has('sparse_mla_attention')) {
-        place('rope_cache', 1260, 540);
-        place('kv_cache', 1260, 608);
-        tailY = 672;
+        place('rope_cache', 1260, 634);
+        place('kv_cache', 1260, 702);
+        place('attention_reduce_scatter', cx, 748);
+        tailY = 842;
       } else {
         const detail = attentionDetailOpen();
-        place('q_a_proj', qx, 704);
-        place('kv_a_proj', kvx, 704);
-        place('attention_projection_weights', OPENPANGU_WIDTHS.leftParameterLane, 704);
-        place('q_causal_conv', qx, 834);
-        place('kv_causal_conv', kvx, 834);
-        place('q_residual_add', qx, 912);
-        place('kv_residual_add', kvx, 912);
-        place('q_a_norm', qx, 990);
-        place('kv_a_norm', kvx, 990);
-        place('q_b_proj', qx, 1082);
-        place('kv_b_proj', kvx, 1082);
-        place('query_tensor', qx, 1222);
-        place('key_tensor', keyX, 1222);
-        place('value_tensor', valueX, 1222);
+        place('q_a_proj', qx, 798);
+        place('kv_a_proj', kvx, 798);
+        place('attention_projection_weights', OPENPANGU_WIDTHS.leftParameterLane, 798);
+        place('q_causal_conv', qx, 928);
+        place('kv_causal_conv', kvx, 928);
+        place('q_residual_add', qx, 1006);
+        place('kv_residual_add', kvx, 1006);
+        place('q_a_norm', qx, 1084);
+        place('kv_a_norm', kvx, 1084);
+        place('q_b_proj', qx, 1176);
+        place('kv_b_proj', kvx, 1176);
+        place('query_tensor', qx, 1316);
+        place('key_tensor', keyX, 1316);
+        place('value_tensor', valueX, 1316);
         if (detail) {
-          place('rope_apply', 800, 1147);
-          place('dsa_indexer', 810, 1310);
-          place('rope_cache', stateX, 1147);
-          place('kv_cache', stateX, 1222);
-          place('param_sink_state', stateX, 1294);
-          place('mome_state', stateX, 1366);
-          place('attention_core', cx, 1422);
-          place('o_causal_conv', cx, 1522);
-          place('o_residual_add', cx, 1600);
-          place('o_proj', cx, 1684);
-          tailY = 1776;
+          place('rope_apply', 800, 1241);
+          place('dsa_indexer', 810, 1404);
+          place('rope_cache', stateX, 1241);
+          place('kv_cache', stateX, 1316);
+          place('param_sink_state', stateX, 1388);
+          place('mome_state', stateX, 1460);
+          place('attention_core', cx, 1516);
+          place('o_causal_conv', cx, 1616);
+          place('o_residual_add', cx, 1694);
+          place('o_proj', cx, 1778);
+          place('attention_reduce_scatter', cx, 1870);
+          tailY = 1962;
         } else {
-          place('attention_core', cx, 1390);
-          place('o_causal_conv', cx, 1492);
-          place('o_residual_add', cx, 1570);
-          place('o_proj', cx, 1654);
-          tailY = 1746;
+          place('attention_core', cx, 1484);
+          place('o_causal_conv', cx, 1586);
+          place('o_residual_add', cx, 1664);
+          place('o_proj', cx, 1748);
+          place('attention_reduce_scatter', cx, 1840);
+          tailY = 1932;
         }
       }
 
@@ -909,26 +965,31 @@
         place('ffn_choice', cx, tailY + 294);
         tailY += 404;
       } else {
-        place('dense_mlp', 420, tailY + 328);
-        place('dense_mlp_weights', OPENPANGU_WIDTHS.leftParameterLane, tailY + 448);
-        place('dense_gate_up', 420, tailY + 448);
-        place('dense_silu', 420, tailY + 568);
-        place('dense_down', 420, tailY + 688);
+        place('ffn_all_gather', cx, tailY + 306);
+        place('dense_mlp', 420, tailY + 424);
+        place('dense_mlp_weights', OPENPANGU_WIDTHS.leftParameterLane, tailY + 544);
+        place('dense_gate_up', 420, tailY + 544);
+        place('dense_silu', 420, tailY + 664);
+        place('dense_down', 420, tailY + 784);
         if (c.has('moe_ffn')) {
-          place('moe_ffn', OPENPANGU_WIDTHS.moeCoreLane, tailY + 328);
-          tailY += 828;
+          place('moe_ffn', OPENPANGU_WIDTHS.moeCoreLane, tailY + 424);
+          place('ffn_reduce_scatter', cx, tailY + 904);
+          tailY += 1014;
         } else {
-          place('moe_ffn', OPENPANGU_WIDTHS.moeCoreLane, tailY + 328);
-          place('router_weight', OPENPANGU_WIDTHS.moeParameterLane, tailY + 448);
-          place('router_gate', OPENPANGU_WIDTHS.moeCoreLane, tailY + 448);
-          place('route_topk', OPENPANGU_WIDTHS.moeCoreLane, tailY + 568);
-          place('expert_bank_weights', OPENPANGU_WIDTHS.moeParameterLane, tailY + 688);
-          place('routed_expert_bank', OPENPANGU_WIDTHS.moeCoreLane, tailY + 688);
-          place('shared_expert_weights', OPENPANGU_WIDTHS.moeParameterLane, tailY + 568);
-          place('shared_expert_mlp', OPENPANGU_WIDTHS.moeSharedLane, tailY + 568);
-          place('expert_parallel_state', OPENPANGU_WIDTHS.moeStateLane, tailY + 688);
-          place('moe_combine', OPENPANGU_WIDTHS.moeCombineLane, tailY + 828);
-          tailY += 988;
+          place('moe_ffn', OPENPANGU_WIDTHS.moeCoreLane, tailY + 424);
+          place('router_weight', OPENPANGU_WIDTHS.moeParameterLane, tailY + 544);
+          place('router_gate', OPENPANGU_WIDTHS.moeCoreLane, tailY + 544);
+          place('route_topk', OPENPANGU_WIDTHS.moeCoreLane, tailY + 664);
+          place('moe_all_to_all_dispatch', OPENPANGU_WIDTHS.moeCoreLane, tailY + 784);
+          place('expert_bank_weights', OPENPANGU_WIDTHS.moeParameterLane, tailY + 904);
+          place('routed_expert_bank', OPENPANGU_WIDTHS.moeCoreLane, tailY + 904);
+          place('shared_expert_weights', OPENPANGU_WIDTHS.moeParameterLane, tailY + 664);
+          place('shared_expert_mlp', OPENPANGU_WIDTHS.moeSharedLane, tailY + 664);
+          place('expert_parallel_state', OPENPANGU_WIDTHS.moeStateLane, tailY + 904);
+          place('moe_all_to_all_combine', OPENPANGU_WIDTHS.moeCombineLane, tailY + 1024);
+          place('moe_combine', OPENPANGU_WIDTHS.moeCombineLane, tailY + 1144);
+          place('ffn_reduce_scatter', cx, tailY + 1264);
+          tailY += 1374;
         }
       }
 
@@ -1093,15 +1154,17 @@
         add('token_embedding', 'decoder_layer');
         add('decoder_layer', 'mhc_attention', true);
         add('mhc_attention', 'input_layernorm');
+        add('input_layernorm', 'attention_all_gather');
         if (state.collapsedModules.has('sparse_mla_attention')) {
-          add('input_layernorm', 'sparse_mla_attention');
+          add('attention_all_gather', 'sparse_mla_attention');
           add('positions', 'sparse_mla_attention', true);
           add('rope_cache', 'sparse_mla_attention', true);
           add('kv_cache', 'sparse_mla_attention', true);
-          add('sparse_mla_attention', 'post_attention_norm');
+          add('sparse_mla_attention', 'attention_reduce_scatter');
+          add('attention_reduce_scatter', 'post_attention_norm');
         } else {
           const detail = attentionDetailOpen();
-          add('input_layernorm', 'sparse_mla_attention');
+          add('attention_all_gather', 'sparse_mla_attention');
           add('sparse_mla_attention', 'q_a_proj', false, forkDown(0, 0));
           add('sparse_mla_attention', 'kv_a_proj', false, forkDown(0, 0));
           add('attention_projection_weights', 'q_a_proj', true, straightSideEdge('right', 'left'));
@@ -1123,30 +1186,33 @@
             add('kv_cache', 'attention_core', true);
             add('param_sink_state', 'attention_core', true); add('mome_state', 'attention_core', true);
           }
-          add('attention_core', 'o_causal_conv'); add('attention_core', 'o_residual_add', true); add('o_causal_conv', 'o_residual_add'); add('o_residual_add', 'o_proj'); add('o_proj', 'post_attention_norm');
+          add('attention_core', 'o_causal_conv'); add('attention_core', 'o_residual_add', true); add('o_causal_conv', 'o_residual_add'); add('o_residual_add', 'o_proj'); add('o_proj', 'attention_reduce_scatter'); add('attention_reduce_scatter', 'post_attention_norm');
         }
         add('post_attention_norm', 'mhc_attention_post'); add('mhc_attention_post', 'pre_mlp_norm');
         if (state.collapsedModules.has('ffn_choice')) {
           add('pre_mlp_norm', 'ffn_choice'); add('ffn_choice', 'post_mlp_norm');
         } else {
-          add('pre_mlp_norm', 'dense_mlp', false, forkDown(0, 0));
+          add('pre_mlp_norm', 'ffn_all_gather');
+          add('ffn_all_gather', 'dense_mlp', false, forkDown(0, 0));
           add('dense_mlp_weights', 'dense_gate_up', true, straightSideEdge('right', 'left'));
           add('dense_mlp', 'dense_gate_up'); add('dense_gate_up', 'dense_silu'); add('dense_silu', 'dense_down');
-          add('dense_down', 'post_mlp_norm', false, forkDown(0, 0));
+          add('dense_down', 'ffn_reduce_scatter', false, forkDown(0, 0));
           if (state.collapsedModules.has('moe_ffn')) {
-            add('pre_mlp_norm', 'moe_ffn', false, forkDown(0, 0));
-            add('moe_ffn', 'post_mlp_norm', false, forkDown(0, 0));
+            add('ffn_all_gather', 'moe_ffn', false, forkDown(0, 0));
+            add('moe_ffn', 'ffn_reduce_scatter', false, forkDown(0, 0));
           } else {
-            add('pre_mlp_norm', 'router_gate', false, forkDown(0, 0)); add('router_gate', 'route_topk'); add('route_topk', 'routed_expert_bank');
+            add('ffn_all_gather', 'router_gate', false, forkDown(0, 0)); add('router_gate', 'route_topk'); add('route_topk', 'moe_all_to_all_dispatch'); add('moe_all_to_all_dispatch', 'routed_expert_bank');
             add('router_weight', 'router_gate', true, straightSideEdge('right', 'left'));
             add('expert_bank_weights', 'routed_expert_bank', true, straightSideEdge('right', 'left'));
             add('shared_expert_weights', 'shared_expert_mlp', true, straightSideEdge('right', 'left'));
             add('expert_parallel_state', 'routed_expert_bank', true, straightSideEdge('left', 'right'));
-            add('pre_mlp_norm', 'shared_expert_mlp', false, forkDown(0, 0));
-            add('routed_expert_bank', 'moe_combine', false, forkDown(0, 0));
+            add('ffn_all_gather', 'shared_expert_mlp', false, forkDown(0, 0));
+            add('routed_expert_bank', 'moe_all_to_all_combine', false, forkDown(0, 0));
+            add('moe_all_to_all_combine', 'moe_combine', false, forkDown(0, 0));
             add('shared_expert_mlp', 'moe_combine', false, forkDown(0, 0));
-            add('moe_combine', 'post_mlp_norm', false, forkDown(0, 0));
+            add('moe_combine', 'ffn_reduce_scatter', false, forkDown(0, 0));
           }
+          add('ffn_reduce_scatter', 'post_mlp_norm', false, forkDown(0, 0));
         }
         add('post_mlp_norm', 'block_post_norm'); add('block_post_norm', 'final_norm');
       }
