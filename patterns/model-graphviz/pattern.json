@@ -51,7 +51,7 @@
   },
   "interactionContract": {
     "renderController": "Call window.PtoModelGraphvizPattern.renderController(container, graph, options) when the product needs pan/zoom, focus, evidence hover, edge tags, or external phase/step linkage. The legacy render() API still returns an SVG and remains valid for static previews.",
-    "controllerMethods": ["selectNode(nodeId, options)", "setFocus({ nodeId, relatedNodeIds, source })", "setPhase({ nodeId, relatedNodeIds })", "clearSelection()", "fit()", "destroy()"],
+    "controllerMethods": ["selectNode(nodeId, options)", "setFocus({ nodeId, relatedNodeIds, source })", "setPhase({ nodeId, relatedNodeIds })", "clearSelection()", "fit()", "setTransform({ tx, ty, zoom })", "getTransform()", "destroy()"],
     "evidenceMap": "Pass options.evidenceMap or graph.trainingEvidence keyed by node id. Evidence may include dimension, metric, what, description, evidence, action, sources, and relatedNodeIds.",
     "edgeTags": "Edges may define tag, edgeType, edgeTypeLabel, sourceAnchor, targetAnchor, curve, and tagPosition. The renderer places compact edge tags at a stable point along the rendered path.",
     "hierarchyFocus": "Selected nodes include explicit relatedNodeIds, evidence relatedNodeIds, ancestors, descendants for selected clusters, and directly connected edge neighbors. Focus changes must not refit or recenter the viewport.",

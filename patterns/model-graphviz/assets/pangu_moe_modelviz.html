@@ -155,6 +155,31 @@
       will-change: transform;
     }
 
+    .pangu-detail-toggle {
+      cursor: pointer;
+      pointer-events: all;
+    }
+
+    .pangu-detail-toggle .pangu-toggle-hit {
+      fill: transparent;
+      stroke: transparent;
+      pointer-events: all;
+    }
+
+    .pangu-detail-toggle circle:not(.pangu-toggle-hit) {
+      fill: var(--model-graphviz-toggle-bg);
+      stroke: var(--model-graphviz-toggle-border);
+      stroke-width: 1.2px;
+    }
+
+    .pangu-detail-toggle text {
+      fill: var(--model-graphviz-toggle-icon);
+      font: 750 14px / 1 var(--font-sans);
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+
     .pangu-status {
       min-height: 28px;
       padding: 7px 12px;
@@ -201,6 +226,16 @@
     let currentVariant = VARIANT_ORDER.includes(params.get('variant')) ? params.get('variant') : 'r72b';
     const showExpertDetail = params.get('expert') === '1' || params.get('detail') === 'experts';
     let controller = null;
+    const R72B_DETAIL_MODULES = {
+      attention: {
+        clusters: ['r72b_attention_detail'],
+        statusLabel: 'MLA Attention',
+      },
+      experts: {
+        clusters: ['r72b_expert_detail'],
+        statusLabel: 'Routed Expert Pool',
+      },
+    };
     const PANGU_PRO_DETAIL_MODULES = {
       attention_gqa: {
         clusters: ['mulattention_detail'],
@@ -212,6 +247,15 @@
       },
     };
     const initialProDetail = params.get('detail');
+    const panguR72BExpandedModules = new Set(
+      initialProDetail === 'all'
+        ? Object.keys(R72B_DETAIL_MODULES)
+        : initialProDetail === 'attention'
+          ? ['attention']
+          : initialProDetail === 'experts'
+            ? ['experts']
+            : []
+    );
     const panguProExpandedModules = new Set(
       initialProDetail === 'all'
         ? Object.keys(PANGU_PRO_DETAIL_MODULES)
@@ -402,109 +446,262 @@
       const cx = 640;
       const left = 130;
       const right = 1000;
+      const attentionExpanded = panguR72BExpandedModules.has('attention');
+      const expertsExpanded = panguR72BExpandedModules.has('experts');
+      let y = 72;
       const nodes = [
-        compactNode('token_ids', 'Token IDs', 'Input', 'tensor', cx, 72, 170, 48, 'io:input'),
-        compactNode('embedding', 'Parallel Embedding', 'Op', 'op', cx, 178, 250, 56, 'sem:embedding'),
-        compactNode('dense_block', 'Dense Decoder Block', 'Module', 'op', cx, 292, 280, 58, 'module:decoder'),
-        compactNode('attn_all_gather', 'AllGather', 'Comm', 'op', cx, 388, 220, 52, 'sem:comm'),
-        compactNode('attention', 'MLA Attention', 'Op', 'op', cx, 474, 230, 54, 'sem:attention'),
-        compactNode('attn_reduce_scatter', 'Reduce-Scatter', 'Comm', 'op', cx, 560, 242, 52, 'sem:comm'),
-        compactNode('moe_norm', 'MoE RMSNorm', 'Op', 'op', cx, 652, 220, 54, 'sem:norm'),
-        compactNode('moe_all_gather', 'AllGather', 'Comm', 'op', cx, 738, 220, 52, 'sem:comm'),
-        compactNode('router', 'Router Gate', 'Op', 'op', cx, 826, 210, 54, 'sem:gate'),
-        compactNode('dispatch', 'All-to-All Dispatch', 'Comm', 'op', cx, 914, 230, 52, 'sem:comm'),
-        compactNode('experts', config.expertText, 'Op', 'op', cx, 1002, 250, 58, 'sem:moe'),
-        compactNode('shared_expert', 'Shared Expert', 'Module', 'op', right, 958, 190, 58, 'sem:mlp'),
-        compactNode('combine', 'All-to-All Combine', 'Comm', 'op', cx, 1090, 230, 52, 'sem:comm'),
-        compactNode('moe_reduce_scatter', 'Reduce-Scatter', 'Comm', 'op', cx, 1176, 242, 52, 'sem:comm'),
-        compactNode('final_norm', 'Final RMSNorm', 'Op', 'op', cx, 1268, 210, 54, 'sem:norm'),
-        compactNode('lm_head', 'LM Head', 'Op', 'op', cx, 1360, 190, 54, 'sem:head'),
-        compactNode('logits', 'Logits', 'Output', 'tensor', cx, 1448, 160, 48, 'io:output'),
-        compactNode('embedding_weight', 'Embedding Weight', 'Parameter', 'tensor', left, 178, 190, 48, 'io:parameter'),
-        compactNode('attention_weights', 'Attention Weights', 'Parameter', 'tensor', left, 474, 190, 48, 'io:parameter'),
-        compactNode('router_weight', 'Router Weight', 'Parameter', 'tensor', left, 826, 180, 48, 'io:parameter'),
-        compactNode('expert_weights', 'Expert Weights', 'Parameter', 'tensor', left, 1002, 180, 48, 'io:parameter'),
-        compactNode('shared_weights', 'Shared Weights', 'Parameter', 'tensor', left, 958, 180, 48, 'io:parameter'),
-        compactNode('norm_gamma', 'Norm Gamma', 'Parameter', 'tensor', left, 652, 170, 48, 'io:parameter'),
-        compactNode('lm_head_weight', 'LM Head Weight', 'Parameter', 'tensor', left, 1360, 190, 48, 'io:parameter'),
+        compactNode('token_ids', 'Token IDs', 'Input', 'tensor', cx, y, 170, 48, 'io:input'),
       ];
+      y += 106;
+      nodes.push(compactNode('embedding', 'Parallel Embedding', 'Op', 'op', cx, y, 250, 56, 'sem:embedding'));
+      const embeddingY = y;
+      y += 114;
+      nodes.push(compactNode('dense_block', 'Dense Decoder Block', 'Module', 'op', cx, y, 280, 58, 'module:decoder'));
+      y += 96;
+      nodes.push(compactNode('attn_all_gather', 'AllGather', 'Comm', 'op', cx, y, 220, 52, 'sem:comm'));
+      y += 86;
+      const attentionStartY = y;
+      if (attentionExpanded) {
+        nodes.push(
+          compactNode('qkv_proj', 'Q/KV Latent Proj', 'Op', 'op', cx, y, 250, 54, 'sem:linear'),
+          compactNode('rope_sparse', 'RoPE + DSA/SWA', 'Op', 'op', cx, y + 84, 250, 54, 'sem:attention'),
+          compactNode('mla_core', 'MLA Core', 'Op', 'op', cx, y + 168, 230, 54, 'sem:attention'),
+          compactNode('attention_out_proj', 'Output Projection', 'Op', 'op', cx, y + 252, 230, 54, 'sem:linear'),
+          compactNode('attention_weights', 'Attention Weights', 'Parameter', 'tensor', left, y, 190, 48, 'io:parameter')
+        );
+        y += 338;
+      } else {
+        nodes.push({
+          ...compactNode('attention', 'MLA Attention', 'Module', 'op', cx, y, 230, 54, 'sem:attention'),
+          collapsed: true,
+        });
+        nodes.push(compactNode('attention_weights', 'Attention Weights', 'Parameter', 'tensor', left, y, 190, 48, 'io:parameter'));
+        y += 86;
+      }
+      nodes.push(compactNode('attn_reduce_scatter', 'Reduce-Scatter', 'Comm', 'op', cx, y, 242, 52, 'sem:comm'));
+      y += 92;
+      nodes.push(compactNode('moe_norm', 'MoE RMSNorm', 'Op', 'op', cx, y, 220, 54, 'sem:norm'));
+      const moeNormY = y;
+      y += 86;
+      nodes.push(compactNode('moe_all_gather', 'AllGather', 'Comm', 'op', cx, y, 220, 52, 'sem:comm'));
+      y += 88;
+      nodes.push(compactNode('router', 'Router Gate', 'Op', 'op', cx, y, 210, 54, 'sem:gate'));
+      const routerY = y;
+      y += 88;
+      nodes.push(compactNode('dispatch', 'All-to-All Dispatch', 'Comm', 'op', cx, y, 230, 52, 'sem:comm'));
+      const dispatchY = y;
+      y += 88;
+      const expertStartY = y;
+      if (expertsExpanded) {
+        nodes.push(
+          compactNode('expert_groups', 'Expert Groups', 'Tensor', 'tensor', cx, y, 230, 52, 'io:state'),
+          compactNode('swift_gmm', 'SwiftGMM', 'Op', 'op', cx, y + 84, 220, 56, 'sem:moe'),
+          compactNode('expert_outputs', 'Expert Outputs', 'Tensor', 'tensor', cx, y + 168, 220, 52, 'io:output'),
+          compactNode('expert_weights', 'Expert Weights', 'Parameter', 'tensor', left, y + 84, 180, 48, 'io:parameter')
+        );
+        y += 260;
+      } else {
+        nodes.push({
+          ...compactNode('experts', config.expertText, 'Module', 'op', cx, y, 250, 58, 'sem:moe'),
+          collapsed: true,
+        });
+        nodes.push(compactNode('expert_weights', 'Expert Weights', 'Parameter', 'tensor', left, y, 180, 48, 'io:parameter'));
+        y += 88;
+      }
+      const sharedY = Math.round((dispatchY + y) / 2);
+      nodes.push(compactNode('shared_expert', 'Shared Expert', 'Module', 'op', right, sharedY, 190, 58, 'sem:mlp'));
+      nodes.push(compactNode('combine', 'All-to-All Combine', 'Comm', 'op', cx, y, 230, 52, 'sem:comm'));
+      const combineY = y;
+      y += 86;
+      nodes.push(compactNode('moe_reduce_scatter', 'Reduce-Scatter', 'Comm', 'op', cx, y, 242, 52, 'sem:comm'));
+      y += 92;
+      nodes.push(compactNode('final_norm', 'Final RMSNorm', 'Op', 'op', cx, y, 210, 54, 'sem:norm'));
+      y += 92;
+      nodes.push(compactNode('lm_head', 'LM Head', 'Op', 'op', cx, y, 190, 54, 'sem:head'));
+      const lmHeadY = y;
+      y += 88;
+      nodes.push(compactNode('logits', 'Logits', 'Output', 'tensor', cx, y, 160, 48, 'io:output'));
+
+      nodes.push(
+        compactNode('embedding_weight', 'Embedding Weight', 'Parameter', 'tensor', left, embeddingY, 190, 48, 'io:parameter'),
+        compactNode('router_weight', 'Router Weight', 'Parameter', 'tensor', left, routerY, 180, 48, 'io:parameter'),
+        compactNode('shared_weights', 'Shared Weights', 'Parameter', 'tensor', left, sharedY, 180, 48, 'io:parameter'),
+        compactNode('norm_gamma', 'Norm Gamma', 'Parameter', 'tensor', left, moeNormY, 170, 48, 'io:parameter'),
+        compactNode('lm_head_weight', 'LM Head Weight', 'Parameter', 'tensor', left, lmHeadY, 190, 48, 'io:parameter')
+      );
+
       const edges = [
         ['token_ids', 'embedding', 'ACT'],
         ['embedding', 'dense_block', 'ACT'],
         ['dense_block', 'attn_all_gather', 'AllGather'],
-        ['attn_all_gather', 'attention', 'ACT'],
-        ['attention', 'attn_reduce_scatter', 'ReduceScatter'],
         ['attn_reduce_scatter', 'moe_norm', 'ACT'],
         ['moe_norm', 'moe_all_gather', 'AllGather'],
         ['moe_all_gather', 'router', 'ACT'],
         ['router', 'dispatch', 'dispatch'],
-        ['dispatch', 'experts', 'TOKENS'],
         ['moe_all_gather', 'shared_expert', 'ACT'],
         ['shared_expert', 'combine', 'ACT'],
-        ['experts', 'combine', 'combine'],
         ['combine', 'moe_reduce_scatter', 'ReduceScatter'],
         ['moe_reduce_scatter', 'final_norm', 'ACT'],
         ['final_norm', 'lm_head', 'ACT'],
         ['lm_head', 'logits', 'LOGITS'],
       ].map(([source, target, tag]) => ({ source, target, tag, edgeType: tag === 'ACT' || tag === 'LOGITS' ? 'activation' : 'communication' }));
+      if (attentionExpanded) {
+        edges.push(
+          { source: 'attn_all_gather', target: 'qkv_proj', tag: 'ACT', edgeType: 'activation' },
+          { source: 'qkv_proj', target: 'rope_sparse', tag: 'ACT', edgeType: 'activation' },
+          { source: 'rope_sparse', target: 'mla_core', tag: 'ACT', edgeType: 'activation' },
+          { source: 'mla_core', target: 'attention_out_proj', tag: 'ACT', edgeType: 'activation' },
+          { source: 'attention_out_proj', target: 'attn_reduce_scatter', tag: 'ReduceScatter', edgeType: 'communication' }
+        );
+      } else {
+        edges.push(
+          { source: 'attn_all_gather', target: 'attention', tag: 'ACT', edgeType: 'activation' },
+          { source: 'attention', target: 'attn_reduce_scatter', tag: 'ReduceScatter', edgeType: 'communication' }
+        );
+      }
+      if (expertsExpanded) {
+        edges.push(
+          { source: 'dispatch', target: 'expert_groups', tag: 'TOKENS', edgeType: 'communication' },
+          { source: 'expert_groups', target: 'swift_gmm', tag: 'group', edgeType: 'activation' },
+          { source: 'swift_gmm', target: 'expert_outputs', tag: 'out', edgeType: 'activation' },
+          { source: 'expert_outputs', target: 'combine', tag: 'combine', edgeType: 'communication' }
+        );
+      } else {
+        edges.push(
+          { source: 'dispatch', target: 'experts', tag: 'TOKENS', edgeType: 'communication' },
+          { source: 'experts', target: 'combine', tag: 'combine', edgeType: 'communication' }
+        );
+      }
       edges.push(
         { source: 'embedding_weight', target: 'embedding', tag: 'W', edgeType: 'parameter', dashed: true },
-        { source: 'attention_weights', target: 'attention', tag: 'W', edgeType: 'parameter', dashed: true },
+        { source: 'attention_weights', target: attentionExpanded ? 'qkv_proj' : 'attention', tag: 'W', edgeType: 'parameter', dashed: true },
         { source: 'router_weight', target: 'router', tag: 'W', edgeType: 'parameter', dashed: true },
-        { source: 'expert_weights', target: 'experts', tag: 'W', edgeType: 'parameter', dashed: true },
+        { source: 'expert_weights', target: expertsExpanded ? 'swift_gmm' : 'experts', tag: 'W', edgeType: 'parameter', dashed: true },
         { source: 'shared_weights', target: 'shared_expert', tag: 'W', edgeType: 'parameter', dashed: true },
         { source: 'norm_gamma', target: 'moe_norm', tag: 'gamma', edgeType: 'parameter', dashed: true },
         { source: 'lm_head_weight', target: 'lm_head', tag: 'W', edgeType: 'parameter', dashed: true }
       );
-      return {
-        width: 1280,
-        height: 1540,
+      const clusters = [
+        { id: 'model', label: config.title, x: 20, y: 120, width: 1160, height: y - 36, colorKey: 'module:model' },
+        { id: 'decoder', label: config.layerText, x: 390, y: 246, width: 500, height: Math.max(970, y - 318), colorKey: 'module:decoder', repeat: true },
+        { id: 'moe', label: 'MoE FFN', x: 390, y: moeNormY - 92, width: 760, height: Math.max(520, combineY - moeNormY + 250), colorKey: 'sem:moe', repeat: true },
+      ];
+      if (attentionExpanded) {
+        clusters.push({ id: 'r72b_attention_detail', label: 'MLA Attention Detail', x: cx - 155, y: attentionStartY - 58, width: 310, height: 348, colorKey: 'sem:attention', parent: 'decoder' });
+        ['qkv_proj', 'rope_sparse', 'mla_core', 'attention_out_proj'].forEach((id) => {
+          const node = nodes.find((item) => item.id === id);
+          if (node) node.parent = 'r72b_attention_detail';
+        });
+      }
+      if (expertsExpanded) {
+        clusters.push({ id: 'r72b_expert_detail', label: 'Routed Expert Detail', x: cx - 155, y: expertStartY - 58, width: 310, height: 264, colorKey: 'sem:moe', parent: 'moe' });
+        ['expert_groups', 'swift_gmm', 'expert_outputs'].forEach((id) => {
+          const node = nodes.find((item) => item.id === id);
+          if (node) node.parent = 'r72b_expert_detail';
+        });
+      }
+      const graph = {
+        width: 1320,
+        height: y + 72,
         clusters: [
-          { id: 'model', label: config.title, x: 20, y: 120, width: 1160, height: 1380, colorKey: 'module:model' },
-          { id: 'decoder', label: config.layerText, x: 390, y: 246, width: 500, height: 970, colorKey: 'module:decoder', repeat: true },
-          { id: 'moe', label: 'MoE FFN', x: 390, y: 560, width: 760, height: 670, colorKey: 'sem:moe', repeat: true },
+          ...clusters,
         ],
         nodes,
         edges,
       };
+      return normalizeGraphBounds(graph);
     }
 
-    function togglePanguProModule(moduleId) {
-      if (!PANGU_PRO_DETAIL_MODULES[moduleId]) return;
-      if (panguProExpandedModules.has(moduleId)) {
-        panguProExpandedModules.delete(moduleId);
+    function toggleDetailModule(moduleId) {
+      const modules = currentVariant === 'r72b' ? R72B_DETAIL_MODULES : PANGU_PRO_DETAIL_MODULES;
+      const expandedModules = currentVariant === 'r72b' ? panguR72BExpandedModules : panguProExpandedModules;
+      if (!modules[moduleId]) return;
+      const label = modules[moduleId].statusLabel || moduleId;
+      if (expandedModules.has(moduleId)) {
+        expandedModules.delete(moduleId);
       } else {
-        panguProExpandedModules.add(moduleId);
+        expandedModules.add(moduleId);
       }
-      renderVariant();
+      renderVariant({ preserveTransform: true, status: `${label} detail ${expandedModules.has(moduleId) ? 'opened' : 'closed'}.` });
     }
 
-    function wirePanguProExpanders() {
+    function createSvgElement(tagName, attrs = {}) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', tagName);
+      Object.entries(attrs).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) el.setAttribute(key, String(value));
+      });
+      return el;
+    }
+
+    function appendDetailToggle(svg, x, y, moduleId, expanded) {
+      const group = createSvgElement('g', {
+        class: 'pangu-detail-toggle',
+        transform: `translate(${x}, ${y})`,
+        role: 'button',
+        tabindex: '0',
+        'aria-label': `${moduleId} ${expanded ? 'collapse detail' : 'expand detail'}`,
+      });
+      group.appendChild(createSvgElement('circle', { class: 'pangu-toggle-hit', cx: 0, cy: 0, r: 18 }));
+      group.appendChild(createSvgElement('circle', { cx: 0, cy: 0, r: 8.5 }));
+      const icon = createSvgElement('text', { x: 0, y: 0.3 });
+      icon.textContent = expanded ? '-' : '+';
+      group.appendChild(icon);
+      const title = createSvgElement('title');
+      title.textContent = expanded ? 'Collapse detail' : 'Expand detail';
+      group.appendChild(title);
+      group.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleDetailModule(moduleId);
+      });
+      group.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        toggleDetailModule(moduleId);
+      });
+      svg.appendChild(group);
+    }
+
+    function wireDetailInteractions(graph) {
       const stage = document.getElementById('graphStage');
-      Object.entries(PANGU_PRO_DETAIL_MODULES).forEach(([moduleId, detail]) => {
+      const svg = stage.querySelector('svg');
+      if (!svg) return;
+      const modules = currentVariant === 'r72b' ? R72B_DETAIL_MODULES : PANGU_PRO_DETAIL_MODULES;
+      const expandedModules = currentVariant === 'r72b' ? panguR72BExpandedModules : panguProExpandedModules;
+      Object.entries(modules).forEach(([moduleId, detail]) => {
+        const expanded = expandedModules.has(moduleId);
         const nodeEl = stage.querySelector(`[data-node-id="${moduleId}"]`);
         if (nodeEl) {
           nodeEl.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopImmediatePropagation();
-            togglePanguProModule(moduleId);
+            toggleDetailModule(moduleId);
           }, true);
           nodeEl.addEventListener('keydown', (event) => {
             if (event.key !== 'Enter' && event.key !== ' ') return;
             event.preventDefault();
             event.stopImmediatePropagation();
-            togglePanguProModule(moduleId);
+            toggleDetailModule(moduleId);
           }, true);
         }
         detail.clusters.forEach((clusterId) => {
           const clusterEl = stage.querySelector(`[data-cluster-id="${clusterId}"]`);
           if (!clusterEl) return;
-          clusterEl.addEventListener('click', (event) => {
+          clusterEl.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
             event.preventDefault();
             event.stopImmediatePropagation();
-            togglePanguProModule(moduleId);
+            toggleDetailModule(moduleId);
           }, true);
         });
+        const node = graph.nodes.find((item) => item.id === moduleId);
+        if (node) {
+          appendDetailToggle(svg, node.x + node.width / 2 - 18, node.y, moduleId, expanded);
+          return;
+        }
+        const clusterId = detail.clusters[0];
+        const cluster = graph.clusters.find((item) => item.id === clusterId);
+        if (cluster) appendDetailToggle(svg, cluster.x + cluster.width - 13, cluster.y + 13, moduleId, expanded);
       });
     }
 
@@ -526,8 +723,9 @@
       svg.style.transform = `translate(${tx}px, ${ty}px) scale(${zoom})`;
     }
 
-    function renderVariant() {
+    function renderVariant(options = {}) {
       const variant = VARIANTS[currentVariant] || VARIANTS.r72b;
+      const initialTransform = options.preserveTransform ? controller?.getTransform?.() : null;
       document.title = `${variant.title} Architecture`;
       document.getElementById('pageTitle').textContent = `${variant.title} Architecture`;
       document.getElementById('pageSource').textContent = variant.source;
@@ -543,15 +741,16 @@
         minReadableZoom: currentVariant === 'pro72ba16b' ? 0.44 : 0.58,
         selectableClusters: false,
         reportOverlays: false,
+        initialTransform,
         colormap: window.PtoModelGraphvizPattern.modelArchitectureColormap(graph),
       });
-      if (currentVariant === 'pro72ba16b') {
-        wirePanguProExpanders();
+      wireDetailInteractions(graph);
+      if (currentVariant === 'pro72ba16b' && !initialTransform) {
         applyImmediateFit(graph);
         requestAnimationFrame(() => controller?.fit());
         window.setTimeout(() => controller?.fit(), 150);
       }
-      document.getElementById('statusText').textContent = `${variant.title} loaded.`;
+      document.getElementById('statusText').textContent = options.status || `${variant.title} loaded.`;
     }
 
     document.getElementById('variantFit').addEventListener('click', () => controller?.fit());
