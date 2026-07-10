@@ -549,7 +549,7 @@
       y += 88;
       nodes.push(compactNode('dispatch', 'All-to-All Dispatch', 'Comm', 'op', cx, y, 230, 52, 'sem:comm'));
       const dispatchY = y;
-      y += 88;
+      y += expertsExpanded ? 124 : 88;
       const expertStartY = y;
       if (expertsExpanded) {
         nodes.push(
@@ -567,7 +567,7 @@
         nodes.push(compactNode('expert_weights', 'Expert Weights', 'Parameter', 'tensor', left, y, 180, 48, 'io:parameter'));
         y += 88;
       }
-      const sharedY = expertsExpanded ? expertStartY - 40 : expertStartY - 64;
+      const sharedY = expertsExpanded ? dispatchY + 42 : expertStartY - 64;
       nodes.push(compactNode('shared_expert', 'Shared Expert', 'Module', 'op', right, sharedY, 190, 58, 'sem:mlp'));
       nodes.push(compactNode('combine', 'All-to-All Combine', 'Comm', 'op', cx, y, 230, 52, 'sem:comm'));
       const combineY = y;
@@ -653,7 +653,7 @@
         });
       }
       if (expertsExpanded) {
-        clusters.push({ id: 'r72b_expert_detail', label: 'Routed Expert Detail', x: cx - 175, y: expertStartY - 92, width: 350, height: 320, colorKey: 'sem:moe', parent: 'moe' });
+        clusters.push({ id: 'r72b_expert_detail', label: 'Routed Expert Detail', x: cx - 175, y: expertStartY - 72, width: 350, height: 330, colorKey: 'sem:moe', parent: 'moe' });
         ['expert_groups', 'swift_gmm', 'expert_outputs'].forEach((id) => {
           const node = nodes.find((item) => item.id === id);
           if (node) node.parent = 'r72b_expert_detail';
