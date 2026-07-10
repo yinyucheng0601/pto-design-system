@@ -406,6 +406,19 @@
   stroke-width: 0.9px;
 }
 
+:root[data-theme='light'] .pto-model-graphviz-node.is-op rect,
+:root[data-theme='light'] .pto-model-graphviz-node.is-module rect {
+  stroke: none;
+  stroke-width: 0;
+}
+
+:root[data-theme='light'] .pto-model-architecture-stage .pto-model-graphviz-node.is-selected rect,
+:root[data-theme='light'] .pto-model-architecture-stage .pto-model-graphviz-node.is-model-selected rect,
+:root[data-theme='light'] .pto-model-architecture-stage .pto-model-graphviz-node.is-training-selected rect {
+  stroke: var(--model-architecture-selected-stroke);
+  stroke-width: 3px;
+}
+
 :root[data-theme='light'] .pto-model-architecture-stage .pto-model-graphviz-node-label {
   fill: var(--model-graphviz-node-label);
   font-size: var(--font-size-title-sm);

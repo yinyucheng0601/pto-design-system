@@ -1090,6 +1090,21 @@
     };
   }
 
+  function clusterBoundaryRects(cluster, padding = 0) {
+    const left = cluster.x - padding;
+    const top = cluster.y - padding;
+    const right = cluster.x + cluster.width + padding;
+    const bottom = cluster.y + cluster.height + padding;
+    const band = Math.max(8, padding * 2);
+    const titleBand = Math.max(38, padding * 3);
+    return [
+      { left, top, right, bottom: top + titleBand },
+      { left, top: bottom - band, right, bottom },
+      { left, top, right: left + band, bottom },
+      { left: right - band, top, right, bottom },
+    ];
+  }
+
   function rectsOverlap(a, b) {
     return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
   }
@@ -1134,22 +1149,71 @@
       .some((node) => rectsOverlap(tagRect, nodeRect(node, padding)));
   }
 
+  function edgeTagOverlapsCluster(point, width, height, entry, padding) {
+    const tagRect = tagRectAt(point, width, height);
+    return (entry.avoidClusters || [])
+      .filter(Boolean)
+      .some((cluster) => clusterBoundaryRects(cluster, padding).some((rect) => rectsOverlap(tagRect, rect)));
+  }
+
+  function shiftedEdgeTagPoint(entry, length, distance, point, offset) {
+    if (!Number.isFinite(offset) || Math.abs(offset) < 0.5) return point;
+    const sample = Math.max(1, Math.min(8, length * 0.01));
+    const before = entry.el.getPointAtLength(Math.max(0, distance - sample));
+    const after = entry.el.getPointAtLength(Math.min(length, distance + sample));
+    const dx = after.x - before.x;
+    const dy = after.y - before.y;
+    const magnitude = Math.hypot(dx, dy);
+    if (!magnitude) return { x: point.x, y: point.y - offset };
+    return {
+      x: point.x + (-dy / magnitude) * offset,
+      y: point.y + (dx / magnitude) * offset,
+    };
+  }
+
+  function edgeTagOffsets(edge, opts) {
+    const explicitOffset = Number(edge?.tagOffset);
+    if (Number.isFinite(explicitOffset)) return [explicitOffset, 0];
+    if (Array.isArray(edge?.tagOffsets) && edge.tagOffsets.length) {
+      return [0, ...edge.tagOffsets.map(Number).filter(Number.isFinite)];
+    }
+    const explicitOptions = Array.isArray(opts.edgeTagOffsets)
+      ? opts.edgeTagOffsets.map(Number).filter(Number.isFinite)
+      : [];
+    if (explicitOptions.length) return [0, ...explicitOptions];
+    return normalizeEdgeType(edge) === 'parameter'
+      ? [0, -24, 24, -38, 38, -52, 52]
+      : [0];
+  }
+
   function resolveEdgeTagPoint(entry, length, width, height, options) {
     const opts = options || {};
     const edge = entry.edge || {};
     const explicitPosition = Number(edge.tagPosition);
     const basePosition = Number.isFinite(explicitPosition) ? explicitPosition : 0.52;
     const avoidNodes = edge.tagAvoidNodes !== false && opts.edgeTagAvoidNodes !== false;
+    const avoidClusters = normalizeEdgeType(edge) === 'parameter'
+      && edge.tagAvoidClusters !== false
+      && opts.edgeTagAvoidClusters !== false;
     const endpointPadding = Number.isFinite(Number(opts.edgeTagNodePadding))
       ? Number(opts.edgeTagNodePadding)
       : 6;
+    const clusterPadding = Number.isFinite(Number(opts.edgeTagClusterPadding))
+      ? Number(opts.edgeTagClusterPadding)
+      : 12;
 
     let fallbackPoint = null;
     for (const position of uniqueTagPositions(basePosition)) {
-      const point = entry.el.getPointAtLength(length * position);
-      if (!fallbackPoint) fallbackPoint = point;
-      if (!avoidNodes || !edgeTagOverlapsNode(point, width, height, entry, endpointPadding)) {
-        return point;
+      const distance = length * position;
+      const basePoint = entry.el.getPointAtLength(distance);
+      if (!fallbackPoint) fallbackPoint = basePoint;
+      for (const offset of edgeTagOffsets(edge, opts)) {
+        const point = shiftedEdgeTagPoint(entry, length, distance, basePoint, offset);
+        const overlapsNode = avoidNodes && edgeTagOverlapsNode(point, width, height, entry, endpointPadding);
+        const overlapsCluster = avoidClusters && edgeTagOverlapsCluster(point, width, height, entry, clusterPadding);
+        if (!overlapsNode && !overlapsCluster) {
+          return point;
+        }
       }
     }
     return fallbackPoint;
@@ -1179,6 +1243,8 @@
           class: tagClass,
           transform: `translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`,
           'data-edge-type': normalizeEdgeType(edge),
+          'data-source': edge.source || entry.source || null,
+          'data-target': edge.target || entry.target || null,
           'aria-label': label,
         });
         group.appendChild(createSvgElement('rect', {
@@ -1617,7 +1683,7 @@
         'data-target': edge.target,
       });
       svg.appendChild(el);
-      edgeEntries.push({ el, edge, source: edge.source, target: edge.target, sourceNode: source, targetNode, avoidNodes: data.nodes, tagEl: null });
+      edgeEntries.push({ el, edge, source: edge.source, target: edge.target, sourceNode: source, targetNode, avoidNodes: data.nodes, avoidClusters: data.clusters, tagEl: null });
     });
 
     (data.nodes || []).forEach((node) => {

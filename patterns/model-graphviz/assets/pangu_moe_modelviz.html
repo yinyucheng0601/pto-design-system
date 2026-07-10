@@ -26,7 +26,7 @@
   <link rel="stylesheet" href="../../../tokens/foundation.css">
   <link rel="stylesheet" href="../../../tokens/semantic.css">
   <link rel="stylesheet" href="../../../tokens/components.css">
-  <link rel="stylesheet" href="../pattern.css?v=model-gallery-consistency-2">
+  <link rel="stylesheet" href="../pattern.css?v=model-gallery-light-border-1">
   <style>
     :root {
       --pangu-bg: var(--background);
@@ -251,7 +251,7 @@
     <div class="pangu-status" id="statusText">Loading Pangu graph.</div>
   </main>
 
-  <script src="../pattern.js?v=model-gallery-category-colors-3"></script>
+  <script src="../pattern.js?v=model-gallery-tag-avoid-1"></script>
   <script src="./pangu_ultramoe_718b_graph.js?v=model-gallery-consistency-2"></script>
   <script src="./pangu_pro_moe_72ba16b_graph.js?v=model-gallery-consistency-2"></script>
   <script>
@@ -567,7 +567,7 @@
         nodes.push(compactNode('expert_weights', 'Expert Weights', 'Parameter', 'tensor', left, y, 180, 48, 'io:parameter'));
         y += 88;
       }
-      const sharedY = Math.round((dispatchY + y) / 2);
+      const sharedY = expertsExpanded ? expertStartY - 40 : expertStartY - 64;
       nodes.push(compactNode('shared_expert', 'Shared Expert', 'Module', 'op', right, sharedY, 190, 58, 'sem:mlp'));
       nodes.push(compactNode('combine', 'All-to-All Combine', 'Comm', 'op', cx, y, 230, 52, 'sem:comm'));
       const combineY = y;
