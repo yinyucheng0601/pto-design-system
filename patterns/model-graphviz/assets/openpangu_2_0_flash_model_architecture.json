@@ -265,7 +265,8 @@
       "op_type": "CausalConv1D",
       "attrs": {
         "kernel_width_symbol": "W_router",
-        "path": "MoME Q stream"
+        "path": "MoME Q stream",
+        "residual_connection": "fused_in_mome_conv"
       },
       "provenance": [
         {
@@ -273,23 +274,6 @@
           "fact": "NPUPanguSparseAttention creates qa_conv for MoME",
           "confidence": "confirmed",
           "line": 1011
-        }
-      ]
-    },
-    {
-      "id": "q_residual_add",
-      "kind": "op",
-      "label": "Q Add",
-      "op_type": "Add",
-      "attrs": {
-        "residual_connection": true
-      },
-      "provenance": [
-        {
-          "source": "attention_impl",
-          "fact": "MoME causal conv custom op supports residual_connection",
-          "confidence": "confirmed",
-          "line": 1715
         }
       ]
     },
@@ -351,7 +335,8 @@
       "op_type": "CausalConv1D",
       "attrs": {
         "kernel_width_symbol": "W_router",
-        "path": "MoME KV stream"
+        "path": "MoME KV stream",
+        "residual_connection": "fused_in_mome_conv"
       },
       "provenance": [
         {
@@ -359,23 +344,6 @@
           "fact": "NPUPanguSparseAttention creates compresskv_conv for MoME",
           "confidence": "confirmed",
           "line": 1017
-        }
-      ]
-    },
-    {
-      "id": "kv_residual_add",
-      "kind": "op",
-      "label": "KV Add",
-      "op_type": "Add",
-      "attrs": {
-        "residual_connection": true
-      },
-      "provenance": [
-        {
-          "source": "attention_impl",
-          "fact": "MoME causal conv custom op supports residual_connection",
-          "confidence": "confirmed",
-          "line": 1715
         }
       ]
     },
@@ -477,7 +445,8 @@
       "op_type": "CausalConv1D",
       "attrs": {
         "kernel_width_symbol": "W_router",
-        "path": "MoME output stream"
+        "path": "MoME output stream",
+        "residual_connection": "fused_in_mome_conv"
       },
       "provenance": [
         {
@@ -485,23 +454,6 @@
           "fact": "NPUPanguSparseAttention creates o_conv for MoME",
           "confidence": "confirmed",
           "line": 1023
-        }
-      ]
-    },
-    {
-      "id": "o_residual_add",
-      "kind": "op",
-      "label": "Output Add",
-      "op_type": "Add",
-      "attrs": {
-        "residual_connection": true
-      },
-      "provenance": [
-        {
-          "source": "attention_impl",
-          "fact": "Attention output can pass through output-side MoME before projection",
-          "confidence": "confirmed",
-          "line": 2144
         }
       ]
     },
@@ -1372,63 +1324,6 @@
       ]
     },
     {
-      "id": "e_qa_skip_to_qadd",
-      "source": "q_a_proj",
-      "target": "q_residual_add",
-      "tensor": {
-        "name": "q_lora_residual",
-        "shape": "[B,T,R_q]",
-        "dtype": "bf16"
-      },
-      "provenance": [
-        {
-          "source": "attention_impl",
-          "fact": "q_a_proj feeds q_residual_add with q_lora_residual",
-          "confidence": "confirmed",
-          "line": 1715
-        }
-      ]
-    },
-    {
-      "id": "e_qconv_to_qadd",
-      "source": "q_causal_conv",
-      "target": "q_residual_add",
-      "tensor": {
-        "name": "q_local_context",
-        "shape": "[B,T,R_q]",
-        "dtype": "bf16",
-        "constraints": [
-          "W_router=3"
-        ]
-      },
-      "provenance": [
-        {
-          "source": "attention_impl",
-          "fact": "q_causal_conv feeds q_residual_add with q_local_context",
-          "confidence": "confirmed",
-          "line": 1715
-        }
-      ]
-    },
-    {
-      "id": "e_qadd_to_qnorm",
-      "source": "q_residual_add",
-      "target": "q_a_norm",
-      "tensor": {
-        "name": "q_lora",
-        "shape": "[B,T,R_q]",
-        "dtype": "bf16"
-      },
-      "provenance": [
-        {
-          "source": "attention_impl",
-          "fact": "q_residual_add feeds q_a_norm with q_lora",
-          "confidence": "confirmed",
-          "line": 2024
-        }
-      ]
-    },
-    {
       "id": "e_qnorm_to_qb",
       "source": "q_a_norm",
       "target": "q_b_proj",
@@ -1479,63 +1374,6 @@
           "fact": "kv_a_proj feeds kv_causal_conv with kv_lora",
           "confidence": "confirmed",
           "line": 2068
-        }
-      ]
-    },
-    {
-      "id": "e_kva_skip_to_kvadd",
-      "source": "kv_a_proj",
-      "target": "kv_residual_add",
-      "tensor": {
-        "name": "kv_lora_residual",
-        "shape": "[B,T,R_kv+D_rope]",
-        "dtype": "bf16"
-      },
-      "provenance": [
-        {
-          "source": "attention_impl",
-          "fact": "kv_a_proj feeds kv_residual_add with kv_lora_residual",
-          "confidence": "confirmed",
-          "line": 2082
-        }
-      ]
-    },
-    {
-      "id": "e_kvconv_to_kvadd",
-      "source": "kv_causal_conv",
-      "target": "kv_residual_add",
-      "tensor": {
-        "name": "kv_local_context",
-        "shape": "[B,T,R_kv]",
-        "dtype": "bf16",
-        "constraints": [
-          "W_router=3"
-        ]
-      },
-      "provenance": [
-        {
-          "source": "attention_impl",
-          "fact": "kv_causal_conv feeds kv_residual_add with kv_local_context",
-          "confidence": "confirmed",
-          "line": 2082
-        }
-      ]
-    },
-    {
-      "id": "e_kvadd_to_kvnorm",
-      "source": "kv_residual_add",
-      "target": "kv_a_norm",
-      "tensor": {
-        "name": "kv_lora_plus_rope",
-        "shape": "[B,T,R_kv+D_rope]",
-        "dtype": "bf16"
-      },
-      "provenance": [
-        {
-          "source": "attention_impl",
-          "fact": "kv_residual_add feeds kv_a_norm with kv_lora_plus_rope",
-          "confidence": "confirmed",
-          "line": 2092
         }
       ]
     },
@@ -1749,63 +1587,6 @@
           "fact": "attention_core feeds o_causal_conv with attn_output",
           "confidence": "confirmed",
           "line": 2137
-        }
-      ]
-    },
-    {
-      "id": "e_core_skip_to_oadd",
-      "source": "attention_core",
-      "target": "o_residual_add",
-      "tensor": {
-        "name": "attn_output_residual",
-        "shape": "[B,T,N_h,D_v]",
-        "dtype": "bf16"
-      },
-      "provenance": [
-        {
-          "source": "attention_impl",
-          "fact": "attention_core feeds o_residual_add with attn_output_residual",
-          "confidence": "confirmed",
-          "line": 2144
-        }
-      ]
-    },
-    {
-      "id": "e_oconv_to_oadd",
-      "source": "o_causal_conv",
-      "target": "o_residual_add",
-      "tensor": {
-        "name": "attn_local_context",
-        "shape": "[B,T,N_h,D_v]",
-        "dtype": "bf16",
-        "constraints": [
-          "W_router=3"
-        ]
-      },
-      "provenance": [
-        {
-          "source": "attention_impl",
-          "fact": "o_causal_conv feeds o_residual_add with attn_local_context",
-          "confidence": "confirmed",
-          "line": 2144
-        }
-      ]
-    },
-    {
-      "id": "e_oadd_to_o",
-      "source": "o_residual_add",
-      "target": "o_proj",
-      "tensor": {
-        "name": "attn_output",
-        "shape": "[B,T,N_h,D_v]",
-        "dtype": "bf16"
-      },
-      "provenance": [
-        {
-          "source": "attention_impl",
-          "fact": "o_residual_add feeds o_proj with attn_output",
-          "confidence": "confirmed",
-          "line": 849
         }
       ]
     },
@@ -2503,6 +2284,57 @@
           "confidence": "confirmed"
         }
       ]
+    },
+    {
+      "id": "e_qconv_to_qnorm",
+      "source": "q_causal_conv",
+      "target": "q_a_norm",
+      "tensor": {
+        "name": "q_lora_after_mome",
+        "shape": "[B,T,R_q]",
+        "dtype": "bf16"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "MoME causal conv is fused with residual_connection=1 and returns the stream tensor for the next op",
+          "confidence": "confirmed"
+        }
+      ]
+    },
+    {
+      "id": "e_kvconv_to_kvnorm",
+      "source": "kv_causal_conv",
+      "target": "kv_a_norm",
+      "tensor": {
+        "name": "kv_lora_plus_rope_after_mome",
+        "shape": "[B,T,R_kv+D_rope]",
+        "dtype": "bf16"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "MoME causal conv is fused with residual_connection=1 and returns the stream tensor for the next op",
+          "confidence": "confirmed"
+        }
+      ]
+    },
+    {
+      "id": "e_oconv_to_o",
+      "source": "o_causal_conv",
+      "target": "o_proj",
+      "tensor": {
+        "name": "attn_output_after_mome",
+        "shape": "[B,T,N_h,D_v]",
+        "dtype": "bf16"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "MoME causal conv is fused with residual_connection=1 and returns the stream tensor for the next op",
+          "confidence": "confirmed"
+        }
+      ]
     }
   ],
   "repeats": [
@@ -2687,19 +2519,16 @@
         "nodes": [
           "q_a_proj",
           "q_causal_conv",
-          "q_residual_add",
           "q_a_norm",
           "q_b_proj",
           "kv_a_proj",
           "kv_causal_conv",
-          "kv_residual_add",
           "kv_a_norm",
           "kv_b_proj",
           "rope_apply",
           "dsa_indexer",
           "attention_core",
           "o_causal_conv",
-          "o_residual_add",
           "o_proj",
           "rope_cache",
           "kv_cache",

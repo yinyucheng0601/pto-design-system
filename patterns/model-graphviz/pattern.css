@@ -582,6 +582,19 @@
   cursor: pointer;
 }
 
+.pto-model-graphviz-interactive .pto-model-graphviz-edge-tags,
+.pto-model-graphviz-interactive .pto-model-graphviz-edge-tag {
+  pointer-events: auto;
+}
+
+.pto-model-graphviz-interactive .pto-model-graphviz-edge {
+  pointer-events: stroke;
+}
+
+.pto-model-graphviz-interactive .pto-model-graphviz-edge-tag {
+  cursor: help;
+}
+
 .pto-model-graphviz-interactive .pto-model-graphviz-node,
 .pto-model-graphviz-interactive .pto-model-graphviz-edge,
 .pto-model-graphviz-interactive .pto-model-graphviz-edge-tag {

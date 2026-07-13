@@ -287,8 +287,33 @@
     return String(edge?.tag || edge?.edgeTypeLabel || edge?.edgeType || '').trim();
   }
 
-  function edgeTagWidth(label) {
-    return Math.max(38, Math.min(94, String(label || '').length * 5.7 + 18));
+  function edgeTagFontSize(edge, options) {
+    const value = Number(edge?.tagFontSize ?? options?.edgeTagFontSize);
+    return Number.isFinite(value) ? Math.max(8, Math.min(18, value)) : 9.5;
+  }
+
+  function edgeTagHeight(edge, options) {
+    const value = Number(edge?.tagHeight ?? options?.edgeTagHeight);
+    return Number.isFinite(value) ? Math.max(16, Math.min(32, value)) : 18;
+  }
+
+  function edgeTagAngle(edge) {
+    const value = Number(edge?.tagAngle ?? edge?.tagRotation ?? 0);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  function edgeTagWidth(label, fontSize = 9.5, paddingX = 9) {
+    return Math.max(38, Math.min(132, String(label || '').length * fontSize * 0.6 + paddingX * 2));
+  }
+
+  function rotatedTagSize(width, height, angle) {
+    const radians = Math.abs(angle) * Math.PI / 180;
+    const cos = Math.abs(Math.cos(radians));
+    const sin = Math.abs(Math.sin(radians));
+    return {
+      width: width * cos + height * sin,
+      height: width * sin + height * cos,
+    };
   }
 
   function classToken(value) {
@@ -327,6 +352,57 @@
       info?.description ? `<p>${esc(info.description)}</p>` : '',
       lines ? `<ul>${lines}</ul>` : '',
       info?.action ? `<p><b>${esc(actionLabel)}</b> ${esc(info.action)}</p>` : '',
+      sources ? `<div class="pto-model-graphviz-hover-source">${sources}</div>` : '',
+    ].filter(Boolean).join('');
+  }
+
+  function edgeHasHover(edge) {
+    const info = edge?.hover || edge || {};
+    return Boolean(
+      info.title
+      || info.what
+      || info.description
+      || info.object
+      || info.tensor
+      || (Array.isArray(info.evidence) && info.evidence.length)
+      || (Array.isArray(info.lines) && info.lines.length)
+      || (Array.isArray(info.sources) && info.sources.length)
+    );
+  }
+
+  function edgeHoverHtml(edge, options) {
+    if (typeof options?.renderEdgeHover === 'function') {
+      return options.renderEdgeHover(edge);
+    }
+    const info = edge?.hover || edge || {};
+    const tensor = info.tensor || edge?.tensor || null;
+    const title = info.title || info.label || edgeTagText(edge) || 'Edge object';
+    const chips = [
+      edgeTagText(edge),
+      info.object,
+      tensor?.name,
+      tensor?.shape,
+      tensor?.dtype,
+      edge?.edgeType || edge?.type,
+    ].filter(Boolean).map((item) => `<span>${esc(item)}</span>`).join('');
+    const lines = (info.evidence || info.lines || []).slice(0, 4)
+      .map((line) => `<li>${esc(line)}</li>`)
+      .join('');
+    const sources = (info.sources || []).slice(0, 3)
+      .map((item) => `<span>${esc(item)}</span>`)
+      .join('');
+
+    return [
+      '<div class="pto-model-graphviz-hover-title">',
+        '<div>',
+          `<small>${esc(edge?.source || '')} -> ${esc(edge?.target || '')}</small>`,
+          `<strong>${esc(title)}</strong>`,
+        '</div>',
+      '</div>',
+      chips ? `<div class="pto-model-graphviz-hover-chips">${chips}</div>` : '',
+      info.what ? `<p>${esc(info.what)}</p>` : '',
+      info.description ? `<p>${esc(info.description)}</p>` : '',
+      lines ? `<ul>${lines}</ul>` : '',
       sources ? `<div class="pto-model-graphviz-hover-source">${sources}</div>` : '',
     ].filter(Boolean).join('');
   }
@@ -804,8 +880,12 @@
     const targetAnchor = edge?.targetAnchor || (vertical
       ? source.y < target.y ? 'top' : 'bottom'
       : source.x < target.x ? 'left' : 'right');
-    const start = nodeAnchor(source, sourceAnchor);
-    const end = nodeAnchor(target, targetAnchor);
+    const start = edge?.sourcePoint
+      ? { x: Number(edge.sourcePoint.x), y: Number(edge.sourcePoint.y) }
+      : nodeAnchor(source, sourceAnchor);
+    const end = edge?.targetPoint
+      ? { x: Number(edge.targetPoint.x), y: Number(edge.targetPoint.y) }
+      : nodeAnchor(target, targetAnchor);
     if (Array.isArray(edge?.waypoints) && edge.waypoints.length) {
       const points = [
         start,
@@ -1235,13 +1315,17 @@
       try {
         const length = entry.el.getTotalLength();
         if (!length) return;
-        const width = edgeTagWidth(label);
-        const height = 18;
-        point = resolveEdgeTagPoint(entry, length, width, height, opts);
+        const fontSize = edgeTagFontSize(edge, opts);
+        const paddingX = Number.isFinite(Number(edge.tagPaddingX)) ? Number(edge.tagPaddingX) : 9;
+        const width = edgeTagWidth(label, fontSize, paddingX);
+        const height = edgeTagHeight(edge, opts);
+        const angle = edgeTagAngle(edge);
+        const collisionSize = rotatedTagSize(width, height, angle);
+        point = resolveEdgeTagPoint(entry, length, collisionSize.width, collisionSize.height, opts);
         if (!point) return;
         const group = createSvgElement('g', {
           class: tagClass,
-          transform: `translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`,
+          transform: `translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})${angle ? ` rotate(${angle})` : ''}`,
           'data-edge-type': normalizeEdgeType(edge),
           'data-source': edge.source || entry.source || null,
           'data-target': edge.target || entry.target || null,
@@ -1260,6 +1344,7 @@
           y: 0.4,
           'text-anchor': 'middle',
           'dominant-baseline': 'central',
+          style: `font-size: ${fontSize}px;`,
         });
         text.textContent = label;
         group.appendChild(text);
@@ -1337,6 +1422,9 @@
     const selectable = interaction.selectable !== false && opts.selectable !== false;
     const hoverEnabled = overlays.evidence !== false && opts.evidence !== false && hasEvidence;
     const edgeTagsEnabled = overlays.edgeTags !== false && opts.edgeTags !== false;
+    const edgeHoverEnabled = overlays.edgeHover !== false
+      && opts.edgeHover !== false
+      && edgeEntries.some((entry) => edgeHasHover(entry.edge));
 
     let selectedItemId = null;
     let selectedRelated = { nodeIds: new Set(), clusterIds: new Set() };
@@ -1358,7 +1446,7 @@
       drawEdgeTags(svg, edgeEntries, opts);
     }
 
-    if (hoverEnabled) {
+    if (hoverEnabled || edgeHoverEnabled) {
       hover = createHover(stage, opts.hoverClassName);
     }
 
@@ -1475,6 +1563,14 @@
       placeHover(stage, hover, event);
     }
 
+    function showEdgeHover(edge, event) {
+      if (!hover || !edgeHasHover(edge)) return;
+      hover.innerHTML = edgeHoverHtml(edge, opts);
+      hover.classList.add('is-visible');
+      hover.setAttribute('aria-hidden', 'false');
+      placeHover(stage, hover, event);
+    }
+
     function hideHover() {
       if (!hover) return;
       hover.classList.remove('is-visible');
@@ -1508,6 +1604,21 @@
         });
       }
     });
+
+    if (edgeHoverEnabled) {
+      edgeEntries.forEach((entry) => {
+        if (!edgeHasHover(entry.edge)) return;
+        const targets = [entry.el, entry.tagEl].filter(Boolean);
+        targets.forEach((el) => {
+          el.setAttribute('aria-label', edgeTagText(entry.edge) || entry.edge.title || 'edge object');
+          listen(el, 'pointerenter', (event) => showEdgeHover(entry.edge, event));
+          listen(el, 'pointermove', (event) => {
+            if (hover?.classList.contains('is-visible')) placeHover(stage, hover, event);
+          });
+          listen(el, 'pointerleave', hideHover);
+        });
+      });
+    }
 
     const selectableClusters = selectable && interaction.selectableClusters !== false && opts.selectableClusters !== false;
     clusterEntries.forEach(({ el, cluster }) => {
@@ -1557,7 +1668,7 @@
 
       listen(stage, 'pointerdown', (event) => {
         if (event.button !== 0) return;
-        if (event.target.closest('.pto-model-graphviz-node, .pto-model-graphviz-toggle')) return;
+        if (event.target.closest('.pto-model-graphviz-node, .pto-model-graphviz-toggle, .pto-model-graphviz-edge, .pto-model-graphviz-edge-tag')) return;
         suppressClick = false;
         pan = { id: event.pointerId, x: event.clientX, y: event.clientY, tx: transform.tx, ty: transform.ty, moved: false };
       });
