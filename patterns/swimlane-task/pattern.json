@@ -62,7 +62,8 @@
     "isSelected",
     "isRelated",
     "isEmphasized",
-    "fontFamily"
+    "fontFamily",
+    "--pto-swimlane-tooltip-bg"
   ],
   "forbiddenOverrides": [
     "segment width math",
