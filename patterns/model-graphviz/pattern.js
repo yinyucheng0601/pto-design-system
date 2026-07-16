@@ -1419,6 +1419,7 @@
     const hierarchy = buildHierarchy(graph);
     const abortController = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const panZoomEnabled = interaction.panZoom !== false && opts.panZoom !== false;
+    const wheelZoomWithoutModifier = interaction.wheelZoomWithoutModifier === true || opts.wheelZoomWithoutModifier === true;
     const selectable = interaction.selectable !== false && opts.selectable !== false;
     const hoverEnabled = overlays.evidence !== false && opts.evidence !== false && hasEvidence;
     const edgeTagsEnabled = overlays.edgeTags !== false && opts.edgeTags !== false;
@@ -1643,7 +1644,7 @@
 
     if (panZoomEnabled) {
       listen(stage, 'wheel', (event) => {
-        if (!event.ctrlKey && !event.metaKey) {
+        if (!wheelZoomWithoutModifier && !event.ctrlKey && !event.metaKey) {
           if (global.parent && global.parent !== global) {
             global.parent.postMessage({
               type: 'pto-pattern-preview-wheel',

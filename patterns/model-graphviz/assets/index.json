@@ -36,6 +36,7 @@
       "model": "openPangu-2.0-Flash",
       "schema": "openpangu_2_0_flash_model_architecture.json",
       "preview": "openpangu_2_0_flash_modelviz.html",
+      "trainingOverlayPreview": "openpangu_2_0_flash_training_overlay_modelviz.html",
       "validation": "openpangu_2_0_flash_model_architecture_validation.md",
       "nodes": 63,
       "edges": 68,
