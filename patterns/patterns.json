@@ -47,6 +47,11 @@
       "preview": "patterns/model-training-graphviz/pattern.html"
     },
     {
+      "id": "model-architecture-3d-deck",
+      "path": "patterns/model-architecture-3d-deck/pattern.json",
+      "preview": "patterns/model-architecture-3d-deck/pattern.html"
+    },
+    {
       "id": "training-metrics-chart",
       "path": "patterns/training-metrics-chart/pattern.json",
       "preview": "patterns/training-metrics-chart/pattern.html"

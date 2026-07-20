@@ -1,0 +1,61 @@
+{
+  "id": "model-architecture-3d-deck",
+  "name": "Model Architecture 3D Deck",
+  "type": "hybrid",
+  "description": "Reusable CSS 3D model architecture deck with projected parallel annotations, PP partition wireframes, side-view operator labels, and iso/front/right view switching.",
+  "source": {
+    "visualContract": "/Users/yin/pto/pangu-moe-trainviz/op-rank-time-openpangu-flash-events.html",
+    "colorReference": "patterns/model-graphviz/assets/openpangu_2_0_flash_pass_ir_capsule_modelviz.html",
+    "patternHtml": "patterns/model-architecture-3d-deck/pattern.html",
+    "patternCss": "patterns/model-architecture-3d-deck/pattern.css",
+    "renderScript": "patterns/model-architecture-3d-deck/pattern.js",
+    "colormapDependency": "patterns/model-graphviz/pattern.js#modelArchitectureColormap",
+    "classification": "hybrid-pattern",
+    "extractedCapabilities": [
+      "CSS 3D layer deck rendering",
+      "iso/front/right view switching",
+      "drag rotate and direct pan",
+      "wheel zoom and fit",
+      "PP stage partition projection",
+      "DP/PP/TP/EP annotation badges",
+      "right-view operator row labels"
+    ],
+    "parityNotes": "The openPangu preset preserves the source page's 46 decoder layers, Dense L0-L1 / MoE L2-L45 split, DSA cadence, block-post layers, full Sparse MLA operator graph, Dense and MoE branches, mHC state paths, input objects, LM Head, logits path, MTP L46-L48 tail, stage ranges, view angles, DOMMatrix PP projection, label clamping, and pointer interaction. Node semantics and colors reuse model-graphviz's modelArchitectureColormap contract: Embedding, Norm, Attention, Linear, Head, MLP, Act, Gate, MoE, Comm, Decoder, and IO nodes follow the same keys as the OpenPangu Pass IR capsule reference. Operator surfaces use the reference capsule's opaque semantic gradient with inset highlights and no translucent border-fill treatment; light IO tensors use the reference solid gray. In iso view only the first layer of each PP stage (L0, L12, L23, L35) keeps semantic color and the full capsule surface. Repeat layers use foreground-muted colors at 0.08 opacity with flat fills and no shadows to reduce 3D paint cost, then restore the full gradient and inset highlights on hover. PP wireframe near, depth, and far edges all use the same non-scaling 1.35px stroke and 0.72 opacity; face outlines are closed paths so corner caps do not double-paint. The source product page remains on its integrated local renderer because reconnecting its inspector, timeline, profiling, and Three.js selection bridges is a larger refactor."
+  },
+  "globalApi": "window.PtoModelArchitecture3dDeck",
+  "requiredApis": [
+    "render(root, options)",
+    "controller.setView(view)",
+    "controller.setParallelMode(mode)",
+    "controller.setTheme(theme)",
+    "controller.fit()",
+    "controller.setZoom(scale)",
+    "controller.selectNode(nodeId, layer)",
+    "controller.destroy()"
+  ],
+  "parallelModes": ["pp", "tp", "ep", "dp", "none"],
+  "legacyParallelModeAliases": { "all": "pp" },
+  "useWhen": [
+    "A model architecture must be read as a stack of repeated layers in depth.",
+    "Users need iso, front, and right projections of the same model.",
+    "Parallel topology labels must stay attached to model nodes or PP stage volumes while the view changes."
+  ],
+  "allowedOverrides": [
+    "options.preset or options.config",
+    "options.initialView",
+    "options.parallelMode",
+    "options.initialTheme",
+    "options.initialZoom",
+    "--pto-model-deck-card-width",
+    "--pto-model-deck-card-height",
+    "--pto-model-deck-depth-gap",
+    "--pto-model-deck-perspective"
+  ],
+  "forbiddenOverrides": [
+    "Do not replace projected PP wireframe math with fixed SVG paths.",
+    "Do not hand-position parallel badges in product CSS.",
+    "Do not duplicate iso/front/right transform rules in a consuming page.",
+    "Do not restyle internal node, partition, annotation, or side-label classes outside this pattern."
+  ],
+  "agentReuseRule": "Load patterns/model-graphviz/pattern.js before this pattern's pattern.js, load pattern.css, then call window.PtoModelArchitecture3dDeck.render with domain config. Pass data and callbacks only; do not copy the shared colormap, generated DOM, projection math, or view-state CSS into the product page."
+}

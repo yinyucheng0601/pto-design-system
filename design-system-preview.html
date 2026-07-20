@@ -1753,6 +1753,10 @@
       height: 960px !important;
     }
 
+    #pattern-previews .preview-embed-frame[data-pattern-preview='model-architecture-3d-deck'] {
+      height: 680px !important;
+    }
+
     #pattern-previews .preview-embed-frame[data-pattern-preview='aic-core-object'] {
       height: 780px !important;
     }
@@ -2153,6 +2157,7 @@
               <tr><td><code>swimlane-task-bar</code></td><td>Use <code>patterns/swimlane-task/pattern.js</code> and call <code>window.PtoSwimlaneTaskPattern.drawTaskBar</code>, <code>createTaskColormap</code>, and <code>initHoverTooltip</code>. The canonical task bar is canvas-rendered, sourced from <code>pypto-swimlane-perf-tool/js/swimlane.js</code>, and the hover tip mirrors the PMU swimlane <code>.sl-tooltip</code> interaction. Do not rebuild it with DOM/CSS or rewrite segment math, colormap selection, or hover tip behavior locally.</td></tr>
               <tr><td><code>memory-architecture-layout</code></td><td>Use <code>patterns/memory-architecture/pattern.js</code>. Call <code>window.PtoMemoryArchitecturePattern.renderArchitecture</code> to build the stage, <code>createRouteOverlay</code> for MTE routes, <code>attachHoverInteractions</code> for hardware tips, and <code>attachPathFocusInteractions</code> or <code>setPathFocus</code> / <code>clearPathFocus</code> for <code>ascend-hardware-map-v3</code>-style flow-step hover. Extend preset data for 910B/950; do not copy raw <code>mem_viewer</code> HTML, redraw route geometry locally, reimplement <code>is-path-focused</code> route glow, or change route <code>stroke-width</code> for hover/playback focus.</td></tr>
               <tr><td><code>hardware-architecture-viewport</code></td><td>Use <code>patterns/hardware-architecture-viewport/pattern.css</code> and <code>pattern.js</code>, then call <code>window.PtoHardwareArchitectureViewport.mount</code> for architecture-map host controls, detail visibility, zoom readout, iframe readiness, size sync, and the standard hardware postMessage protocol. Do not replace the shared dotted viewport, title toolbar, zoom cluster, or standard <code>hardware-ready</code> / <code>hardware-size</code> / <code>hardware-focus</code> messages with page-local variants.</td></tr>
+              <tr><td><code>model-architecture-3d-deck</code></td><td>Use <code>patterns/model-architecture-3d-deck/pattern.css</code> and <code>pattern.js</code>, then call <code>window.PtoModelArchitecture3dDeck.render</code>. The shared hybrid renderer preserves the source openPangu 46-layer Dense/MoE/Sparse MLA/mHC/MTP architecture and owns dark/light switching, iso/front/right transforms, drag rotate/direct pan, wheel zoom, projected PP stage wireframes, DP/PP/TP/EP badges, and right-view operator labels. Pass model data and callbacks only; do not simplify the model graph, copy projection math, or hand-position labels in product CSS.</td></tr>
               <tr><td><code>aic-core-object</code></td><td>Use <code>patterns/aic-core-object/pattern.js</code> and call <code>window.PtoAicCorePattern.render</code>. The shell is config-driven from the design draft; extend the preset data for 950B instead of cloning the generated DOM or restyling the chrome locally.</td></tr>
               <tr><td><code>aiv-core-object</code></td><td>Use <code>patterns/aiv-core-object/pattern.js</code> and call <code>window.PtoAivCorePattern.render</code> with <code>ascend910b</code> or <code>ascend950b</code>. The 910B preset is the simplified Scalar + UB + Vector object; the 950B preset keeps DCache, ICache, ND-DMA Cache, SIMT, SIMD, and Vector topology. Extend preset data instead of copying generated DOM or changing card geometry locally.</td></tr>
               <tr><td><code>pass-ir-graph-node</code></td><td>Use <code>patterns/pass-ir-graph-node/pattern.js</code> and build cards through <code>window.PtoPassIrGraphNodePattern</code>. The shared contract owns full/compact op, tensor, incast/outcast, selected, and JS-generated group cards. Do not rewrite node chrome or group shell geometry in page-local CSS/HTML.</td></tr>
@@ -2498,6 +2503,27 @@
             <span class="token-badge">source: patterns/hardware-architecture-viewport/pattern.js</span>
             <span class="token-badge">contract: viewport toolbar + 910B/950B switch + memory architecture renderer</span>
             <span class="state-badge">Pattern</span>
+          </div>
+        </article>
+
+        <article class="preview-card preview-card-full-row">
+          <div class="preview-card-head">
+            <h3 class="preview-card-title">模型架构 3D Deck Pattern</h3>
+            <div class="preview-card-class">源页 openPangu 46 层完整架构：深浅模式、3D / 正视 / 侧视切换、PP 分区投影、DP / PP / TP / EP 标注与侧视算子标签</div>
+          </div>
+          <div class="preview-stage preview-stack">
+            <div class="preview-inline">
+              <a class="btn btn-ghost" href="./patterns/model-architecture-3d-deck/pattern.html?v=parallel-tabs-v2">查看完整示例</a>
+            </div>
+            <div class="preview-embed">
+              <iframe class="preview-embed-frame" data-pattern-preview="model-architecture-3d-deck" data-sync-theme-param="true" data-src="./patterns/model-architecture-3d-deck/pattern.html?embed=1&amp;v=parallel-tabs-v2" src="about:blank" title="Model Architecture 3D Deck Pattern Preview" loading="lazy"></iframe>
+            </div>
+          </div>
+          <div class="preview-meta">
+            <span class="token-badge">pattern id: model-architecture-3d-deck</span>
+            <span class="token-badge">source: patterns/model-architecture-3d-deck/pattern.js</span>
+            <span class="token-badge">contract: source-parity CSS 3D + dark/light + projected parallel annotations + multi-view controller</span>
+            <span class="state-badge">Hybrid Pattern</span>
           </div>
         </article>
 
@@ -3387,6 +3413,7 @@
         'swimlane-task',
         'memory-architecture',
         'hardware-architecture-viewport',
+        'model-architecture-3d-deck',
         'aic-core-object',
         'aiv-core-object',
         'pass-ir-graph-node',
