@@ -1,0 +1,567 @@
+.pto-model-training-sidecar {
+  --training-forward: var(--pto-model-deck-comm, #06b6d4);
+  --training-backward: var(--pto-model-deck-state, #8b5cf6);
+  --training-parameter: var(--pto-model-deck-linear, #3b82f6);
+  --training-metric-std: var(--pto-model-deck-norm, #38bdf8);
+  --training-metric-amax: var(--warning, #f59e0b);
+  --training-metric-latency: var(--pto-model-deck-moe, #ea580c);
+  --training-forward-text: color-mix(in srgb, var(--training-forward) 72%, var(--foreground));
+  --pto-training-sidecar-scale: 1;
+}
+
+html[data-theme="light"] .pto-model-training-sidecar { --training-forward-text: color-mix(in srgb, var(--training-forward) 42%, var(--foreground)); }
+
+.pto-model-training-sidecar .pto-model-deck__viewport { cursor: default; }
+.pto-model-training-sidecar .pto-model-deck__viewport.is-grabbing { cursor: grabbing; }
+
+.pto-training-sidecar__svg,
+.pto-training-sidecar__labels {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.pto-training-sidecar__svg {
+  z-index: 28;
+  width: 100%;
+  height: 100%;
+}
+
+.pto-model-training-sidecar.is-sidecar-dragging .pto-training-sidecar__svg,
+.pto-model-training-sidecar.is-sidecar-dragging .pto-training-sidecar__labels,
+.pto-model-training-sidecar.is-sidecar-dragging .pto-training-sidecar__focus,
+.pto-model-training-sidecar.is-sidecar-dragging .pto-training-sidecar__inspector {
+  will-change: transform;
+}
+
+.pto-model-training-sidecar.is-sidecar-dragging .pto-training-sidecar__semantic-label {
+  translate: var(--pto-sidecar-drag-inverse-x, 0) var(--pto-sidecar-drag-inverse-y, 0);
+}
+
+.pto-model-deck:not([data-view="right"]) .pto-training-sidecar__svg,
+.pto-model-deck:not([data-view="right"]) .pto-training-sidecar__labels,
+.pto-model-deck:not([data-view="right"]) .pto-training-sidecar__focus,
+.pto-model-deck:not([data-view="right"]) .pto-training-sidecar__inspector,
+.pto-model-deck:not([data-view="right"]) .pto-training-sidecar__context {
+  display: none;
+}
+
+.pto-training-sidecar__stage-guide,
+.pto-training-sidecar__layer-guide,
+.pto-training-sidecar__hidden,
+.pto-training-sidecar__backward,
+.pto-training-sidecar__optimizer,
+.pto-training-sidecar__parameter-stem,
+.pto-training-sidecar__communication {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pto-training-sidecar__layer-guide {
+  stroke: color-mix(in srgb, var(--foreground) 13%, transparent);
+  stroke-width: calc(.75px * var(--pto-training-sidecar-scale));
+  stroke-dasharray: 2 5;
+  pointer-events: none;
+}
+
+.pto-training-sidecar__stage-guide {
+  stroke: color-mix(in srgb, var(--success) 62%, transparent);
+  stroke-width: calc(1.5px * var(--pto-training-sidecar-scale));
+  stroke-opacity: .72;
+  pointer-events: stroke;
+}
+
+.pto-training-sidecar__hidden {
+  stroke: var(--training-forward);
+  stroke-width: calc(1.8px * var(--pto-training-sidecar-scale));
+  stroke-opacity: .78;
+  pointer-events: stroke;
+}
+
+.pto-training-sidecar__flow-texture { pointer-events: none; }
+.pto-training-sidecar__flow-texture.is-forward { --flow-texture-color: var(--training-forward); }
+.pto-training-sidecar__flow-texture.is-backward { --flow-texture-color: var(--training-backward); }
+
+.pto-training-sidecar__flow-texture-base {
+  fill: color-mix(in srgb, var(--flow-texture-color) 7%, var(--background));
+  stroke: none;
+}
+
+.pto-training-sidecar__flow-texture-arrow {
+  fill: none;
+  stroke: var(--flow-texture-color);
+  stroke-width: calc(2.4px * var(--pto-training-sidecar-scale));
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-opacity: .34;
+  vector-effect: non-scaling-stroke;
+}
+
+.pto-training-sidecar__backward {
+  stroke: var(--training-backward);
+  stroke-width: calc(1.8px * var(--pto-training-sidecar-scale));
+  stroke-opacity: .72;
+  stroke-dasharray: 6 5;
+  pointer-events: stroke;
+}
+
+.pto-training-sidecar__communication.is-forward { stroke: var(--training-forward); }
+.pto-training-sidecar__communication.is-backward { stroke: var(--training-backward); }
+.pto-training-sidecar__communication {
+  stroke-width: calc(2.8px * var(--pto-training-sidecar-scale));
+  stroke-opacity: .92;
+  pointer-events: stroke;
+}
+
+.pto-training-sidecar__hidden-dot {
+  r: calc(1.75px * var(--pto-training-sidecar-scale));
+  fill: var(--background);
+  stroke: var(--training-forward);
+  stroke-width: calc(1.15px * var(--pto-training-sidecar-scale));
+  vector-effect: non-scaling-stroke;
+  pointer-events: all;
+}
+
+.pto-training-sidecar__layer-number {
+  position: absolute;
+  transform: translate(-50%, -100%) scale(var(--pto-training-sidecar-scale));
+  transform-origin: 50% 100%;
+  color: var(--foreground-muted);
+  font: 750 7.5px/1 var(--font-mono);
+  white-space: nowrap;
+  text-shadow: 0 1px 3px var(--background), 0 0 6px var(--background);
+  pointer-events: auto;
+}
+
+.pto-training-sidecar__backward-dot {
+  r: calc(1.75px * var(--pto-training-sidecar-scale));
+  fill: var(--background);
+  stroke: var(--training-backward);
+  stroke-width: calc(1.15px * var(--pto-training-sidecar-scale));
+  vector-effect: non-scaling-stroke;
+  pointer-events: all;
+}
+
+.pto-training-sidecar__parameter-stem {
+  stroke: var(--training-parameter);
+  stroke-width: calc(1px * var(--pto-training-sidecar-scale));
+  stroke-opacity: .28;
+}
+
+.pto-training-sidecar__parameter-dot {
+  r: calc(2.2px * var(--pto-training-sidecar-scale));
+  fill: color-mix(in srgb, var(--training-parameter) 62%, var(--background));
+  stroke: color-mix(in srgb, var(--training-parameter) 76%, var(--foreground));
+  stroke-width: calc(1px * var(--pto-training-sidecar-scale));
+  vector-effect: non-scaling-stroke;
+  pointer-events: all;
+}
+
+.pto-training-sidecar__optimizer {
+  stroke: color-mix(in srgb, var(--training-parameter) 64%, var(--foreground));
+  stroke-width: calc(1.4px * var(--pto-training-sidecar-scale));
+  stroke-dasharray: 4 4;
+  pointer-events: stroke;
+}
+
+.pto-training-sidecar__metric-band {
+  fill: color-mix(in srgb, var(--metric-color) 10%, transparent);
+  stroke: color-mix(in srgb, var(--metric-color) 20%, transparent);
+  stroke-width: calc(.7px * var(--pto-training-sidecar-scale));
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.pto-training-sidecar__metric-midline {
+  fill: none;
+  stroke: color-mix(in srgb, var(--metric-color) 20%, transparent);
+  stroke-width: calc(.7px * var(--pto-training-sidecar-scale));
+  stroke-dasharray: 2 4;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.pto-training-sidecar__metric-line {
+  fill: none;
+  stroke: var(--metric-color);
+  stroke-width: calc(1.6px * var(--pto-training-sidecar-scale));
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-opacity: .86;
+  vector-effect: non-scaling-stroke;
+  pointer-events: stroke;
+}
+
+.pto-training-sidecar__metric-point {
+  fill: var(--metric-color);
+  stroke: transparent;
+  stroke-width: calc(8px * var(--pto-training-sidecar-scale));
+  vector-effect: non-scaling-stroke;
+  pointer-events: all;
+}
+
+.pto-training-sidecar__metric-point:hover { stroke: color-mix(in srgb, var(--metric-color) 22%, transparent); }
+
+.pto-training-sidecar__operator-band {
+  fill: color-mix(in srgb, var(--operator-color) 4%, transparent);
+  stroke: color-mix(in srgb, var(--operator-color) 40%, transparent);
+  stroke-width: calc(1px * var(--pto-training-sidecar-scale));
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+  pointer-events: all;
+}
+
+.pto-training-sidecar__selection {
+  fill: color-mix(in srgb, var(--primary) 7%, transparent);
+  stroke: color-mix(in srgb, var(--primary) 58%, transparent);
+  stroke-width: calc(1.2px * var(--pto-training-sidecar-scale));
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.pto-training-sidecar__layer-hit {
+  fill: transparent;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.pto-training-sidecar__layer-hit:hover {
+  fill: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.pto-training-sidecar__layer-hit:focus-visible {
+  outline: none;
+  fill: color-mix(in srgb, var(--primary) 12%, transparent);
+  stroke: var(--primary);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.pto-training-sidecar__labels { z-index: 32; }
+
+.pto-training-sidecar__context {
+  position: absolute;
+  right: 14px;
+  top: 66px;
+  z-index: 42;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 25px;
+  padding: 0 9px;
+  border: 1px solid color-mix(in srgb, var(--warning) 48%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--background) 88%, var(--warning) 12%);
+  color: var(--foreground-secondary);
+  font: 800 10px/1 var(--font-mono);
+  pointer-events: auto;
+}
+
+.pto-training-sidecar__context b {
+  color: var(--warning);
+  font-weight: 900;
+}
+
+.pto-training-sidecar__semantic-label,
+.pto-training-sidecar__value-label,
+.pto-training-sidecar__stage-label,
+.pto-training-sidecar__comm-label,
+.pto-training-sidecar__operator-label {
+  position: absolute;
+  pointer-events: none;
+  white-space: nowrap;
+  text-shadow: 0 1px 4px var(--background), 0 0 8px var(--background);
+}
+
+.pto-training-sidecar__operator-label {
+  max-width: 340px;
+  box-sizing: border-box;
+  overflow: visible;
+  padding: 2px 6px;
+  transform: translate(-50%, -50%) scale(var(--pto-training-sidecar-scale));
+  transform-origin: 50% 50%;
+  border: 1px solid color-mix(in srgb, var(--operator-color) 46%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--background) 88%, var(--operator-color) 12%);
+  color: color-mix(in srgb, var(--operator-color) 64%, var(--foreground));
+  font: 850 8.5px/1 var(--font-mono);
+  text-align: center;
+  text-overflow: clip;
+  white-space: normal;
+  pointer-events: auto;
+}
+
+.pto-training-sidecar__semantic-label {
+  left: 14px;
+  transform: translateY(-50%) scale(var(--pto-training-sidecar-scale));
+  transform-origin: 0 50%;
+  display: grid;
+  gap: 2px;
+  color: var(--foreground);
+  font: 850 10px/1 var(--font-sans);
+}
+
+.pto-training-sidecar__semantic-label span {
+  color: var(--foreground-muted);
+  font: 700 8.5px/1 var(--font-mono);
+}
+
+.pto-training-sidecar__value-label {
+  transform: translate(-50%, -100%) scale(var(--pto-training-sidecar-scale));
+  transform-origin: 50% 100%;
+  color: var(--foreground-secondary);
+  font: 750 8.5px/1 var(--font-mono);
+}
+
+.pto-training-sidecar__metric-label {
+  position: absolute;
+  transform: translate(-100%, -50%) scale(var(--pto-training-sidecar-scale));
+  transform-origin: 100% 50%;
+  color: var(--foreground-secondary);
+  font: 800 8.5px/1 var(--font-mono);
+  white-space: nowrap;
+  pointer-events: auto;
+}
+
+.pto-training-sidecar__value-label,
+.pto-training-sidecar__sample-label,
+.pto-training-sidecar__semantic-label,
+.pto-training-sidecar__stage-label,
+.pto-training-sidecar__comm-label {
+  pointer-events: auto;
+}
+
+.pto-training-sidecar__sample-label {
+  position: absolute;
+  transform: translate(-50%, 0) scale(var(--pto-training-sidecar-scale));
+  transform-origin: 50% 0;
+  color: var(--foreground-muted);
+  font: 750 8.5px/1 var(--font-mono);
+  white-space: nowrap;
+  text-shadow: 0 1px 4px var(--background), 0 0 8px var(--background);
+}
+
+.pto-training-sidecar__value-label.is-forward { color: var(--training-forward-text); }
+.pto-training-sidecar__value-label.is-backward { color: color-mix(in srgb, var(--training-backward) 72%, var(--foreground)); }
+
+.pto-training-sidecar__stage-label {
+  transform: translate(-50%, -50%) scale(var(--pto-training-sidecar-scale));
+  transform-origin: 50% 50%;
+  padding: 3px 8px;
+  border: 1px solid color-mix(in srgb, var(--success) 24%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--background) 90%, var(--success) 10%);
+  color: color-mix(in srgb, var(--success) 72%, var(--foreground));
+  font: 800 9px/1 var(--font-mono);
+}
+
+.pto-training-sidecar__tooltip {
+  position: absolute;
+  z-index: 80;
+  display: none;
+  max-width: 300px;
+  box-sizing: border-box;
+  padding: 7px 9px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface-2) 96%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, #000 22%, transparent);
+  color: var(--foreground);
+  font: 750 10px/1.35 var(--font-mono);
+  pointer-events: none;
+}
+
+.pto-training-sidecar__tooltip.is-visible { display: block; }
+
+.pto-training-sidecar__base-tip-hit {
+  position: absolute;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.pto-training-sidecar__comm-label {
+  transform: translate(-50%, -50%) scale(var(--pto-training-sidecar-scale));
+  transform-origin: 50% 50%;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--background) 90%, transparent);
+  font: 850 8px/1 var(--font-mono);
+}
+
+.pto-training-sidecar__comm-label.is-forward { color: var(--training-forward-text); }
+.pto-training-sidecar__comm-label.is-backward { color: var(--training-backward); }
+
+.pto-training-sidecar__focus {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 45;
+  width: 292px;
+  min-height: 414px;
+  box-sizing: border-box;
+  display: none;
+  grid-template-rows: auto auto auto auto 1fr;
+  gap: 9px;
+  padding: 13px;
+  border: 1px solid color-mix(in srgb, var(--primary) 62%, transparent);
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--background) 95%, var(--primary) 5%);
+  box-shadow: 0 18px 46px color-mix(in srgb, #000 28%, transparent);
+  color: var(--foreground);
+  pointer-events: auto;
+}
+
+[data-detail] { cursor: pointer; }
+
+.pto-training-sidecar__inspector {
+  position: absolute;
+  right: 16px;
+  top: 108px;
+  z-index: 72;
+  width: min(330px, calc(100% - 32px));
+  box-sizing: border-box;
+  display: none;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid color-mix(in srgb, var(--primary) 54%, var(--border));
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--background) 96%, var(--primary) 4%);
+  box-shadow: 0 18px 48px color-mix(in srgb, #000 30%, transparent);
+  color: var(--foreground);
+  pointer-events: auto;
+}
+
+.pto-training-sidecar__inspector.is-open { display: grid; }
+
+.pto-training-sidecar__inspector header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pto-training-sidecar__inspector header > div { display: grid; gap: 4px; }
+.pto-training-sidecar__inspector header span { color: var(--primary); font: 850 9px/1 var(--font-mono); text-transform: uppercase; }
+.pto-training-sidecar__inspector h3 { margin: 0; color: var(--foreground); font: 850 15px/1.2 var(--font-sans); }
+.pto-training-sidecar__inspector header button { width: 25px; height: 25px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-1); color: var(--foreground-secondary); cursor: pointer; }
+.pto-training-sidecar__inspector > p { margin: 0; color: var(--foreground-secondary); font: 650 11px/1.55 var(--font-sans); }
+
+.pto-training-sidecar__inspector-values { display: grid; border: 1px solid color-mix(in srgb, var(--border) 72%, transparent); border-radius: var(--radius-lg); overflow: hidden; }
+.pto-training-sidecar__inspector-values div { display: grid; grid-template-columns: minmax(92px,.8fr) minmax(0,1.2fr); gap: 10px; padding: 8px 10px; background: color-mix(in srgb, var(--surface-1) 82%, transparent); }
+.pto-training-sidecar__inspector-values div + div { border-top: 1px solid color-mix(in srgb, var(--border) 58%, transparent); }
+.pto-training-sidecar__inspector-values span { color: var(--foreground-muted); font: 750 9px/1.3 var(--font-mono); }
+.pto-training-sidecar__inspector-values b { overflow-wrap: anywhere; color: var(--foreground); font: 800 10px/1.3 var(--font-mono); }
+
+.pto-training-sidecar__assessment { display: grid; gap: 4px; padding: 9px 10px; border: 1px solid currentColor; border-radius: var(--radius-lg); background: color-mix(in srgb, currentColor 7%, transparent); font: 750 10px/1.35 var(--font-mono); }
+.pto-training-sidecar__assessment.is-normal { color: var(--success); }
+.pto-training-sidecar__assessment.is-warning { color: var(--warning); }
+.pto-training-sidecar__assessment.is-abnormal { color: var(--destructive, #ef4444); }
+.pto-training-sidecar__assessment.is-info { color: var(--primary); }
+.pto-training-sidecar__assessment span { color: var(--foreground-secondary); }
+.pto-training-sidecar__inspector footer { color: var(--foreground-muted); font: 700 9px/1.45 var(--font-mono); }
+
+.pto-training-sidecar__focus.is-open { display: grid; }
+
+.pto-training-sidecar__focus-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pto-training-sidecar__focus-title {
+  display: grid;
+  gap: 4px;
+  font: 850 13px/1 var(--font-sans);
+}
+
+.pto-training-sidecar__focus-title span {
+  color: var(--foreground-muted);
+  font: 700 9px/1 var(--font-mono);
+}
+
+.pto-training-sidecar__focus-close {
+  width: 24px;
+  height: 24px;
+  border: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  color: var(--foreground-secondary);
+  cursor: pointer;
+}
+
+.pto-training-sidecar__focus-section {
+  display: grid;
+  gap: 6px;
+  padding: 8px 9px;
+  border: 1px solid color-mix(in srgb, var(--border) 66%, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--surface-1) 82%, transparent);
+}
+
+.pto-training-sidecar__focus-section > b {
+  color: var(--foreground-muted);
+  font: 850 9px/1 var(--font-mono);
+  text-transform: uppercase;
+}
+
+.pto-training-sidecar__flow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 6px;
+  color: var(--foreground-secondary);
+  font: 750 9px/1.2 var(--font-mono);
+}
+
+.pto-training-sidecar__flow i {
+  height: 1px;
+  background: currentColor;
+  opacity: .55;
+}
+
+.pto-training-sidecar__flow.is-forward { color: var(--training-forward); }
+.pto-training-sidecar__flow.is-backward { color: var(--training-backward); }
+
+.pto-training-sidecar__kv {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 5px 10px;
+  color: var(--foreground-secondary);
+  font: 700 9px/1.2 var(--font-mono);
+}
+
+.pto-training-sidecar__detail-slot {
+  min-height: 54px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed color-mix(in srgb, var(--primary) 38%, transparent);
+  border-radius: var(--radius-md);
+  color: var(--foreground-muted);
+  font: 750 9px/1.3 var(--font-mono);
+  text-align: center;
+}
+
+/* The sidecar already owns the full-width Stage labels above the topology axis.
+   Suppress only the redundant in-model PP pills in the PP/right-view composition. */
+.pto-model-training-sidecar[data-view="right"][data-parallel="pp"]
+  .pto-model-deck__annotation.is-side[data-kind="pp"] {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .pto-training-sidecar__semantic-label { display: none; }
+  .pto-training-sidecar__context { right: 8px; top: 106px; }
+  .pto-training-sidecar__focus { width: 260px; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pto-training-sidecar__focus { animation: pto-training-sidecar-in .16s ease-out; }
+  @keyframes pto-training-sidecar-in {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}

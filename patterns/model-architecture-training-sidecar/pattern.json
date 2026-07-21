@@ -1,0 +1,60 @@
+{
+  "id": "model-architecture-training-sidecar",
+  "name": "Model Architecture Training Sidecar",
+  "type": "hybrid",
+  "description": "A non-destructive training-semantics overlay for the canonical model-architecture-3d-deck right view, with forward hidden state, backward activation gradients, parameter/optimizer state, metric strips, selectable Layer focus lenses, and click-through annotation inspectors.",
+  "source": {
+    "basePattern": "patterns/model-architecture-3d-deck",
+    "patternHtml": "patterns/model-architecture-training-sidecar/pattern.html",
+    "patternCss": "patterns/model-architecture-training-sidecar/pattern.css",
+    "renderScript": "patterns/model-architecture-training-sidecar/pattern.js",
+    "classification": "hybrid-pattern",
+    "visualContract": "The canonical side view remains owned by model-architecture-3d-deck. This pattern may read projected DOM bounds and add sibling SVG/DOM overlays, but must not mutate base Layer geometry, PP boundaries, residual rails, FFN bands, input/output paths, colors, or projection math. In the sidecar preview, the base right-edge operator legend is disabled through its public showSideLabels option and replaced by projected per-row bands whose labels sit at the center of the operator extent. Input and output operators use the same projected-band labeling, and every sidecar annotation exposes a hover tip without forcing continuous canvas redraw. In right-view PP mode, redundant in-model PP pills are hidden only within the sidecar because the full-width Stage labels above the topology axis are the canonical PP labels for this composition; full-height PP boundaries and Send/Recv annotations remain visible. The training sidecar uses an expandable tall canvas and a right-view-specific fit with reserved top and bottom semantic lanes; do not compress annotations merely to preserve a fixed screenshot height. Model depth is represented only by Layer numbers and faint vertical alignment guides; do not draw a horizontal topology axis, tick dots, or an arrowhead. Per-Layer Std σ, Amax, and latency are rendered as aligned small-multiple line charts with independent scales, units, reference bands, and interactive points; do not use color opacity as the sole value encoding, and do not label standard deviation as Norm. The top tensor area uses separate projected lanes for input context, forward hidden state, parallel embedding, and the model silhouette; none may overlap. Forward and backward tensor-flow lanes use borderless, low-contrast directional chevrons generated from the current projected Layer-dot coordinates, with exactly one chevron centered between each adjacent pair of Layer dots. Every tensor-flow dot and PP Send/Recv boundary target owns a unique stable key. PP boundary details include source/destination Stage and ranks, tensor identity, activation or gradient statistics, mock P2P latency, status assessment, and execution context. Side-view panning uses a drag fast path: apply only the current pan delta as a compositor transform to projected overlays while dragging, keep fixed semantic headers compensated, and perform one full DOM/projection rebuild on pointer release. PP boundaries have higher visual hierarchy than Layer guides and span from above the Stage labels through the optimizer region. All projected annotation offsets, type, strokes, dots, chart points, textures, and hit regions share the base model zoom ratio; do not mix fixed screen-space annotation sizing with model-space geometry.",
+    "evidence": [
+      "Megatron Core pipeline parallelism and bridge communicator documentation",
+      "PyTorch CrossEntropyLoss and optimization documentation",
+      "Megatron distributed parameter/gradient buffer and optimizer documentation"
+    ]
+  },
+  "globalApi": "window.PtoModelArchitectureTrainingSidecar",
+  "requiredApis": [
+    "render(root, options)",
+    "controller.selectLayer(layer)",
+    "controller.collapseLayer()",
+    "controller.openDetail(detail)",
+    "controller.closeDetail()",
+    "controller.setLayerSnapshot(layer, data)",
+    "controller.setView(view)",
+    "controller.setTheme(theme)",
+    "controller.setZoom(value)",
+    "controller.setPose(pose)",
+    "controller.selectNode(nodeId, layer)",
+    "controller.refresh()",
+    "controller.destroy()"
+  ],
+  "semanticBands": {
+    "module": ["Embedding", "Attention", "MoE", "Head"],
+    "tensor": ["Input", "Hidden State", "Activation", "Residual", "Activation Gradient"],
+    "parameter": ["Weight", "Parameter Gradient", "Optimizer State"],
+    "metric": ["Loss", "Std σ", "Amax", "Latency"]
+  },
+  "mockDataRule": "Every synthetic snapshot must include provenance=mock plus step, microbatch, rank, stage, layer, and tensor context. Softmax logits and probabilities must remain distinct; Weight/optimizer state belongs to an optimization step rather than one microbatch.",
+  "allowedOverrides": [
+    "options.step",
+    "options.microbatch",
+    "options.microbatchCount",
+    "options.topLaneReserve",
+    "options.bottomLaneReserve",
+    "options.initialLayer",
+    "options.renderLayerDetail",
+    "options.onLayerSelect"
+  ],
+  "forbiddenOverrides": [
+    "Do not edit or restyle model-architecture-3d-deck internals from this pattern.",
+    "Do not relabel the real L0-L45 Decoder stack as a generic 48-layer stack.",
+    "Do not draw parameter gradients as the backward inter-layer transport.",
+    "Do not present mock values as measured telemetry.",
+    "Do not implement Layer internals until a domain schema is approved; use renderLayerDetail instead."
+  ],
+  "agentReuseRule": "Load model-graphviz, then model-architecture-3d-deck, then this sidecar. Call PtoModelArchitectureTrainingSidecar.render. Extend training data and the layer-detail slot without copying or changing the base deck renderer. Every added sidecar annotation must use the shared tip/detail metadata contract so it remains hoverable and opens the inspector; metrics must include a definition, current value, reference range, status assessment, and execution context."
+}
