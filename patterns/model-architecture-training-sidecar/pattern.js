@@ -65,12 +65,13 @@
     const viewport=root.querySelector('.pto-model-deck__viewport');
     const svg=document.createElementNS(NS,'svg');svg.classList.add('pto-training-sidecar__svg');svg.setAttribute('aria-label','Training semantics overlay');
     const labels=document.createElement('div');labels.className='pto-training-sidecar__labels';
+    const layerHits=document.createElementNS(NS,'svg');layerHits.classList.add('pto-training-sidecar__layer-hits');layerHits.setAttribute('aria-label','Decoder Layer column hit areas');
     const contextBadge=document.createElement('div');contextBadge.className='pto-training-sidecar__context';contextBadge.innerHTML=`<b>MOCK</b> step ${context.step} · MB ${context.microbatch}/${context.microbatchCount}`;
     tip(contextBadge,`Mock telemetry context · optimization step ${context.step} · microbatch ${context.microbatch} of ${context.microbatchCount}`,{title:'Mock telemetry context',category:'Context',definition:'本页面数值为可复现的示意数据，用于验证信息架构，不代表真实训练测量。',values:[['Optimization step',context.step],['Microbatch',`${context.microbatch}/${context.microbatchCount}`]],status:'info',statusLabel:'MOCK 数据'});
     const focus=document.createElement('aside');focus.className='pto-training-sidecar__focus';focus.setAttribute('aria-live','polite');
     const tooltip=document.createElement('div');tooltip.className='pto-training-sidecar__tooltip';tooltip.setAttribute('role','tooltip');
     const detailPanel=document.createElement('aside');detailPanel.className='pto-training-sidecar__inspector';detailPanel.setAttribute('aria-live','polite');
-    viewport.append(svg,labels,contextBadge,focus,tooltip,detailPanel);
+    viewport.append(svg,labels,layerHits,contextBadge,focus,tooltip,detailPanel);
 
     function geometry(){
       const width=viewport.clientWidth,height=viewport.clientHeight,base=viewport.getBoundingClientRect();
@@ -129,6 +130,33 @@
       }
       const gradient=snapshot.tensor.activationGradient,status=gradient.norm>1.2?'warning':'normal';
       return{key,title:`PP backward boundary · L${lo} → L${lo-1}`,category:'PP Communication',definition:'相邻 Pipeline Stage 之间发送/接收反向 activation gradient ∂L/∂h；跨边界传输的不是参数梯度 ∂L/∂W。',values:[['Boundary',`L${lo} → L${lo-1}`],['Source',`PP${sourceStage} · ranks ${sourceStage*8}–${sourceStage*8+7}`],['Destination',`PP${destinationStage} · ranks ${destinationStage*8}–${destinationStage*8+7}`],['Tensor','g = ∂L/∂h'],['Gradient norm',gradient.norm.toFixed(3)],['Gradient amax',gradient.amax.toFixed(3)],['P2P latency',`${latency.toFixed(2)} ms · MOCK`]],status,statusLabel:status==='warning'?'关注：边界激活梯度偏高':'正常：边界激活梯度位于 mock 参考范围',context:`step ${snapshot.step} · MB ${snapshot.microbatch}/${snapshot.microbatchCount} · PP${sourceStage} → PP${destinationStage} · Send/Recv backward activation gradient · MOCK`};
+    }
+
+    function internalOperatorMetric(layer,label,op,index,nodeId){
+      const snapshot=snapshotFor(layer),sample=(salt,min,max)=>min+seeded(layer,index*7+salt)*(max-min);
+      const mean=sample(31,-.008,.008),std=sample(32,.72,1.08),amax=sample(33,5.4,9.65),grad=sample(34,.28,1.08);
+      const latencyBase=/expert/i.test(`${label} ${op}`)?.56:/attention/i.test(`${label} ${op}`)?.24:/comm|gather|scatter|dispatch|combine/i.test(`${label} ${op}`)?.13:/norm|add|merge/i.test(`${label} ${op}`)?.03:.09;
+      const latency=latencyBase+sample(35,.01,latencyBase*.62+.04),values=[['Mean',mean.toFixed(4)],['Std σ',std.toFixed(3)],['Amax',amax.toFixed(2)],['Activation gradient L2',grad.toFixed(3)],['Latency',`${latency.toFixed(2)} ms`]],summary=[];
+      let definition='该算子行展示选定 Layer 内部输出张量的数值统计、反向激活梯度和示意执行耗时。';
+      let status=amax>9.35?'warning':'normal';
+      if(/Router/i.test(label)){
+        const pmax=sample(36,.48,.72),imbalance=sample(37,1.02,1.18),entropy=sample(38,1.56,2.08);
+        summary.push(`Pmax ${pmax.toFixed(2)}`,`imb ${imbalance.toFixed(2)}×`,`${latency.toFixed(2)}ms`);values.unshift(['Router Pmax',pmax.toFixed(3)],['Expert imbalance',`${imbalance.toFixed(2)}×`],['Routing entropy',entropy.toFixed(2)]);definition='Router 根据 token hidden state 产生 expert 概率与 Top-k routing map；这些数值不进入下一层 hidden-state 主干。';status=imbalance>1.15?'warning':status;
+      }else if(/Dispatch|Combine|AllGather|Reduce-Scatter/i.test(label)){
+        const tokens=Math.round(sample(39,3584,4608)),bytes=sample(40,24,38);
+        summary.push(`${tokens} tok`,`${bytes.toFixed(0)}MB`,`${latency.toFixed(2)}ms`);values.unshift(['Token count',tokens],['Payload',`${bytes.toFixed(1)} MB`]);definition=/Dispatch|Combine/i.test(label)?'Layer 内部的 EP token dispatch/combine 通信；它可能跨设备，但不跨模型 Layer。':'该算子执行 Layer 内部的张量并行集合通信。';
+      }else if(/FlashAttention/i.test(label)){
+        const logit=sample(41,11.8,15.6),pmax=sample(42,.46,.76),rowError=sample(43,.00004,.00032);
+        summary.push(`logit ±${logit.toFixed(1)}`,`Pmax ${pmax.toFixed(2)}`,`${latency.toFixed(2)}ms`);values.unshift(['Attention logits range',`−${logit.toFixed(1)}…${logit.toFixed(1)}`],['Probability max',pmax.toFixed(3)],['Softmax row-sum error',rowError.toExponential(1)]);definition='Fused Sparse FlashAttention 内部包含缩放点积 logits、mask、Softmax probability 和 P×V context；logits 不受 0–1 限制，probability 才位于 0–1。';
+      }else if(/Expert/i.test(label)){
+        const tokens=Math.round(sample(44,36,76)),load=sample(45,.72,.96);
+        summary.push(`${tokens} tok`,`Amax ${amax.toFixed(1)}`,`${latency.toFixed(2)}ms`);values.unshift(['Assigned tokens',tokens],['Capacity utilization',`${(load*100).toFixed(0)}%`]);definition='Expert 对分配到本地的 token 执行 FFN；输出随后由 EP Combine 恢复 token 顺序并加权合并。';
+      }else if(/Residual Add|Merge|Routed \+ Shared Add/i.test(label)){
+        summary.push(`σ ${std.toFixed(2)}`,`Amax ${amax.toFixed(1)}`,`∇ ${grad.toFixed(2)}`);definition='Residual Add 将计算分支输出与 identity path 汇合；输出继续作为本层后续主干或下一层 hidden state。';
+      }else{
+        summary.push(`σ ${std.toFixed(2)}`,`Amax ${amax.toFixed(1)}`,`${latency.toFixed(2)}ms`);
+      }
+      return{summary,detail:{key:`layer-${layer}-operator-${nodeId}`,title:`${label} · L${layer}`,category:'Layer operator',definition,values:[...values,['Parameter gradient L2',snapshot.parameter.gradientNorm.toFixed(3)],['数据来源','MOCK']],status,statusLabel:status==='warning'?'关注：至少一项接近 mock 参考边界':'正常：mock 指标位于参考范围',context:`step ${snapshot.step} · MB ${snapshot.microbatch}/${snapshot.microbatchCount} · PP${snapshot.stage} · rank ${snapshot.rank} · L${layer} · ${nodeId} · MOCK`}};
     }
 
     function positionDetailPanel(){
@@ -224,27 +252,39 @@
     function renderFocus(g){
       if(!Number.isFinite(selectedLayer)){focus.classList.remove('is-open');focus.replaceChildren();return;}
       const point=g.points.find(item=>item.layer===selectedLayer);if(!point)return;
-      const snapshot=snapshotFor(selectedLayer),panelWidth=292,panelHeight=438;
-      const left=clamp(point.x-panelWidth/2,74,g.width-panelWidth-16),top=clamp((g.modelTop+g.modelBottom)/2-panelHeight/2,74,g.height-panelHeight-18);
-      focus.style.left=`${left}px`;focus.style.top=`${top}px`;focus.classList.add('is-open');
-      focus.innerHTML=`
-        <div class="pto-training-sidecar__focus-header"><div class="pto-training-sidecar__focus-title">Layer L${snapshot.layer}<span>PP${snapshot.stage} · rank ${snapshot.rank} · MOCK</span></div><button class="pto-training-sidecar__focus-close" type="button" aria-label="收起 Layer">×</button></div>
-        <section class="pto-training-sidecar__focus-section"><b>Tensor · Forward</b><div class="pto-training-sidecar__flow is-forward"><span>h${snapshot.layer}</span><i></i><span>h${snapshot.layer+1}</span></div><div class="pto-training-sidecar__kv"><span>μ ${snapshot.tensor.hidden.mean.toFixed(4)}</span><span>σ ${snapshot.tensor.hidden.std.toFixed(3)}</span><span>amax ${snapshot.tensor.hidden.amax.toFixed(2)}</span><span>norm ${snapshot.tensor.hidden.norm.toFixed(1)}</span></div></section>
-        <section class="pto-training-sidecar__focus-section"><b>Module</b><div class="pto-training-sidecar__detail-slot" data-layer-detail-slot>Layer internal renderer slot<br>${esc(snapshot.module.kind)}</div></section>
-        <section class="pto-training-sidecar__focus-section"><b>Tensor · Backward</b><div class="pto-training-sidecar__flow is-backward"><span>g${snapshot.layer}</span><i></i><span>g${snapshot.layer+1}</span></div><div class="pto-training-sidecar__kv"><span>grad h · L2 ${snapshot.tensor.activationGradient.norm.toFixed(3)}</span><span>amax ${snapshot.tensor.activationGradient.amax.toFixed(2)}</span></div></section>
-        <section class="pto-training-sidecar__focus-section"><b>Parameter / Metric</b><div class="pto-training-sidecar__kv"><span>W · L2 ${snapshot.parameter.weightNorm.toFixed(1)}</span><span>grad W · L2 ${snapshot.parameter.gradientNorm.toFixed(3)}</span><span>update/W ${snapshot.parameter.updateRatio.toExponential(2)}</span><span>${snapshot.metric.latency.toFixed(2)} ms</span></div></section>`;
+      const snapshot=snapshotFor(selectedLayer),panelWidth=310*g.scale,panelTop=g.modelTop-24*g.scale,panelHeight=g.modelBottom-g.modelTop+48*g.scale,left=clamp(point.x-panelWidth/2,8,g.width-panelWidth-8);
+      const rowData=controller.config.sideRows.map((row,index)=>{
+        const nodes=row.ids.map(id=>point.card.querySelector(`[data-node="${CSS.escape(id)}"]`)).filter(Boolean);if(!nodes.length)return null;
+        const rects=nodes.map(node=>node.getBoundingClientRect()),y=rects.reduce((sum,rect)=>sum+rect.top+rect.height/2,0)/rects.length-g.base.top-panelTop,node=nodes[0],pseudo=getComputedStyle(node,'::after'),computed=getComputedStyle(node),color=pseudo.backgroundColor&&pseudo.backgroundColor!=='rgba(0, 0, 0, 0)'?pseudo.backgroundColor:computed.backgroundColor;
+        return{row,index,nodes,y,color,metric:internalOperatorMetric(selectedLayer,row.label,node.dataset.op||'',index,row.ids[0])};
+      }).filter(Boolean);
+      const nodeY=(id,fallback)=>{const node=point.card.querySelector(`[data-node="${CSS.escape(id)}"]`),rect=node?.getBoundingClientRect();return rect?rect.top+rect.height/2-g.base.top-panelTop:fallback;};
+      const inputY=nodeY('mhc_state_in',36*g.scale),outputY=nodeY('mhc_state_out',panelHeight-30*g.scale),attentionEnd=nodeY('mhc_attention_post',panelHeight*.54),mlpStart=nodeY('pre_mlp_norm',attentionEnd+16*g.scale),mlpEnd=nodeY('ffn_residual_add',panelHeight-42*g.scale);
+      const hiddenStatus=snapshot.tensor.hidden.amax>9.35?'warning':'normal',hiddenDetail={key:`layer-${selectedLayer}-hidden-input`,title:`Input hidden state · h${selectedLayer}`,category:'Layer tensor',definition:'当前 Layer 输入 hidden state，同时进入 Attention 计算分支和第一条 residual identity path。',values:[['Mean',snapshot.tensor.hidden.mean.toFixed(4)],['Std σ',snapshot.tensor.hidden.std.toFixed(3)],['Amax',snapshot.tensor.hidden.amax.toFixed(2)],['L2 proxy',snapshot.tensor.hidden.norm.toFixed(1)],['Activation gradient L2',snapshot.tensor.activationGradient.norm.toFixed(3)],['数据来源','MOCK']],status:hiddenStatus,statusLabel:hiddenStatus==='warning'?'关注：Amax 接近 mock 参考边界':'正常：mock 指标位于参考范围',context:`step ${snapshot.step} · MB ${snapshot.microbatch}/${snapshot.microbatchCount} · PP${snapshot.stage} · rank ${snapshot.rank} · L${selectedLayer}`};
+      const rows=rowData.map(item=>{
+        const isResidualAdd=/Residual Add|Routed \+ Shared Add/i.test(item.row.label);
+        return `<button type="button" class="pto-training-sidecar__focus-row${isResidualAdd?' is-residual-add':''}" data-focus-row="${item.index}" style="top:${item.y.toFixed(1)}px;--focus-color:${item.color}"><b>${esc(item.row.label)}</b><span>${item.metric.summary.map(value=>`<i>${esc(value)}</i>`).join('')}</span></button>`;
+      }).join('');
+      focus.style.left=`${left}px`;focus.style.top=`${panelTop}px`;focus.style.width=`${panelWidth}px`;focus.style.height=`${panelHeight}px`;focus.classList.add('is-open');
+      focus.innerHTML=`<div class="pto-training-sidecar__focus-header"><div class="pto-training-sidecar__focus-title">Layer L${snapshot.layer}<span>PP${snapshot.stage} · rank ${snapshot.rank} · ${esc(snapshot.module.kind)} · MOCK</span></div><button class="pto-training-sidecar__focus-close" type="button" aria-label="收起 Layer">×</button></div>
+        <div class="pto-training-sidecar__focus-shared"><span>Position / RoPE</span><span>Attention Mask</span></div>
+        <div class="pto-training-sidecar__focus-residual is-attention" style="top:${inputY.toFixed(1)}px;height:${Math.max(12,attentionEnd-inputY).toFixed(1)}px"><span>identity h${selectedLayer}</span></div>
+        <div class="pto-training-sidecar__focus-residual is-mlp" style="top:${mlpStart.toFixed(1)}px;height:${Math.max(12,mlpEnd-mlpStart).toFixed(1)}px"><span>identity r${selectedLayer}</span></div>
+        <button type="button" class="pto-training-sidecar__focus-row is-hidden" data-focus-hidden style="top:${inputY.toFixed(1)}px"><b>Input hidden state · h${selectedLayer}</b><span><i>σ ${snapshot.tensor.hidden.std.toFixed(2)}</i><i>Amax ${snapshot.tensor.hidden.amax.toFixed(1)}</i><i>∇ ${snapshot.tensor.activationGradient.norm.toFixed(2)}</i></span></button>
+        ${rows}
+        <button type="button" class="pto-training-sidecar__focus-row is-hidden" data-focus-output style="top:${outputY.toFixed(1)}px"><b>Output hidden state · h${selectedLayer+1}</b><span><i>σ ${(snapshot.tensor.hidden.std*1.012).toFixed(2)}</i><i>Amax ${(snapshot.tensor.hidden.amax*1.018).toFixed(1)}</i><i>∇ ${snapshot.tensor.activationGradient.norm.toFixed(2)}</i></span></button>
+        ${snapshot.module.dense?'':`<div class="pto-training-sidecar__focus-aux" style="top:${Math.min(panelHeight-32*g.scale,mlpEnd+8*g.scale).toFixed(1)}px">Aux loss · balance 0.014 · z-loss 0.003</div>`}
+        <div class="pto-training-sidecar__focus-backward"><span>g${selectedLayer} · L2 ${snapshot.tensor.activationGradient.norm.toFixed(2)}</span><i></i><span>Backward ∂L/∂h</span><i></i><span>g${selectedLayer+1}</span></div>`;
       focus.querySelector('.pto-training-sidecar__focus-close')?.addEventListener('click',()=>selectLayer(null));
-      const slot=focus.querySelector('[data-layer-detail-slot]');
-      if(typeof options.renderLayerDetail==='function'){
-        const content=options.renderLayerDetail({layer:selectedLayer,snapshot,slot,controller:api});
-        if(global.Node&&content instanceof global.Node)slot.replaceChildren(content);else if(typeof content==='string')slot.innerHTML=content;
-      }
+      tip(focus.querySelector('[data-focus-hidden]'),`L${selectedLayer} · input hidden state · MOCK`,hiddenDetail);
+      tip(focus.querySelector('[data-focus-output]'),`L${selectedLayer} · output hidden state · MOCK`,{...hiddenDetail,key:`layer-${selectedLayer}-hidden-output`,title:`Output hidden state · h${selectedLayer+1}`,definition:'第二次 residual merge 后的 Layer 输出，也是下一 Layer 输入；若位于 PP 边界则通过 activation Send/Recv 传输。'});
+      rowData.forEach(item=>tip(focus.querySelector(`[data-focus-row="${item.index}"]`),`L${selectedLayer} · ${item.row.label} · MOCK`,item.metric.detail));
     }
 
     function render(){
       raf=0;if(destroyed)return;clearDragPreview();const g=geometry();if(!g)return;
       root.style.setProperty('--pto-training-sidecar-scale',g.scale.toFixed(4));
-      svg.setAttribute('viewBox',`0 0 ${g.width} ${g.height}`);svg.replaceChildren();labels.replaceChildren();
+      svg.setAttribute('viewBox',`0 0 ${g.width} ${g.height}`);layerHits.setAttribute('viewBox',`0 0 ${g.width} ${g.height}`);svg.replaceChildren();labels.replaceChildren();layerHits.replaceChildren();
       const first=g.points[0],last=g.points[g.points.length-1],x0=Math.min(g.input.x,first.x),x1=Math.max(g.output.x,last.x);
       STAGE_RANGES.slice(1).forEach(([lo])=>{const before=g.points.find(point=>point.layer===lo-1),after=g.points.find(point=>point.layer===lo);if(!before||!after)return;const x=(before.x+after.x)/2,guide=path(`M${x.toFixed(1)} ${(g.stageY-18*g.scale).toFixed(1)}L${x.toFixed(1)} ${(g.optimizerY+10*g.scale).toFixed(1)}`,'pto-training-sidecar__stage-guide');tip(guide,`PP boundary · L${lo-1}/L${lo} · spans all training lanes`);svg.append(guide);});
       g.points.forEach(point=>svg.append(path(`M${point.x.toFixed(1)} ${(g.axisY+5*g.scale).toFixed(1)}L${point.x.toFixed(1)} ${g.optimizerY.toFixed(1)}`,'pto-training-sidecar__layer-guide')));
@@ -293,7 +333,7 @@
       const samples=new Set(SAMPLE_LAYERS);
       g.points.forEach(point=>{
         label(labels,'pto-training-sidecar__layer-number',`L${point.layer}`,point.x,g.axisY-7*g.scale,`Decoder Layer ${point.layer}`);
-        const hit=document.createElementNS(NS,'rect');hit.setAttribute('class','pto-training-sidecar__layer-hit');hit.dataset.layer=String(point.layer);hit.setAttribute('tabindex','0');hit.setAttribute('role','button');hit.setAttribute('aria-label',`展开 Layer ${point.layer}`);hit.setAttribute('x',(point.x-Math.max(4*g.scale,g.gap*.42)).toFixed(1));hit.setAttribute('y',(g.axisY-13*g.scale).toFixed(1));hit.setAttribute('width',Math.max(8*g.scale,g.gap*.84).toFixed(1));hit.setAttribute('height',(26*g.scale).toFixed(1));svg.appendChild(hit);
+        const hitWidth=Math.max(7*g.scale,Math.min(12*g.scale,g.gap*.46)),hit=document.createElementNS(NS,'rect');hit.setAttribute('class','pto-training-sidecar__layer-hit');hit.setAttribute('data-deck-no-drag','true');hit.dataset.layer=String(point.layer);hit.dataset.tip=`Layer L${point.layer} · 点击展开内部算子与指标`;hit.setAttribute('tabindex','0');hit.setAttribute('role','button');hit.setAttribute('aria-label',`展开 Layer ${point.layer}`);hit.setAttribute('x',(point.x-hitWidth/2).toFixed(1));hit.setAttribute('y',(g.modelTop-4*g.scale).toFixed(1));hit.setAttribute('width',hitWidth.toFixed(1));hit.setAttribute('height',Math.max(12,g.modelBottom-g.modelTop+8*g.scale).toFixed(1));hit.setAttribute('rx',(2*g.scale).toFixed(1));layerHits.appendChild(hit);
         if(samples.has(point.layer)){const snapshot=snapshotFor(point.layer),std=Number(metricValue(snapshot,'std')),status=snapshot.metric.amax>9.35||snapshot.metric.latency>2.35?'warning':'normal';label(labels,'pto-training-sidecar__sample-label',`L${point.layer} · σ${std.toFixed(2)} · ${snapshot.metric.latency.toFixed(2)}ms`,point.x,g.metricY+76*g.scale,`L${point.layer} sample · Std σ ${std.toFixed(3)} · Amax ${snapshot.metric.amax.toFixed(2)} · Latency ${snapshot.metric.latency.toFixed(2)} ms · MOCK`,{title:`Layer metric summary · L${point.layer}`,category:'Metric',definition:'选定 Layer 的 hidden-state 标准差、绝对最大值与执行耗时摘要。点击折线节点可查看各指标定义及独立阈值判断。',values:[['Std σ',std.toFixed(3)],['Amax',snapshot.metric.amax.toFixed(2)],['Latency',`${snapshot.metric.latency.toFixed(2)} ms`]],status,statusLabel:status==='warning'?'关注：至少一项接近参考边界':'正常：摘要指标均位于参考范围',context:`step ${snapshot.step} · MB ${snapshot.microbatch}/${snapshot.microbatchCount} · PP${snapshot.stage} · rank ${snapshot.rank} · MOCK`});}
       });
 
@@ -312,13 +352,13 @@
     function schedule(){if(!raf)raf=requestAnimationFrame(render);}
     function clearDragPreview(){
       if(dragPreviewRaf){cancelAnimationFrame(dragPreviewRaf);dragPreviewRaf=0;}
-      [svg,labels,focus,detailPanel].forEach(node=>{node.style.transform='';});
+      [svg,labels,layerHits,focus,detailPanel].forEach(node=>{node.style.transform='';});
       labels.style.removeProperty('--pto-sidecar-drag-inverse-x');labels.style.removeProperty('--pto-sidecar-drag-inverse-y');root.classList.remove('is-sidecar-dragging');
     }
     function applyDragPreview(){
       dragPreviewRaf=0;if(!dragging||!dragOrigin||destroyed)return;
       const dx=controller.state.panX-dragOrigin.panX,dy=controller.state.panY-dragOrigin.panY,transform=`translate3d(${dx}px, ${dy}px, 0)`;
-      svg.style.transform=transform;labels.style.transform=transform;focus.style.transform=transform;if(selectedDetail)detailPanel.style.transform=transform;
+      svg.style.transform=transform;labels.style.transform=transform;layerHits.style.transform=transform;focus.style.transform=transform;if(selectedDetail)detailPanel.style.transform=transform;
       labels.style.setProperty('--pto-sidecar-drag-inverse-x',`${-dx}px`);labels.style.setProperty('--pto-sidecar-drag-inverse-y',`${-dy}px`);
     }
     function queueDragPreview(){if(!dragPreviewRaf)dragPreviewRaf=requestAnimationFrame(applyDragPreview);}
@@ -333,7 +373,8 @@
     function queueSidecarFit(){requestAnimationFrame(fitSidecar);}
     function selectLayer(layer){
       selectedLayer=layer===null||layer===undefined||!Number.isFinite(Number(layer))?null:clamp(Number(layer),0,controller.config.layerCount-1);
-      schedule();options.onLayerSelect?.(selectedLayer===null?null:{layer:selectedLayer,snapshot:snapshotFor(selectedLayer)},api);return api;
+      controller.setLayerExpansion?.(selectedLayer,selectedLayer===null?0:(Number(options.layerExpansionDepth)||640));
+      if(selectedDetail)openDetail(null);schedule();options.onLayerSelect?.(selectedLayer===null?null:{layer:selectedLayer,snapshot:snapshotFor(selectedLayer)},api);return api;
     }
     function setLayerSnapshot(layer,data){const key=Number(layer);if(Number.isFinite(key)){if(data)snapshots.set(key,data);else snapshots.delete(key);schedule();}return api;}
     function eventLayer(event){const target=event.target.closest?.('.pto-training-sidecar__layer-hit');return target?Number(target.dataset.layer):null;}
@@ -352,17 +393,17 @@
     function showTooltip(event){const target=tooltipTarget(event);if(!target)return;tooltip.textContent=target.dataset.tip;tooltip.classList.add('is-visible');moveTooltip(event);}
     function moveTooltip(event){if(!tooltip.classList.contains('is-visible'))return;const rect=viewport.getBoundingClientRect(),x=clamp(event.clientX-rect.left+12,8,rect.width-tooltip.offsetWidth-8),y=clamp(event.clientY-rect.top+12,8,rect.height-tooltip.offsetHeight-8);tooltip.style.left=`${x}px`;tooltip.style.top=`${y}px`;}
     function hideTooltip(event){if(event.relatedTarget?.closest?.('[data-tip]'))return;tooltip.classList.remove('is-visible');}
-    function pointerDown(event){if(event.button!==0||event.target.closest('[data-stage-ui],button'))return;dragging=true;dragOrigin={panX:controller.state.panX,panY:controller.state.panY};root.classList.add('is-sidecar-dragging');tooltip.classList.remove('is-visible');}
+    function pointerDown(event){if(event.button!==0||event.target.closest('[data-stage-ui],button,.pto-training-sidecar__layer-hit'))return;dragging=true;dragOrigin={panX:controller.state.panX,panY:controller.state.panY};root.classList.add('is-sidecar-dragging');tooltip.classList.remove('is-visible');}
     function pointerMove(event){if(dragging)queueDragPreview();else moveTooltip(event);}
     function pointerUp(){if(!dragging)return;dragging=false;dragOrigin=null;schedule();}
-    svg.addEventListener('click',click);svg.addEventListener('keydown',keydown);viewport.addEventListener('click',detailClick);viewport.addEventListener('pointerover',showTooltip);viewport.addEventListener('pointerdown',protectDetailPointer,true);viewport.addEventListener('pointerdown',pointerDown);viewport.addEventListener('pointermove',pointerMove);viewport.addEventListener('pointerup',pointerUp);viewport.addEventListener('pointercancel',pointerUp);viewport.addEventListener('pointerout',hideTooltip);viewport.addEventListener('wheel',interaction,{passive:true});
+    layerHits.addEventListener('click',click);layerHits.addEventListener('keydown',keydown);viewport.addEventListener('click',detailClick);viewport.addEventListener('pointerover',showTooltip);viewport.addEventListener('pointerdown',protectDetailPointer,true);viewport.addEventListener('pointerdown',pointerDown);viewport.addEventListener('pointermove',pointerMove);viewport.addEventListener('pointerup',pointerUp);viewport.addEventListener('pointercancel',pointerUp);viewport.addEventListener('pointerout',hideTooltip);viewport.addEventListener('wheel',interaction,{passive:true});
     const observer=global.ResizeObserver?new ResizeObserver(()=>{fitSidecar();schedule();}):null;observer?.observe(viewport);
     const fitButton=root.querySelector('[data-deck-fit]'),fitClick=()=>queueSidecarFit();fitButton?.addEventListener('click',fitClick);
     const baseDestroy=controller.destroy.bind(controller);
     const api={
       root,base:controller,get selectedLayer(){return selectedLayer;},get selectedDetail(){return selectedDetail;},mockSnapshot,selectLayer,collapseLayer(){return selectLayer(null);},openDetail,closeDetail(){return openDetail(null);},setLayerSnapshot,
       setView(view){controller.setView(view);queueSidecarFit();return api;},setParallelMode(mode){controller.setParallelMode(mode);schedule();return api;},setTheme(theme){controller.setTheme(theme);schedule();return api;},setZoom(value){controller.setZoom(value);schedule();return api;},setPose(pose){controller.setPose(pose);schedule();return api;},setFrontLayer(layer){controller.setFrontLayer(layer);schedule();return api;},selectNode(nodeId,layer){return controller.selectNode(nodeId,layer);},fit(){return fitSidecar();},refresh(){controller.refresh();schedule();return api;},
-      destroy(){destroyed=true;cancelAnimationFrame(raf);cancelAnimationFrame(dragPreviewRaf);observer?.disconnect();fitButton?.removeEventListener('click',fitClick);svg.removeEventListener('click',click);svg.removeEventListener('keydown',keydown);viewport.removeEventListener('click',detailClick);viewport.removeEventListener('pointerover',showTooltip);viewport.removeEventListener('pointerdown',protectDetailPointer,true);viewport.removeEventListener('pointerdown',pointerDown);viewport.removeEventListener('pointermove',pointerMove);viewport.removeEventListener('pointerup',pointerUp);viewport.removeEventListener('pointercancel',pointerUp);viewport.removeEventListener('pointerout',hideTooltip);viewport.removeEventListener('wheel',interaction);baseDestroy();}
+      destroy(){destroyed=true;cancelAnimationFrame(raf);cancelAnimationFrame(dragPreviewRaf);observer?.disconnect();fitButton?.removeEventListener('click',fitClick);layerHits.removeEventListener('click',click);layerHits.removeEventListener('keydown',keydown);viewport.removeEventListener('click',detailClick);viewport.removeEventListener('pointerover',showTooltip);viewport.removeEventListener('pointerdown',protectDetailPointer,true);viewport.removeEventListener('pointerdown',pointerDown);viewport.removeEventListener('pointermove',pointerMove);viewport.removeEventListener('pointerup',pointerUp);viewport.removeEventListener('pointercancel',pointerUp);viewport.removeEventListener('pointerout',hideTooltip);viewport.removeEventListener('wheel',interaction);baseDestroy();}
     };
     requestAnimationFrame(()=>{fitSidecar();if(options.initialLayer!==null&&options.initialLayer!==undefined&&Number.isFinite(Number(options.initialLayer)))selectLayer(Number(options.initialLayer));});
     return api;

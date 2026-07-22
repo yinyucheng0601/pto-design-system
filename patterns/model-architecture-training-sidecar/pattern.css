@@ -15,7 +15,8 @@ html[data-theme="light"] .pto-model-training-sidecar { --training-forward-text: 
 .pto-model-training-sidecar .pto-model-deck__viewport.is-grabbing { cursor: grabbing; }
 
 .pto-training-sidecar__svg,
-.pto-training-sidecar__labels {
+.pto-training-sidecar__labels,
+.pto-training-sidecar__layer-hits {
   position: absolute;
   inset: 0;
   overflow: hidden;
@@ -28,8 +29,15 @@ html[data-theme="light"] .pto-model-training-sidecar { --training-forward-text: 
   height: 100%;
 }
 
+.pto-training-sidecar__layer-hits {
+  z-index: 39;
+  width: 100%;
+  height: 100%;
+}
+
 .pto-model-training-sidecar.is-sidecar-dragging .pto-training-sidecar__svg,
 .pto-model-training-sidecar.is-sidecar-dragging .pto-training-sidecar__labels,
+.pto-model-training-sidecar.is-sidecar-dragging .pto-training-sidecar__layer-hits,
 .pto-model-training-sidecar.is-sidecar-dragging .pto-training-sidecar__focus,
 .pto-model-training-sidecar.is-sidecar-dragging .pto-training-sidecar__inspector {
   will-change: transform;
@@ -41,6 +49,7 @@ html[data-theme="light"] .pto-model-training-sidecar { --training-forward-text: 
 
 .pto-model-deck:not([data-view="right"]) .pto-training-sidecar__svg,
 .pto-model-deck:not([data-view="right"]) .pto-training-sidecar__labels,
+.pto-model-deck:not([data-view="right"]) .pto-training-sidecar__layer-hits,
 .pto-model-deck:not([data-view="right"]) .pto-training-sidecar__focus,
 .pto-model-deck:not([data-view="right"]) .pto-training-sidecar__inspector,
 .pto-model-deck:not([data-view="right"]) .pto-training-sidecar__context {
@@ -223,13 +232,13 @@ html[data-theme="light"] .pto-model-training-sidecar { --training-forward-text: 
 }
 
 .pto-training-sidecar__layer-hit {
-  fill: transparent;
+  fill: color-mix(in srgb, var(--primary) 0%, transparent);
   pointer-events: all;
   cursor: pointer;
 }
 
 .pto-training-sidecar__layer-hit:hover {
-  fill: color-mix(in srgb, var(--primary) 8%, transparent);
+  fill: color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
 .pto-training-sidecar__layer-hit:focus-visible {
@@ -545,6 +554,205 @@ html[data-theme="light"] .pto-model-training-sidecar { --training-forward-text: 
   text-align: center;
 }
 
+/* Selected Layer expands in place. Operator names and telemetry share the
+   projected Layer coordinate system; there is no separate operator-type pill. */
+.pto-training-sidecar__focus {
+  min-height: 0;
+  display: none;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  border: calc(1px * var(--pto-training-sidecar-scale)) solid color-mix(in srgb, var(--primary) 52%, var(--border));
+  border-radius: calc(8px * var(--pto-training-sidecar-scale));
+  background: color-mix(in srgb, var(--background) 97%, var(--primary) 3%);
+  box-shadow: 0 calc(12px * var(--pto-training-sidecar-scale)) calc(34px * var(--pto-training-sidecar-scale)) color-mix(in srgb, #000 25%, transparent);
+}
+
+.pto-training-sidecar__focus.is-open { display: block; }
+
+.pto-training-sidecar__focus-header {
+  position: absolute;
+  z-index: 5;
+  left: calc(5px * var(--pto-training-sidecar-scale));
+  right: calc(5px * var(--pto-training-sidecar-scale));
+  top: calc(4px * var(--pto-training-sidecar-scale));
+  min-height: calc(20px * var(--pto-training-sidecar-scale));
+  align-items: center;
+  padding: 0 calc(4px * var(--pto-training-sidecar-scale));
+  border-bottom: calc(1px * var(--pto-training-sidecar-scale)) solid color-mix(in srgb, var(--border) 72%, transparent);
+  background: color-mix(in srgb, var(--background) 94%, transparent);
+}
+
+.pto-training-sidecar__focus-title {
+  gap: calc(2px * var(--pto-training-sidecar-scale));
+  font: 850 calc(9.5px * var(--pto-training-sidecar-scale))/1 var(--font-sans);
+}
+
+.pto-training-sidecar__focus-title span {
+  font: 700 calc(7px * var(--pto-training-sidecar-scale))/1 var(--font-mono);
+}
+
+.pto-training-sidecar__focus-close {
+  width: calc(17px * var(--pto-training-sidecar-scale));
+  height: calc(17px * var(--pto-training-sidecar-scale));
+  border-radius: calc(5px * var(--pto-training-sidecar-scale));
+  font: 800 calc(10px * var(--pto-training-sidecar-scale))/1 var(--font-sans);
+}
+
+.pto-training-sidecar__focus-shared {
+  position: absolute;
+  z-index: 3;
+  left: calc(34px * var(--pto-training-sidecar-scale));
+  right: calc(7px * var(--pto-training-sidecar-scale));
+  top: calc(40px * var(--pto-training-sidecar-scale));
+  display: flex;
+  justify-content: center;
+  gap: calc(4px * var(--pto-training-sidecar-scale));
+  pointer-events: none;
+}
+
+.pto-training-sidecar__focus-shared span,
+.pto-training-sidecar__focus-aux {
+  padding: calc(2px * var(--pto-training-sidecar-scale)) calc(4px * var(--pto-training-sidecar-scale));
+  border: calc(1px * var(--pto-training-sidecar-scale)) solid color-mix(in srgb, var(--training-forward) 24%, var(--border));
+  border-radius: calc(4px * var(--pto-training-sidecar-scale));
+  background: color-mix(in srgb, var(--training-forward) 5%, var(--surface-1));
+  color: color-mix(in srgb, var(--training-forward-text) 72%, var(--foreground-secondary));
+  font: 750 calc(6.8px * var(--pto-training-sidecar-scale))/1 var(--font-mono);
+  white-space: nowrap;
+}
+
+.pto-training-sidecar__focus-row {
+  position: absolute;
+  z-index: 2;
+  left: calc(34px * var(--pto-training-sidecar-scale));
+  right: calc(7px * var(--pto-training-sidecar-scale));
+  min-height: calc(17px * var(--pto-training-sidecar-scale));
+  transform: translateY(-50%);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: calc(4px * var(--pto-training-sidecar-scale));
+  padding: calc(2px * var(--pto-training-sidecar-scale)) calc(4px * var(--pto-training-sidecar-scale));
+  border: calc(.75px * var(--pto-training-sidecar-scale)) solid color-mix(in srgb, var(--focus-color, var(--primary)) 46%, var(--border));
+  border-radius: calc(4px * var(--pto-training-sidecar-scale));
+  background: color-mix(in srgb, var(--focus-color, var(--primary)) 8%, var(--surface-1));
+  color: var(--foreground);
+  text-align: left;
+  cursor: pointer;
+}
+
+.pto-training-sidecar__focus-row:hover {
+  border-color: color-mix(in srgb, var(--focus-color, var(--primary)) 72%, var(--border));
+  background: color-mix(in srgb, var(--focus-color, var(--primary)) 13%, var(--surface-1));
+}
+
+.pto-training-sidecar__focus-row b {
+  min-width: 0;
+  overflow: hidden;
+  color: color-mix(in srgb, var(--focus-color, var(--foreground)) 58%, var(--foreground));
+  font: 800 calc(8px * var(--pto-training-sidecar-scale))/1 var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pto-training-sidecar__focus-row > span {
+  display: flex;
+  min-width: 0;
+  gap: calc(2px * var(--pto-training-sidecar-scale));
+}
+
+.pto-training-sidecar__focus-row i {
+  padding: calc(1.5px * var(--pto-training-sidecar-scale)) calc(2.5px * var(--pto-training-sidecar-scale));
+  border-radius: calc(3px * var(--pto-training-sidecar-scale));
+  background: color-mix(in srgb, var(--background) 74%, transparent);
+  color: color-mix(in srgb, var(--foreground) 82%, var(--foreground-secondary));
+  font: 750 calc(6.5px * var(--pto-training-sidecar-scale))/1 var(--font-mono);
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.pto-training-sidecar__focus-row.is-hidden {
+  --focus-color: var(--training-forward);
+  border-color: color-mix(in srgb, var(--training-forward) 48%, var(--border));
+}
+
+.pto-training-sidecar__focus-row.is-residual-add {
+  padding-left: calc(23px * var(--pto-training-sidecar-scale));
+  border-color: color-mix(in srgb, var(--training-backward) 72%, var(--border));
+  background: color-mix(in srgb, var(--training-backward) 12%, var(--surface-1));
+}
+
+.pto-training-sidecar__focus-row.is-residual-add::before {
+  content: "+";
+  position: absolute;
+  left: calc(5px * var(--pto-training-sidecar-scale));
+  top: 50%;
+  width: calc(13px * var(--pto-training-sidecar-scale));
+  height: calc(13px * var(--pto-training-sidecar-scale));
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  border: calc(1.2px * var(--pto-training-sidecar-scale)) solid color-mix(in srgb, var(--training-backward) 84%, var(--foreground));
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--training-backward) 18%, var(--surface-1));
+  color: color-mix(in srgb, var(--training-backward) 62%, var(--foreground));
+  font: 900 calc(10px * var(--pto-training-sidecar-scale))/1 var(--font-sans);
+}
+
+.pto-training-sidecar__focus-row.is-residual-add b,
+.pto-training-sidecar__focus-row.is-residual-add i {
+  color: color-mix(in srgb, var(--training-backward) 48%, var(--foreground));
+}
+
+.pto-training-sidecar__focus-residual {
+  position: absolute;
+  z-index: 1;
+  left: calc(8px * var(--pto-training-sidecar-scale));
+  width: calc(20px * var(--pto-training-sidecar-scale));
+  border: calc(1px * var(--pto-training-sidecar-scale)) solid color-mix(in srgb, var(--training-backward) 54%, transparent);
+  border-right: 0;
+  border-radius: calc(6px * var(--pto-training-sidecar-scale)) 0 0 calc(6px * var(--pto-training-sidecar-scale));
+  pointer-events: none;
+}
+
+.pto-training-sidecar__focus-residual span {
+  position: absolute;
+  left: calc(3px * var(--pto-training-sidecar-scale));
+  top: 50%;
+  transform: translateY(-50%);
+  color: color-mix(in srgb, var(--training-backward) 58%, var(--foreground));
+  font: 800 calc(6.2px * var(--pto-training-sidecar-scale))/1 var(--font-mono);
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+}
+
+.pto-training-sidecar__focus-aux {
+  position: absolute;
+  z-index: 3;
+  left: calc(34px * var(--pto-training-sidecar-scale));
+  border-color: color-mix(in srgb, var(--warning) 36%, var(--border));
+  background: color-mix(in srgb, var(--warning) 6%, var(--surface-1));
+  color: color-mix(in srgb, var(--warning) 68%, var(--foreground));
+}
+
+.pto-training-sidecar__focus-backward {
+  position: absolute;
+  z-index: 4;
+  left: calc(8px * var(--pto-training-sidecar-scale));
+  right: calc(8px * var(--pto-training-sidecar-scale));
+  bottom: calc(5px * var(--pto-training-sidecar-scale));
+  display: flex;
+  align-items: center;
+  gap: calc(4px * var(--pto-training-sidecar-scale));
+  color: color-mix(in srgb, var(--training-backward) 72%, var(--foreground));
+  font: 750 calc(6.5px * var(--pto-training-sidecar-scale))/1 var(--font-mono);
+  pointer-events: none;
+}
+
+.pto-training-sidecar__focus-backward i { flex: 1; height: calc(1px * var(--pto-training-sidecar-scale)); background: currentColor; opacity: .48; }
+
 /* The sidecar already owns the full-width Stage labels above the topology axis.
    Suppress only the redundant in-model PP pills in the PP/right-view composition. */
 .pto-model-training-sidecar[data-view="right"][data-parallel="pp"]
@@ -555,13 +763,8 @@ html[data-theme="light"] .pto-model-training-sidecar { --training-forward-text: 
 @media (max-width: 900px) {
   .pto-training-sidecar__semantic-label { display: none; }
   .pto-training-sidecar__context { right: 8px; top: 106px; }
-  .pto-training-sidecar__focus { width: 260px; }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .pto-training-sidecar__focus { animation: pto-training-sidecar-in .16s ease-out; }
-  @keyframes pto-training-sidecar-in {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+  .pto-training-sidecar__focus { animation: none; }
 }

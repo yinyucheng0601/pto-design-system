@@ -175,7 +175,7 @@
     const sideLabels=root.querySelector('.pto-model-deck__side-labels');
     const readout=root.querySelector('[data-deck-readout]');
     const initialTheme=THEMES.has(options.initialTheme)?options.initialTheme:(document.documentElement.dataset.theme==='light'?'light':'dark');
-    const state={view:VIEWS.has(options.initialView)?options.initialView:'iso',parallelMode:normalizeParallelMode(options.parallelMode),theme:initialTheme,zoom:Number(options.initialZoom)||.5,rx:-18,ry:-34,panX:0,panY:0,selected:null};
+    const state={view:VIEWS.has(options.initialView)?options.initialView:'iso',parallelMode:normalizeParallelMode(options.parallelMode),theme:initialTheme,zoom:Number(options.initialZoom)||.5,rx:-18,ry:-34,panX:0,panY:0,selected:null,expandedLayer:null,expansionDepth:0};
     let drag=null,raf=0,destroyed=false;
 
     function applySemanticPalette(){
@@ -193,9 +193,27 @@
       Object.entries(colors).forEach(([key,color])=>root.style.setProperty(`--pto-model-deck-${key}`,color));
     }
 
+    function expandedOffset(layer){
+      if(state.view!=='right'||!Number.isFinite(state.expandedLayer)||state.expansionDepth<=0)return 0;
+      if(layer<state.expandedLayer)return state.expansionDepth/2;
+      if(layer>state.expandedLayer)return-state.expansionDepth/2;
+      return 0;
+    }
+    function layerDepth(layer){return-layer*config.depthGap+expandedOffset(layer);}
+    function staticDepth(kind){
+      const base=kind==='input'?config.depthGap*1.55:-(config.layerCount+.5)*config.depthGap;
+      if(state.view!=='right'||!Number.isFinite(state.expandedLayer)||state.expansionDepth<=0)return base;
+      return base+(kind==='input'?state.expansionDepth/2:-state.expansionDepth/2);
+    }
+    function syncLayerExpansion(){
+      root.querySelectorAll('.pto-model-deck__layer[data-layer]').forEach(card=>{card.style.transform=`translate3d(0,0,${layerDepth(Number(card.dataset.layer))}px)`;});
+      const input=root.querySelector('.pto-model-deck__static--input'),output=root.querySelector('.pto-model-deck__static--output');
+      if(input)input.style.transform=`translate3d(0,0,${staticDepth('input')}px)`;
+      if(output)output.style.transform=`translate3d(0,0,${staticDepth('output')}px)`;
+    }
     function pivot(){return state.pivot||{x:0,y:0,z:-(config.layerCount-1)*config.depthGap/2};}
     function transformValue(){const p=pivot();return `scale(${state.zoom}) rotateX(${state.rx}deg) rotateY(${state.ry}deg) translate3d(${-p.x}px,${-p.y}px,${-p.z}px)`;}
-    function apply(){scene.style.left=`calc(50% + ${state.panX}px)`;scene.style.top=`calc(50% + ${state.panY}px)`;scene.style.transform=transformValue();readout.textContent=`${Math.round(state.zoom*100)}%`;scheduleOverlay();}
+    function apply(){syncLayerExpansion();scene.style.left=`calc(50% + ${state.panX}px)`;scene.style.top=`calc(50% + ${state.panY}px)`;scene.style.transform=transformValue();readout.textContent=`${Math.round(state.zoom*100)}%`;scheduleOverlay();}
     function syncButtons(){
       root.dataset.view=state.view;root.dataset.parallel=state.parallelMode;
       root.querySelectorAll('[data-deck-view]').forEach(button=>{const active=button.dataset.deckView===state.view;button.classList.toggle('is-active',active);button.setAttribute('aria-pressed',String(active));});
@@ -219,6 +237,12 @@
       const next=clamp(Number(layer)||0,0,config.layerCount-1);
       root.querySelectorAll('.pto-model-deck__layer').forEach(card=>card.classList.toggle('is-front-layer',Number(card.dataset.layer)===next));
       syncExpertExpansion();scheduleOverlay();return api;
+    }
+    function setLayerExpansion(layer,depth=0){
+      const next=Number(layer),amount=Math.max(0,Number(depth)||0);
+      state.expandedLayer=Number.isFinite(next)?clamp(next,0,config.layerCount-1):null;
+      state.expansionDepth=state.expandedLayer===null?0:amount;
+      apply();return api;
     }
     function syncExpertEdges(card){
       const svg=card.querySelector('.pto-model-deck__edges');if(!svg)return;
@@ -261,10 +285,10 @@
       return{width,height,matrix,metrics:{perspective,originX:width/2,originY:height/2,sceneLeft:width/2+state.panX,sceneTop:height/2+state.panY}};
     }
     function interlayerGeometry(){
-      const z=(layer)=>-layer*config.depthGap,sideX=408,stateX=235,outputY=468,inputY=-561;
+      const z=(layer)=>layerDepth(layer),sideX=408,stateX=235,outputY=468,inputY=-561;
       const links=Array.from({length:config.layerCount-1},(_,layer)=>({sourceLayer:layer,targetLayer:layer+1,stageBoundary:config.stageRanges.some(([lo])=>lo===layer+1),points:[{x:stateX,y:outputY,z:z(layer)},{x:sideX,y:outputY,z:z(layer)},{x:sideX,y:inputY,z:z(layer+1)},{x:stateX,y:inputY,z:z(layer+1)}]}));
-      links.unshift({sourceLayer:-1,targetLayer:0,kind:'input',points:[{x:0,y:-602,z:config.depthGap*1.55},{x:sideX,y:-602,z:config.depthGap*1.55},{x:sideX,y:inputY,z:0},{x:stateX,y:inputY,z:0}]});
-      links.push({sourceLayer:config.layerCount-1,targetLayer:config.layerCount,kind:'output',points:[{x:stateX,y:outputY,z:z(config.layerCount-1)},{x:sideX,y:outputY,z:z(config.layerCount-1)},{x:sideX,y:570,z:-(config.layerCount+.5)*config.depthGap},{x:0,y:570,z:-(config.layerCount+.5)*config.depthGap}]});
+      links.unshift({sourceLayer:-1,targetLayer:0,kind:'input',points:[{x:0,y:-602,z:staticDepth('input')},{x:sideX,y:-602,z:staticDepth('input')},{x:sideX,y:inputY,z:z(0)},{x:stateX,y:inputY,z:z(0)}]});
+      links.push({sourceLayer:config.layerCount-1,targetLayer:config.layerCount,kind:'output',points:[{x:stateX,y:outputY,z:z(config.layerCount-1)},{x:sideX,y:outputY,z:z(config.layerCount-1)},{x:sideX,y:570,z:staticDepth('output')},{x:0,y:570,z:staticDepth('output')}]});
       return links;
     }
     function renderInterlayerSpine(){
@@ -336,7 +360,7 @@
     }
     function renderOverlays(){raf=0;if(destroyed)return;renderInterlayerSpine();renderSideGuides();renderPp();renderAnnotations();renderSideLabels();}
     function scheduleOverlay(){if(raf)return;raf=requestAnimationFrame(renderOverlays);}
-    function pointerDown(event){if(event.button!==0||event.target.closest('[data-stage-ui],button'))return;drag={id:event.pointerId,x:event.clientX,y:event.clientY,rx:state.rx,ry:state.ry,panX:state.panX,panY:state.panY,pan:state.view!=='iso'||event.metaKey||event.ctrlKey};viewport.setPointerCapture?.(event.pointerId);viewport.classList.add('is-grabbing');}
+    function pointerDown(event){if(event.button!==0||event.target.closest('[data-stage-ui],button,[data-deck-no-drag]'))return;drag={id:event.pointerId,x:event.clientX,y:event.clientY,rx:state.rx,ry:state.ry,panX:state.panX,panY:state.panY,pan:state.view!=='iso'||event.metaKey||event.ctrlKey};viewport.setPointerCapture?.(event.pointerId);viewport.classList.add('is-grabbing');}
     function pointerMove(event){if(!drag||event.pointerId!==drag.id)return;const dx=event.clientX-drag.x,dy=event.clientY-drag.y;if(drag.pan){state.panX=drag.panX+dx;state.panY=drag.panY+dy;}else{state.ry=clamp(drag.ry+dx*.24,-82,82);state.rx=clamp(drag.rx-dy*.24,-74,74);}apply();}
     function pointerUp(event){if(!drag||event.pointerId!==drag.id)return;drag=null;viewport.classList.remove('is-grabbing');try{viewport.releasePointerCapture?.(event.pointerId);}catch(_){}}
     function wheel(event){if(event.target.closest('[data-stage-ui]'))return;event.preventDefault();setZoom(state.zoom*Math.exp(-event.deltaY*.0012));}
@@ -350,7 +374,7 @@
     if(!externallyManaged){viewport.addEventListener('pointerdown',pointerDown);viewport.addEventListener('pointermove',pointerMove);viewport.addEventListener('pointerup',pointerUp);viewport.addEventListener('pointercancel',pointerUp);viewport.addEventListener('wheel',wheel,{passive:false});scene.addEventListener('click',nodeClick);}
     const resizeObserver=!externallyManaged&&global.ResizeObserver?new ResizeObserver(resize):null;resizeObserver?.observe(root);
     function setPose(pose={}){if(VIEWS.has(pose.view))state.view=pose.view;if(Number.isFinite(Number(pose.rx)))state.rx=Number(pose.rx);if(Number.isFinite(Number(pose.ry)))state.ry=Number(pose.ry);if(Number.isFinite(Number(pose.zoom)))state.zoom=clamp(Number(pose.zoom),.12,1.35);if(Number.isFinite(Number(pose.panX)))state.panX=Number(pose.panX);if(Number.isFinite(Number(pose.panY)))state.panY=Number(pose.panY);if(pose.pivot&&['x','y','z'].every(key=>Number.isFinite(Number(pose.pivot[key]))))state.pivot={x:Number(pose.pivot.x),y:Number(pose.pivot.y),z:Number(pose.pivot.z)};syncButtons();syncExpertExpansion();apply();return api;}
-    const api={root,state,config,setView,setParallelMode,setTheme,setZoom,setPose,refresh:scheduleOverlay,fit,setFrontLayer,selectNode,destroy(){destroyed=true;cancelAnimationFrame(raf);resizeObserver?.disconnect();if(!externallyManaged){viewport.removeEventListener('pointerdown',pointerDown);viewport.removeEventListener('pointermove',pointerMove);viewport.removeEventListener('pointerup',pointerUp);viewport.removeEventListener('pointercancel',pointerUp);viewport.removeEventListener('wheel',wheel);scene.removeEventListener('click',nodeClick);}}};
+    const api={root,state,config,setView,setParallelMode,setTheme,setZoom,setPose,refresh:scheduleOverlay,fit,setFrontLayer,setLayerExpansion,selectNode,destroy(){destroyed=true;cancelAnimationFrame(raf);resizeObserver?.disconnect();if(!externallyManaged){viewport.removeEventListener('pointerdown',pointerDown);viewport.removeEventListener('pointermove',pointerMove);viewport.removeEventListener('pointerup',pointerUp);viewport.removeEventListener('pointercancel',pointerUp);viewport.removeEventListener('wheel',wheel);scene.removeEventListener('click',nodeClick);}}};
     setTheme(state.theme);Object.assign(state,VIEW_POSES[state.view]);syncExpertExpansion();if(externallyManaged){syncButtons();apply();}else requestAnimationFrame(fit);return api;
   }
 
