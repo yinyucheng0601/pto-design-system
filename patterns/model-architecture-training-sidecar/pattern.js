@@ -71,7 +71,7 @@
     ];
     const metricViewValues=new Set(metricViewOptions.map(([value])=>value));
     const requestedMetricViews=Array.isArray(options.metricViews)?options.metricViews:(options.metricView&&options.metricView!=='structure'?[options.metricView]:[]);
-    let controller=null,raf=0,destroyed=false,selectedLayer=null,selectedDetail=null,selectedDetailKey=null,lossExpanded=false,fitZoom=1,dragging=false,hoveredLayer=null,measurementCache=null,structureDirty=true;
+    let controller=null,raf=0,focusFitRaf=0,focusTransitionTimer=0,destroyed=false,selectedLayer=null,pendingLayer=null,selectedDetail=null,selectedDetailKey=null,lossExpanded=false,fitZoom=1,dragging=false,hoveredLayer=null,measurementCache=null,structureDirty=true,focusRestorePose=null;
     let activeMetricViews=new Set(requestedMetricViews.filter(value=>metricViewValues.has(value)));
     const context={step:options.step??18420,microbatch:options.microbatch??3,microbatchCount:options.microbatchCount??8};
     const topology=options.topology||{};
@@ -85,6 +85,7 @@
     root.classList.add('pto-model-training-sidecar');root.dataset.trainingSidecar='true';
     const viewport=root.querySelector('.pto-model-deck__viewport');
     const overlayScene=document.createElement('div');overlayScene.className='pto-training-sidecar__scene';overlayScene.setAttribute('aria-label','Training semantics canvas scene');
+    const focusScene=document.createElement('div');focusScene.className='pto-training-sidecar__focus-scene';focusScene.setAttribute('aria-label','Expanded Layer slice scene');
     const svg=document.createElementNS(NS,'svg');svg.classList.add('pto-training-sidecar__svg');svg.setAttribute('aria-label','Training semantics overlay');
     const labels=document.createElement('div');labels.className='pto-training-sidecar__labels';
     const layerHits=document.createElementNS(NS,'svg');layerHits.classList.add('pto-training-sidecar__layer-hits');layerHits.setAttribute('aria-label','Decoder Layer column hit areas');
@@ -102,7 +103,7 @@
     if(toolbar)toolbar.insertBefore(dataControl,toolbar.children[2]||null);
     const tooltip=document.createElement('div');tooltip.className='pto-training-sidecar__tooltip';tooltip.setAttribute('role','tooltip');
     const detailPanel=document.createElement('aside');detailPanel.className='pto-training-sidecar__inspector';detailPanel.setAttribute('aria-live','polite');
-    overlayScene.append(svg,labels,layerHits);viewport.append(overlayScene,focus,tooltip,detailPanel);
+    overlayScene.append(svg,labels,layerHits);focusScene.append(focus);viewport.append(overlayScene,focusScene,tooltip,detailPanel);
 
     function metricSummary(summaries){
       return metricViewOptions.flatMap(([value])=>activeMetricViews.has(value)?summaries[value]||[]:[]);
@@ -144,9 +145,11 @@
 
     function syncOverlayTransform(){
       if(!controller||!overlayScene)return;
-      overlayScene.style.left=`calc(50% + ${controller.state.panX}px)`;
-      overlayScene.style.top=`calc(50% + ${controller.state.panY}px)`;
-      overlayScene.style.transform=`scale(${controller.state.zoom})`;
+      [overlayScene,focusScene].forEach(scene=>{
+        scene.style.left=`calc(50% + ${controller.state.panX}px)`;
+        scene.style.top=`calc(50% + ${controller.state.panY}px)`;
+        scene.style.transform=`scale(${controller.state.zoom})`;
+      });
     }
 
     function geometry(){
@@ -164,7 +167,7 @@
       const points=cards.map(card=>{
         const rect=card.getBoundingClientRect(),operators=Array.from(card.querySelectorAll('.pto-model-deck__node,.pto-model-deck__experts')).map(operatorGeometry).filter(Boolean);
         const cardTop=worldY(rect.top-base.top),cardBottom=worldY(rect.bottom-base.top),operatorTop=operators.length?Math.min(...operators.map(item=>item.top)):cardTop,operatorBottom=operators.length?Math.max(...operators.map(item=>item.bottom)):cardBottom;
-        return{layer:Number(card.dataset.layer),stage:Number(card.dataset.stage),x:worldX(rect.left+rect.width/2-base.left),top:operatorTop,bottom:operatorBottom,operatorTop,operatorBottom,operators,card,rect};
+        return{layer:Number(card.dataset.layer),stage:Number(card.dataset.stage),x:worldX(rect.left+rect.width/2-base.left),top:operatorTop,bottom:operatorBottom,cardTop,cardBottom,operatorTop,operatorBottom,operators,card,rect};
       }).sort((a,b)=>a.layer-b.layer);
       const modelTop=Math.min(...points.map(point=>point.operatorTop)),modelBottom=Math.max(...points.map(point=>point.operatorBottom));
       const centerOf=(selector)=>{const node=root.querySelector(selector),rect=node?.getBoundingClientRect();return rect?{x:worldX(rect.left+rect.width/2-base.left),y:worldY(rect.top+rect.height/2-base.top)}:null;};
@@ -201,7 +204,7 @@
       const width=layerColumnWidth(g),padding=2*g.scale;
       g.points.forEach(point=>{
         const background=document.createElementNS(NS,'rect');
-        background.setAttribute('class','pto-training-sidecar__layer-column');
+        background.setAttribute('class',`pto-training-sidecar__layer-column${point.layer===selectedLayer?' is-flipped':''}`);
         background.dataset.layer=String(point.layer);
         background.setAttribute('x',(point.x-width/2).toFixed(1));
         background.setAttribute('y',(point.operatorTop-padding).toFixed(1));
@@ -218,7 +221,7 @@
         point.operators.forEach(operator=>{
           const key=`${point.layer}|${operator.op}|${operator.top.toFixed(1)}|${operator.bottom.toFixed(1)}`;if(seen.has(key))return;seen.add(key);
           const bar=document.createElementNS(NS,'rect');
-          bar.setAttribute('class','pto-training-sidecar__operator-side');
+          bar.setAttribute('class',`pto-training-sidecar__operator-side${point.layer===selectedLayer?' is-flipped':''}`);
           bar.dataset.layer=String(point.layer);bar.dataset.op=operator.op;
           bar.setAttribute('x',(point.x-halfWidth).toFixed(1));
           bar.setAttribute('y',operator.top.toFixed(1));
@@ -469,25 +472,24 @@
       if(!Number.isFinite(selectedLayer))return null;
       const point=g.points.find(item=>item.layer===selectedLayer);if(!point)return;
       const sourceGraph=point.card.querySelector('.pto-model-deck__graph');if(!sourceGraph)return null;
-      const narrow=g.width<=900,graphWidth=720,graphHeight=1124,headerHeight=56,footerHeight=28;
-      const panelWidth=narrow?Math.max(280,g.width-16):Math.min(g.width-16,700);
-      const maxPanelHeight=narrow?Math.min(g.height*.86,760):Math.min(g.height-16,1060);
-      const graphScale=clamp(Math.min((panelWidth-16)/graphWidth,(maxPanelHeight-headerHeight-footerHeight-8)/graphHeight),.38,1.08);
-      const panelHeight=Math.min(maxPanelHeight,Math.ceil(headerHeight+graphHeight*graphScale+footerHeight+8));
-      const panelTop=narrow?g.height-panelHeight-8:clamp((g.height-panelHeight)/2,8,g.height-panelHeight-8);
-      const left=narrow?8:clamp(g.screenX(point.x)-panelWidth/2,8,g.width-panelWidth-8);
-      return{point,sourceGraph,panelWidth,panelTop,panelHeight,left,graphWidth,graphHeight,graphScale,headerHeight,footerHeight};
+      const graphWidth=720,graphHeight=1124,worldPerScreen=1/Math.max(.001,controller.state.zoom);
+      const panelWidth=600,panelTop=point.operatorTop,panelHeight=point.operatorBottom-point.operatorTop;
+      const graphScale=1,graphOffsetY=point.cardTop-point.operatorTop;
+      const left=point.x-panelWidth/2;
+      return{point,sourceGraph,panelWidth,panelTop,panelHeight,left,graphWidth,graphHeight,graphScale,graphOffsetY,worldPerScreen};
     }
 
     function renderFocus(g,layout=measureFocus(g)){
-      if(!layout){focus.classList.remove('is-open');focus.replaceChildren();return;}
-      const {panelWidth,panelTop,panelHeight,left,graphScale,headerHeight}=layout,snapshot=snapshotFor(selectedLayer);
+      root.classList.toggle('has-expanded-layer',Boolean(layout));
+      if(!layout){focus.classList.remove('is-open','is-flipping');focus.removeAttribute('data-layer');focus.replaceChildren();return;}
+      const {panelWidth,panelTop,panelHeight,left,graphScale,graphOffsetY,worldPerScreen}=layout,snapshot=snapshotFor(selectedLayer);
       const hidden=snapshot.tensors.hidden,activationGradient=snapshot.tensors.activationGradient,streams=controller.config.mhcStreams??4;
       const hiddenStatus=hidden.amax>9.35?'warning':'normal',hiddenDetail={key:`layer-${selectedLayer}-hidden-input`,title:`mHC state · H${selectedLayer} ×${streams}`,category:'Layer tensor',definition:'当前 Layer 的输入是四路 mHC state。Attention 和 FFN 均通过训练配置定义的 Mix/Merge 变换四路状态；没有可靠融合矩阵时不画成标准 Add。',values:[['Streams',streams],['Mean',hidden.mean.toFixed(4)],['Std σ',hidden.std.toFixed(3)],['Amax',hidden.amax.toFixed(2)],['L2 proxy',hidden.norm.toFixed(1)],['Activation gradient L2',activationGradient.norm.toFixed(3)]],status:hiddenStatus,statusLabel:hiddenStatus==='warning'?'关注：Amax 接近参考边界':'正常：指标位于参考范围',context:executionContext(snapshot,`L${selectedLayer}`)};
       const outputDetail={...hiddenDetail,key:`layer-${selectedLayer}-hidden-output`,title:`Output mHC state · H${selectedLayer+1} ×${streams}`,definition:'FFN Mix/Merge 后的四路 mHC state，也是下一 Layer 输入；若位于 PP 边界则通过 activation Send/Recv 传输。'};
-      const rankGroup=rankGroupForStage(snapshot.stage),topologyText=rankGroup?`ranks ${rankGroup}`:parallelSummary()||'rank map unavailable',attention=attentionDescriptor(selectedLayer);
-      focus.style.setProperty('--pto-training-focus-scale','1');focus.style.setProperty('--pto-training-focus-graph-scale',graphScale.toFixed(4));focus.style.left=`${left}px`;focus.style.top=`${panelTop}px`;focus.style.width=`${panelWidth}px`;focus.style.height=`${panelHeight}px`;focus.classList.add('is-open');
-      focus.innerHTML=`<div class="pto-training-sidecar__focus-header"><div class="pto-training-sidecar__focus-title">Layer L${snapshot.layer}<span>PP${snapshot.stage??'?'} · ${esc(topologyText)} · ${esc(snapshot.module.kind)}</span><em>${esc(attention.label)} · ${esc(attention.kernel)}</em></div><button class="pto-training-sidecar__focus-close" type="button" aria-label="收起 Layer">×</button></div><div class="pto-training-sidecar__focus-graph-stage" style="top:${headerHeight}px"></div><div class="pto-training-sidecar__focus-backward"><span>∂L/∂H${selectedLayer} · L2 ${activationGradient.norm.toFixed(2)}</span><i></i><span>Backward ×${streams} streams</span><i></i><span>∂L/∂H${selectedLayer+1}</span></div>`;
+      const attention=attentionDescriptor(selectedLayer);
+      const layerChanged=focus.dataset.layer!==String(selectedLayer);
+      focus.style.setProperty('--pto-training-focus-scale',worldPerScreen.toFixed(4));focus.style.setProperty('--pto-training-focus-graph-scale',graphScale.toFixed(4));focus.style.left=`${left}px`;focus.style.top=`${panelTop}px`;focus.style.width=`${panelWidth}px`;focus.style.height=`${panelHeight}px`;focus.dataset.layer=String(selectedLayer);focus.classList.add('is-open');
+      focus.innerHTML=`<button class="pto-training-sidecar__focus-close" type="button" aria-label="收起 Layer">×</button><div class="pto-training-sidecar__focus-graph-stage" style="top:${graphOffsetY}px"></div>`;
       const graph=layout.sourceGraph.cloneNode(true);graph.classList.add('pto-training-sidecar__focus-graph');
       graph.querySelectorAll('.is-selected').forEach(node=>node.classList.remove('is-selected'));
       const semanticById=new Map();(controller.config.sideRows||[]).forEach((row,index)=>row.ids.forEach(id=>semanticById.set(id,{label:row.ids.includes('attention_core')?attention.label:row.label,index})));
@@ -496,14 +498,13 @@
       const boxes=new Map();
       graphNodes.forEach(node=>{
         const x=parseFloat(node.style.left)||0,y=parseFloat(node.style.top)||0,w=parseFloat(node.style.width)||196,h=parseFloat(node.style.height)||30,cx=x+w/2,cy=y+h/2;
-        const add=node.dataset.op==='add',state=node.dataset.op==='mhc-state',targetWidth=add?26:state?220:168,targetHeight=add?26:state?32:30;
+        const add=node.dataset.op==='add',state=node.dataset.op==='mhc-state',addSize=Math.min(w,h),targetWidth=add?addSize:state?190:168,targetHeight=add?addSize:h;
         const normalizedCenter={
           q_a_proj:240,q_causal_conv:240,q_residual_add:240,q_a_norm:240,q_b_proj:240,query_tensor:240,
           kv_a_proj:480,kv_causal_conv:480,kv_residual_add:480,kv_a_norm:480,kv_b_proj:480,key_tensor:480,
           gate:180,a2a_dispatch:180,expert_pool:360,shared_expert:540,a2a_combine:360,moe_branch_add:360
         }[node.dataset.node];
-        const normalizedRow={a2a_dispatch:726,expert_pool:726,shared_expert:726}[node.dataset.node];
-        const compactCenterX=normalizedCenter??cx,compactCenterY=normalizedRow??cy;
+        const compactCenterX=state?540:(normalizedCenter??cx),compactCenterY=cy;
         const box={x:compactCenterX-targetWidth/2,y:compactCenterY-targetHeight/2,w:targetWidth,h:targetHeight};boxes.set(node.dataset.node,box);
         node.style.left=`${box.x}px`;node.style.top=`${box.y}px`;node.style.width=`${box.w}px`;node.style.height=`${box.h}px`;
       });
@@ -517,7 +518,7 @@
         }else if(sourceId==='shared_expert'&&targetId==='moe_branch_add'){
           p0=pointFor(source,'right');p1=pointFor(target,'right');d=`M${p0.x} ${p0.y}L624 ${p0.y}L624 ${p1.y}L${p1.x} ${p1.y}`;
         }else if(kind==='residual'&&(sourceId==='mhc_state_in'||sourceId==='mhc_attention_post')){
-          p0=pointFor(source,'right');p1=pointFor(target,'right');d=`M${p0.x} ${p0.y}L668 ${p0.y}L668 ${p1.y}L${p1.x} ${p1.y}`;
+          p0=pointFor(source,'right');p1=pointFor(target,'right');d=`M${p0.x} ${p0.y}L620 ${p0.y}L620 ${p1.y}L${p1.x} ${p1.y}`;
         }else if(Math.abs(p0.x-p1.x)<8){d=`M${p0.x} ${p0.y}L${p1.x} ${p1.y}`;
         }else{const mid=(p0.y+p1.y)/2;d=`M${p0.x} ${p0.y}C${p0.x} ${mid},${p1.x} ${mid},${p1.x} ${p1.y}`;}
         edge.setAttribute('d',d);
@@ -546,12 +547,17 @@
         }
         node.replaceChildren();
         const labelNode=document.createElement('span');labelNode.className='pto-training-sidecar__focus-node-label';labelNode.textContent=displayLabel;node.appendChild(labelNode);
-        const metricNode=document.createElement('span');metricNode.className='pto-training-sidecar__focus-node-metrics';summary.forEach(value=>{const item=document.createElement('i');item.textContent=value;metricNode.appendChild(item);});node.appendChild(metricNode);
+        if(summary.length){const metricNode=document.createElement('span');metricNode.className='pto-training-sidecar__focus-node-metrics';summary.forEach(value=>{const item=document.createElement('i');item.textContent=value;metricNode.appendChild(item);});node.appendChild(metricNode);}
         tip(node,summary.length?`${displayLabel} · ${summary.join(' · ')}`:displayLabel,detail);
       });
-      if(!snapshot.module.dense){const aux=document.createElement('div');aux.className='pto-training-sidecar__focus-graph-aux';aux.textContent='Router Aux · balance 0.014 · z-loss 0.003 · λ from training job';graph.appendChild(aux);}
+      if(!snapshot.module.dense&&(activeMetricViews.has('moe')||activeMetricViews.has('training'))){const aux=document.createElement('div');aux.className='pto-training-sidecar__focus-graph-aux';aux.textContent='Router Aux · balance 0.014 · z-loss 0.003 · λ from training job';graph.appendChild(aux);}
       focus.querySelector('.pto-training-sidecar__focus-graph-stage')?.appendChild(graph);
       focus.querySelector('.pto-training-sidecar__focus-close')?.addEventListener('click',()=>selectLayer(null));
+      if(layerChanged){
+        focus.classList.remove('is-flipping');
+        void focus.offsetWidth;
+        focus.classList.add('is-flipping');
+      }
     }
 
     function renderLossComposition(g){
@@ -675,10 +681,6 @@
         }
       });
 
-      if(Number.isFinite(selectedLayer)){
-        const point=g.points.find(item=>item.layer===selectedLayer);if(point){const width=Math.max(18*g.scale,g.gap*1.8),selection=document.createElementNS(NS,'rect');selection.setAttribute('class','pto-training-sidecar__selection');selection.setAttribute('x',(point.x-width/2).toFixed(1));selection.setAttribute('y',(g.axisY-17*g.scale).toFixed(1));selection.setAttribute('width',width.toFixed(1));selection.setAttribute('height',Math.max(40*g.scale,structureBottom-g.axisY+18*g.scale).toFixed(1));selection.setAttribute('rx',(7*g.scale).toFixed(1));svg.insertBefore(selection,svg.children[1]||null);}
-      }
-
       const activeLabels=metricViewOptions.filter(([value])=>activeMetricViews.has(value)).map(([,labelText])=>labelText);
       if(activeLabels.length){
         const node=label(labels,'pto-training-sidecar__semantic-label','',g.worldX(14),g.metricY+28*g.scale,`数据标注 · ${activeLabels.join(' / ')}`);
@@ -693,8 +695,49 @@
     }
 
     function schedule(structural=true){if(structural)structureDirty=true;if(!raf)raf=requestAnimationFrame(render);}
+    function poseSnapshot(){
+      const {zoom,panX,panY,rx,ry}=controller.state;
+      return{zoom,panX,panY,rx,ry};
+    }
+    function expandedLayerPose(layout){
+      const width=Math.max(1,viewport.clientWidth),height=Math.max(1,viewport.clientHeight);
+      const topInset=Math.max(56,Number(options.layerFitTopInset)||76),bottomInset=Math.max(24,Number(options.layerFitBottomInset)||40),horizontalInset=Math.max(24,Number(options.layerFitHorizontalInset)||44);
+      const usableHeight=Math.max(320,height-topInset-bottomInset),usableWidth=Math.max(320,width-horizontalInset*2);
+      const heightZoom=usableHeight/Math.max(1,layout.panelHeight),widthZoom=usableWidth/Math.max(1,layout.panelWidth);
+      const zoom=clamp(Math.min(heightZoom,widthZoom),.12,1.35);
+      const centerY=layout.panelTop+layout.panelHeight/2,targetY=topInset+usableHeight/2;
+      return{zoom,panX:-layout.point.x*zoom,panY:targetY-height/2-centerY*zoom};
+    }
+    function transitionCameraTo(pose,{expandedLayer,expansionDepth,onComplete}={}){
+      cancelAnimationFrame(focusFitRaf);
+      focusFitRaf=0;
+      root.classList.add('is-layer-camera-transitioning');
+      viewport.offsetWidth;
+      if(expandedLayer!==undefined)controller.setLayerExpansion?.(expandedLayer,expansionDepth||0);
+      controller.setPose(pose);syncOverlayTransform();
+      clearTimeout(focusTransitionTimer);
+      focusTransitionTimer=window.setTimeout(()=>{
+        onComplete?.();
+        schedule();
+        requestAnimationFrame(()=>root.classList.remove('is-layer-camera-transitioning'));
+      },540);
+    }
+    function fitExpandedLayer(){
+      focusFitRaf=0;
+      if(selectedLayer===null||controller.state.view!=='right'||root.classList.contains('is-layer-camera-transitioning'))return api;
+      const g=geometry(),layout=g&&measureFocus(g);if(!layout)return api;
+      transitionCameraTo(expandedLayerPose(layout));
+      return api;
+    }
+    function queueExpandedLayerFit(){
+      cancelAnimationFrame(focusFitRaf);
+      focusFitRaf=requestAnimationFrame(fitExpandedLayer);
+      return api;
+    }
     function fitSidecar(){
       if(!controller||!viewport)return api;
+      if(root.classList.contains('is-layer-camera-transitioning'))return api;
+      if(selectedLayer!==null&&controller.state.view==='right')return queueExpandedLayerFit();
       if(controller.state.view!=='right'){controller.fit();schedule();return api;}
       const width=Math.max(1,viewport.clientWidth),height=Math.max(1,viewport.clientHeight);
       const topReserve=Number(options.topLaneReserve)||260,bottomReserve=Number(options.bottomLaneReserve)||130;
@@ -702,11 +745,35 @@
       fitZoom=zoom;controller.setPose({zoom,panY:(topReserve-bottomReserve)/2});schedule();return api;
     }
     function queueSidecarFit(){requestAnimationFrame(fitSidecar);}
+    function closeSelectedLayer(afterLayer=null){
+      if(selectedDetail)openDetail(null);
+      const restorePose=focusRestorePose||poseSnapshot();
+      focusRestorePose=null;pendingLayer=afterLayer;
+      transitionCameraTo(restorePose,{expandedLayer:null,expansionDepth:0,onComplete(){
+        selectedLayer=null;
+        options.onLayerSelect?.(null,api);
+        const next=pendingLayer;pendingLayer=null;
+        if(next!==null)window.setTimeout(()=>selectLayer(next),40);
+      }});
+      return api;
+    }
     function selectLayer(layer){
-      selectedLayer=layer===null||layer===undefined||!Number.isFinite(Number(layer))?null:clamp(Number(layer),0,controller.config.layerCount-1);
-      if(selectedLayer!==null)lossExpanded=false;
-      controller.setLayerExpansion?.(selectedLayer,selectedLayer===null?0:(Number(options.layerExpansionDepth)||640));
-      if(selectedDetail)openDetail(null);schedule();options.onLayerSelect?.(selectedLayer===null?null:{layer:selectedLayer,snapshot:snapshotFor(selectedLayer)},api);return api;
+      const nextLayer=layer===null||layer===undefined||!Number.isFinite(Number(layer))?null:clamp(Number(layer),0,controller.config.layerCount-1);
+      if(nextLayer===selectedLayer)return nextLayer===null?api:closeSelectedLayer();
+      if(selectedLayer!==null)return closeSelectedLayer(nextLayer);
+      if(nextLayer===null)return api;
+      hideTooltip();
+      focusRestorePose=poseSnapshot();selectedLayer=nextLayer;lossExpanded=false;
+      const expansionDepth=Number(options.layerExpansionDepth)||640;
+      if(selectedDetail)openDetail(null);
+      const g=geometry(),layout=g&&measureFocus(g);
+      if(layout){
+        renderFocus(g,layout);applyMetricVisibility();
+        transitionCameraTo(expandedLayerPose(layout),{expandedLayer:selectedLayer,expansionDepth});
+      }else{
+        controller.setLayerExpansion?.(selectedLayer,expansionDepth);schedule();queueExpandedLayerFit();
+      }
+      options.onLayerSelect?.({layer:selectedLayer,snapshot:snapshotFor(selectedLayer)},api);return api;
     }
     function setLayerSnapshot(layer,data){const key=Number(layer);if(Number.isFinite(key)){if(data)snapshots.set(key,data);else snapshots.delete(key);schedule(false);}return api;}
     function setMetricViews(values){
@@ -727,7 +794,14 @@
     }
     function layerFocusIn(event){const layer=eventLayer(event);if(layer!==null&&Number.isFinite(layer))setHoveredLayer(layer);}
     function layerFocusOut(event){const target=event.relatedTarget?.closest?.('.pto-training-sidecar__layer-hit');setHoveredLayer(target?Number(target.dataset.layer):null);}
-    function detailClick(event){const target=event.target.closest?.('[data-detail]');if(!target||target.closest('.pto-training-sidecar__inspector')||target.classList.contains('pto-training-sidecar__layer-hit'))return;try{openDetail(JSON.parse(target.dataset.detail),target);}catch(error){openDetail({title:'Annotation',category:'Detail',definition:target.dataset.tip||'Sidecar annotation',status:'info',statusLabel:'语义说明'},target);}}
+    function detailClick(event){
+      const target=event.target.closest?.('[data-detail]');
+      if(target&&!target.closest('.pto-training-sidecar__inspector')&&!target.classList.contains('pto-training-sidecar__layer-hit')){
+        try{openDetail(JSON.parse(target.dataset.detail),target);}catch(error){openDetail({title:'Annotation',category:'Detail',definition:target.dataset.tip||'Sidecar annotation',status:'info',statusLabel:'语义说明'},target);}
+        return;
+      }
+      if(selectedLayer!==null&&!event.target.closest?.('.pto-training-sidecar__focus,.pto-training-sidecar__layer-hit,[data-stage-ui]'))selectLayer(null);
+    }
     function protectDetailPointer(event){if(event.target.closest?.('[data-detail],.pto-training-sidecar__inspector'))event.stopPropagation();}
     function keydown(event){
       const layer=eventLayer(event);
@@ -761,7 +835,7 @@
     const api={
       root,base:controller,get selectedLayer(){return selectedLayer;},get selectedDetail(){return selectedDetail;},get metricView(){return activeMetricViews.size===0?'structure':activeMetricViews.size===1?[...activeMetricViews][0]:'mixed';},get metricViews(){return [...activeMetricViews];},selectLayer,collapseLayer(){return selectLayer(null);},openDetail,closeDetail(){return openDetail(null);},setLayerSnapshot,setMetricView,setMetricViews,toggleMetricView,
       setView(view){controller.setView(view);queueSidecarFit();return api;},setParallelMode(mode){controller.setParallelMode(mode);schedule();return api;},setTheme(theme){controller.setTheme(theme);schedule();return api;},setZoom(value){controller.setZoom(value);syncOverlayTransform();return api;},setPose(pose){controller.setPose(pose);syncOverlayTransform();return api;},setFrontLayer(layer){controller.setFrontLayer(layer);schedule();return api;},selectNode(nodeId,layer){return controller.selectNode(nodeId,layer);},fit(){return fitSidecar();},refresh(){controller.refresh();schedule();return api;},
-      destroy(){destroyed=true;cancelAnimationFrame(raf);observer?.disconnect();fitButton?.removeEventListener('click',fitClick);dataControl.removeEventListener('click',dataControlClick);dataControl.removeEventListener('keydown',dataMenuKeydown);document.removeEventListener('pointerdown',dataOutsidePointer);layerHits.removeEventListener('click',click);layerHits.removeEventListener('keydown',keydown);layerHits.removeEventListener('pointerover',layerHoverIn);layerHits.removeEventListener('pointerout',layerHoverOut);layerHits.removeEventListener('focusin',layerFocusIn);layerHits.removeEventListener('focusout',layerFocusOut);viewport.removeEventListener('click',detailClick);viewport.removeEventListener('pointerover',showTooltip);viewport.removeEventListener('pointerdown',protectDetailPointer,true);viewport.removeEventListener('pointerdown',pointerDown);viewport.removeEventListener('pointermove',pointerMove);viewport.removeEventListener('pointerup',pointerUp);viewport.removeEventListener('pointercancel',pointerUp);viewport.removeEventListener('pointerout',hideTooltip);viewport.removeEventListener('wheel',interaction);baseDestroy();}
+      destroy(){destroyed=true;cancelAnimationFrame(raf);cancelAnimationFrame(focusFitRaf);clearTimeout(focusTransitionTimer);observer?.disconnect();fitButton?.removeEventListener('click',fitClick);dataControl.removeEventListener('click',dataControlClick);dataControl.removeEventListener('keydown',dataMenuKeydown);document.removeEventListener('pointerdown',dataOutsidePointer);layerHits.removeEventListener('click',click);layerHits.removeEventListener('keydown',keydown);layerHits.removeEventListener('pointerover',layerHoverIn);layerHits.removeEventListener('pointerout',layerHoverOut);layerHits.removeEventListener('focusin',layerFocusIn);layerHits.removeEventListener('focusout',layerFocusOut);viewport.removeEventListener('click',detailClick);viewport.removeEventListener('pointerover',showTooltip);viewport.removeEventListener('pointerdown',protectDetailPointer,true);viewport.removeEventListener('pointerdown',pointerDown);viewport.removeEventListener('pointermove',pointerMove);viewport.removeEventListener('pointerup',pointerUp);viewport.removeEventListener('pointercancel',pointerUp);viewport.removeEventListener('pointerout',hideTooltip);viewport.removeEventListener('wheel',interaction);baseDestroy();}
     };
     requestAnimationFrame(()=>{fitSidecar();if(options.initialLayer!==null&&options.initialLayer!==undefined&&Number.isFinite(Number(options.initialLayer)))selectLayer(Number(options.initialLayer));});
     return api;

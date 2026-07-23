@@ -50,9 +50,9 @@ html[data-theme="light"] .pto-model-training-sidecar {
   stroke: color-mix(in srgb, var(--foreground) 10%, var(--background));
 }
 
-.pto-training-sidecar__scene {
+.pto-training-sidecar__scene,
+.pto-training-sidecar__focus-scene {
   position: absolute;
-  z-index: 28;
   left: 50%;
   top: 50%;
   width: 0;
@@ -61,6 +61,26 @@ html[data-theme="light"] .pto-model-training-sidecar {
   will-change: transform;
   pointer-events: none;
 }
+
+.pto-training-sidecar__scene { z-index: 28; }
+.pto-training-sidecar__focus-scene { z-index: 40; }
+.pto-training-sidecar__scene { transition: opacity 160ms ease; }
+
+.pto-model-training-sidecar.is-layer-camera-transitioning .pto-model-deck__scene,
+.pto-model-training-sidecar.is-layer-camera-transitioning .pto-training-sidecar__scene,
+.pto-model-training-sidecar.is-layer-camera-transitioning .pto-training-sidecar__focus-scene {
+  transition:
+    left 520ms cubic-bezier(.22,.72,.18,1),
+    top 520ms cubic-bezier(.22,.72,.18,1),
+    transform 520ms cubic-bezier(.22,.72,.18,1);
+}
+
+.pto-model-training-sidecar.is-layer-camera-transitioning .pto-model-deck__layer,
+.pto-model-training-sidecar.is-layer-camera-transitioning .pto-model-deck__static {
+  transition: transform 520ms cubic-bezier(.22,.72,.18,1);
+}
+
+.pto-model-training-sidecar.is-layer-camera-transitioning .pto-training-sidecar__scene { opacity: .16; }
 
 .pto-training-sidecar__svg,
 .pto-training-sidecar__labels,
@@ -91,6 +111,7 @@ html[data-theme="light"] .pto-model-training-sidecar {
 .pto-training-sidecar__scene circle { vector-effect: none; }
 
 .pto-model-deck:not([data-view="right"]) .pto-training-sidecar__scene,
+.pto-model-deck:not([data-view="right"]) .pto-training-sidecar__focus-scene,
 .pto-model-deck:not([data-view="right"]) .pto-training-sidecar__focus,
 .pto-model-deck:not([data-view="right"]) .pto-training-sidecar__data-control,
 .pto-model-deck:not([data-view="right"]) .pto-training-sidecar__inspector {
@@ -472,6 +493,14 @@ html[data-theme="light"] .pto-model-training-sidecar {
   outline: none;
 }
 
+.pto-training-sidecar__layer-column.is-flipped {
+  fill: var(--training-layer-column-hover);
+}
+
+.pto-training-sidecar__operator-side.is-flipped {
+  fill: var(--operator-side-color);
+}
+
 .pto-training-sidecar__labels { z-index: 32; }
 
 .pto-training-sidecar__semantic-label,
@@ -501,6 +530,13 @@ html[data-theme="light"] .pto-model-training-sidecar {
   text-overflow: clip;
   white-space: nowrap;
   pointer-events: auto;
+  transition: opacity 120ms ease;
+}
+
+.pto-model-training-sidecar.has-expanded-layer .pto-training-sidecar__operator-label {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .pto-training-sidecar__operator-label.is-input {
@@ -876,8 +912,8 @@ html[data-theme="light"] .pto-model-training-sidecar {
   text-align: center;
 }
 
-/* Selected Layer expands in place. Operator names and telemetry share the
-   projected Layer coordinate system; there is no separate operator-type pill. */
+/* The selected Layer is a real slice in the scaled scene. Its 10px side
+   becomes this front plane while adjacent Layer slices make room for it. */
 .pto-training-sidecar__focus {
   --pto-training-sidecar-scale: var(--pto-training-focus-scale, 1);
   min-height: 0;
@@ -885,25 +921,33 @@ html[data-theme="light"] .pto-model-training-sidecar {
   padding: 0;
   gap: 0;
   overflow: hidden;
-  border: calc(1px * var(--pto-training-sidecar-scale)) solid color-mix(in srgb, var(--primary) 52%, var(--border));
-  border-radius: calc(8px * var(--pto-training-sidecar-scale));
-  background: color-mix(in srgb, var(--background) 97%, var(--primary) 3%);
-  box-shadow: 0 calc(12px * var(--pto-training-sidecar-scale)) calc(34px * var(--pto-training-sidecar-scale)) color-mix(in srgb, #000 25%, transparent);
+  transform-origin: 50% 50%;
+  backface-visibility: hidden;
+  border: calc(1px * var(--pto-training-sidecar-scale)) solid color-mix(in srgb, var(--primary) 24%, var(--border));
+  border-radius: calc(3px * var(--pto-training-sidecar-scale));
+  background: rgb(from color-mix(in srgb, var(--background) 98%, var(--primary) 2%) r g b / .985);
+  box-shadow: none;
 }
 
 .pto-training-sidecar__focus.is-open { display: block; }
+.pto-training-sidecar__focus.is-flipping {
+  animation: pto-training-sidecar-slice-flip 520ms cubic-bezier(.22,.72,.18,1) both;
+}
 
 .pto-training-sidecar__focus-header {
   position: absolute;
   z-index: 5;
   left: calc(5px * var(--pto-training-sidecar-scale));
-  right: calc(5px * var(--pto-training-sidecar-scale));
+  right: auto;
   top: calc(4px * var(--pto-training-sidecar-scale));
+  width: 460px;
   min-height: calc(20px * var(--pto-training-sidecar-scale));
   align-items: center;
-  padding: 0 calc(4px * var(--pto-training-sidecar-scale));
-  border-bottom: calc(1px * var(--pto-training-sidecar-scale)) solid color-mix(in srgb, var(--border) 72%, transparent);
-  background: color-mix(in srgb, var(--background) 94%, transparent);
+  box-sizing: border-box;
+  padding: 0 calc(4px * var(--pto-training-sidecar-scale)) 0 calc(38px * var(--pto-training-sidecar-scale));
+  border: 0;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--background) 98%, transparent) 72%, transparent);
+  pointer-events: none;
 }
 
 .pto-training-sidecar__focus-title {
@@ -922,10 +966,15 @@ html[data-theme="light"] .pto-model-training-sidecar {
 }
 
 .pto-training-sidecar__focus-close {
+  position: absolute;
+  z-index: 8;
+  left: 0;
+  top: 0;
   width: calc(17px * var(--pto-training-sidecar-scale));
   height: calc(17px * var(--pto-training-sidecar-scale));
   border-radius: calc(5px * var(--pto-training-sidecar-scale));
   font: 800 calc(10px * var(--pto-training-sidecar-scale))/1 var(--font-sans);
+  pointer-events: auto;
 }
 
 .pto-training-sidecar__focus-shared {
@@ -1168,23 +1217,23 @@ html[data-theme="light"] .pto-model-training-sidecar {
 }
 
 .pto-training-sidecar__focus .pto-training-sidecar__focus-header {
-  min-height: 44px;
-  padding: 4px 8px;
+  min-height: calc(40px * var(--pto-training-sidecar-scale));
+  padding: calc(4px * var(--pto-training-sidecar-scale)) calc(8px * var(--pto-training-sidecar-scale)) calc(4px * var(--pto-training-sidecar-scale)) calc(38px * var(--pto-training-sidecar-scale));
 }
 
 .pto-training-sidecar__focus .pto-training-sidecar__focus-title {
-  gap: 3px;
-  font: 850 14px/1 var(--font-sans);
+  gap: calc(3px * var(--pto-training-sidecar-scale));
+  font: 850 calc(14px * var(--pto-training-sidecar-scale))/1 var(--font-sans);
 }
 
-.pto-training-sidecar__focus .pto-training-sidecar__focus-title span { font: 750 8.5px/1 var(--font-mono); }
-.pto-training-sidecar__focus .pto-training-sidecar__focus-title em { font: 800 8px/1 var(--font-mono); }
+.pto-training-sidecar__focus .pto-training-sidecar__focus-title span { font: 750 calc(8.5px * var(--pto-training-sidecar-scale))/1 var(--font-mono); }
+.pto-training-sidecar__focus .pto-training-sidecar__focus-title em { font: 800 calc(8px * var(--pto-training-sidecar-scale))/1 var(--font-mono); }
 
 .pto-training-sidecar__focus .pto-training-sidecar__focus-close {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  font-size: 15px;
+  width: calc(26px * var(--pto-training-sidecar-scale));
+  height: calc(26px * var(--pto-training-sidecar-scale));
+  border-radius: calc(7px * var(--pto-training-sidecar-scale));
+  font-size: calc(15px * var(--pto-training-sidecar-scale));
 }
 
 .pto-training-sidecar__focus-graph {
@@ -1345,25 +1394,6 @@ html[data-theme="light"] .pto-model-training-sidecar {
 
 @media (max-width: 900px) {
   .pto-training-sidecar__semantic-label { display: none; }
-  .pto-training-sidecar__focus {
-    left: 8px !important;
-    right: 8px !important;
-    top: auto !important;
-    bottom: 8px;
-    width: auto !important;
-    height: min(86vh, 760px) !important;
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    box-shadow: 0 -18px 52px color-mix(in srgb, #000 34%, transparent);
-  }
-  .pto-training-sidecar__focus.is-open::after {
-    content: "Layer Inspector";
-    position: absolute;
-    left: 50%;
-    top: 4px;
-    transform: translateX(-50%);
-    color: var(--foreground-muted);
-    font: 750 8px/1 var(--font-mono);
-  }
   .pto-training-sidecar__inspector.is-open {
     left: 8px !important;
     right: 8px !important;
@@ -1378,6 +1408,26 @@ html[data-theme="light"] .pto-model-training-sidecar {
   .pto-training-sidecar__loss-composition.is-collapsed { width: min(244px, calc(100vw - 24px)); }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .pto-training-sidecar__focus { animation: none; }
+@keyframes pto-training-sidecar-slice-flip {
+  0% {
+    opacity: .34;
+    transform: perspective(calc(1500px * var(--pto-training-sidecar-scale))) rotateY(88deg) scaleX(.06);
+  }
+  64% {
+    opacity: 1;
+    transform: perspective(calc(1500px * var(--pto-training-sidecar-scale))) rotateY(-4deg) scaleX(1);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(calc(1500px * var(--pto-training-sidecar-scale))) rotateY(0deg) scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pto-model-training-sidecar.is-layer-camera-transitioning .pto-model-deck__scene,
+  .pto-model-training-sidecar.is-layer-camera-transitioning .pto-training-sidecar__scene,
+  .pto-model-training-sidecar.is-layer-camera-transitioning .pto-training-sidecar__focus-scene { transition: none; }
+  .pto-model-training-sidecar.is-layer-camera-transitioning .pto-model-deck__layer,
+  .pto-model-training-sidecar.is-layer-camera-transitioning .pto-model-deck__static { transition: none; }
+  .pto-training-sidecar__focus.is-flipping { animation: none; }
 }

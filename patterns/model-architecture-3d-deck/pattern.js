@@ -96,7 +96,7 @@
       graphNode(parts,nodes,'dense_silu','SiLU × Multiply','act',270,760,180,30);graphNode(parts,nodes,'dense_down','Dense Down Linear','linear',264,800,192,32);
       graphNode(parts,nodes,'moe_reduce_scatter','TP/SP Reduce-Scatter','comm',270,842,180,28,'is-tiny');
     }else{
-      graphNode(parts,nodes,'gate','Router · Top-8','gate',98,678,150,32);graphNode(parts,nodes,'a2a_dispatch','EP Dispatch · fused A2A','comm',98,720,150,28,'is-tiny');
+      graphNode(parts,nodes,'gate','Router · Top-8','gate',98,678,150,32);graphNode(parts,nodes,'a2a_dispatch','EP Dispatch · fused A2A','comm',98,712,150,28,'is-tiny');
       parts.push(expertPoolHtml(nodes));graphNode(parts,nodes,'a2a_combine','EP Combine · fused A2A','comm',293,824,180,28,'is-tiny');
       graphNode(parts,nodes,'shared_expert','Shared Expert','mlp',508,700,140,52);graphNode(parts,nodes,'moe_branch_add','+','add',344,866,32,28,'is-add');
     }
