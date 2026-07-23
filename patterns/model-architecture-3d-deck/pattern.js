@@ -14,7 +14,7 @@
     {label:'Q / KV Latent Linear',ids:['q_a_proj','kv_a_proj']},{label:'Q / KV Causal Conv1D',ids:['q_causal_conv','kv_causal_conv']},
     {label:'Q / KV Residual Add',ids:['q_residual_add','kv_residual_add']},{label:'Q / KV LayerNorm',ids:['q_a_norm','kv_a_norm']},
     {label:'Q / KV Up Linear',ids:['q_b_proj','kv_b_proj']},{label:'Query / Key / Value',ids:['query_tensor','key_tensor']},
-    {label:'Sparse FlashAttention',ids:['attention_core']},{label:'Output Causal Conv1D',ids:['o_causal_conv']},
+    {label:'Attention Core · DSA/SWA by Layer',ids:['attention_core']},{label:'Output Causal Conv1D',ids:['o_causal_conv']},
     {label:'Output Residual Add',ids:['o_residual_add']},{label:'Output Projection',ids:['o_proj']},
     {label:'Attention TP/SP Reduce-Scatter',ids:['attn_reduce_scatter']},{label:'Post Attention RMSNorm',ids:['post_attention_norm']},
     {label:'mHC Attention Merge',ids:['mhc_attention_post']},{label:'Pre-MLP RMSNorm',ids:['pre_mlp_norm']},
@@ -29,6 +29,7 @@
   const OPENPANGU_FLASH={
     id:'openpangu-flash',label:'openPangu-2.0-Flash',layerCount:46,depthGap:46,frontLayer:23,
     firstMoeLayer:2,denseLayers:[0,1],dsaLayers:[0,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45],
+    slidingWindow:512,indexTopK:2048,mhcStreams:4,mtpHeads:3,
     blockPostLayers:[0,4,9,14,19,24,29,34,39],routedExperts:256,topK:8,
     stageRanges:[[0,11],[12,22],[23,34],[35,45]],
     representativeLayers:[0,12,23,35],sideRows:SIDE_ROWS,
@@ -72,9 +73,9 @@
     const stage=config.stageRanges.findIndex(([lo,hi])=>layer>=lo&&layer<=hi);
     const first=config.representativeLayers.includes(layer);
     const dense=layer<config.firstMoeLayer,stageRange=config.stageRanges[stage],blockPost=config.blockPostLayers.includes(layer);
-    const attn=config.dsaLayers.includes(layer)?'DSA':'SWA',nodes={},parts=[];
+    const attn=config.dsaLayers.includes(layer)?'DSA':'SWA',attentionLabel=attn==='DSA'?`DSA · Sparse Global · top-k ${config.indexTopK??'configured'}`:`SWA · Sliding Window ${config.slidingWindow??'configured'}`,nodes={},parts=[];
     parts.push(`<div class="pto-model-deck__layer-label opv-cssgraph__layer-label">L${layer}<span>PP${stage} · L${stageRange[0]}-${stageRange[1]} · ${dense?'Dense':'MoE'} · ${attn}${blockPost?' · block-post':''}</span></div>`);
-    parts.push(clusterHtml('Sparse MLA Attention · TP/SP',72,48,576,570,'var(--pto-model-deck-attention)'));
+    parts.push(clusterHtml('MLA Attention · DSA/SWA · TP/SP',72,48,576,570,'var(--pto-model-deck-attention)'));
     parts.push(clusterHtml(dense?'Dense FFN · TP/SP':'MoE FFN · EP dispatch_combine',92,650,536,390,dense?'var(--pto-model-deck-linear)':'var(--pto-model-deck-moe)'));
     graphNode(parts,nodes,'mhc_state_in','X_l · mHC state ×4','mhc-state',500,14,190,30,'is-tiny');
     graphNode(parts,nodes,'attn_norm','Input RMSNorm','norm',270,68,180,36);
@@ -85,7 +86,7 @@
     graphNode(parts,nodes,'q_a_norm','Q LayerNorm','norm',98,256,176,28,'is-tiny');graphNode(parts,nodes,'kv_a_norm','KV LayerNorm','norm',446,256,176,28,'is-tiny');
     graphNode(parts,nodes,'q_b_proj','Q Up Linear','linear',98,290,176,32);graphNode(parts,nodes,'kv_b_proj','KV Up Linear','linear',446,290,176,32);
     graphNode(parts,nodes,'query_tensor','Query','linear',156,328,118,24,'is-tiny');graphNode(parts,nodes,'key_tensor','Key / Value','linear',446,328,130,24,'is-tiny');
-    graphNode(parts,nodes,'attention_core','Sparse FlashAttention','attention',250,366,220,38,'is-wide');
+    graphNode(parts,nodes,'attention_core',attentionLabel,'attention',250,366,220,38,'is-wide');
     graphNode(parts,nodes,'o_causal_conv','Output Causal Conv1D','act',270,414,180,28,'is-tiny');graphNode(parts,nodes,'o_residual_add','+','add',348,448,24,24,'is-add is-compact-add');
     graphNode(parts,nodes,'o_proj','Output Projection','linear',270,476,180,30,'is-tiny');graphNode(parts,nodes,'attn_reduce_scatter','TP/SP Reduce-Scatter','comm',270,514,180,26,'is-tiny');
     graphNode(parts,nodes,'post_attention_norm','Post Attention RMSNorm','norm',270,548,180,30,'is-tiny');graphNode(parts,nodes,'mhc_attention_post','mHC Attention Merge','attention',270,586,180,30,'is-tiny');

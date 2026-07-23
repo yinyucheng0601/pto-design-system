@@ -18,6 +18,7 @@
   --pto-model-deck-output: #38BDF8;
   --pto-model-deck-parameter: #3B82F6;
   --pto-model-deck-state: #8B5CF6;
+  --pto-model-deck-residual: #8B5CF6;
   position: relative;
   min-width: 0;
   min-height: 0;
@@ -28,6 +29,10 @@
   background:
     radial-gradient(120% 95% at 52% 42%, color-mix(in srgb, var(--primary) 5%, transparent), transparent 48%),
     radial-gradient(132% 112% at 52% 44%, transparent 56%, color-mix(in srgb, var(--background) 82%, transparent) 100%);
+}
+
+:root[data-theme="light"] .pto-model-deck {
+  --pto-model-deck-residual: color-mix(in srgb, var(--foreground) 52%, var(--background));
 }
 
 .pto-model-deck__toolbar {
@@ -329,7 +334,7 @@
 .pto-model-deck__edges { position:absolute; inset:0; overflow:visible; pointer-events:none; }
 .pto-model-deck__edges path { fill:none; stroke:color-mix(in srgb,var(--foreground) 34%,transparent); stroke-width:1.6; }
 .pto-model-deck__edges path[data-kind="comm"] { stroke:color-mix(in srgb,var(--pto-model-deck-comm) 62%,transparent); stroke-width:2; }
-.pto-model-deck__edges path[data-kind="residual"]{stroke:color-mix(in srgb,var(--pto-model-deck-act) 70%,transparent);stroke-width:2.1;stroke-dasharray:6 5}
+.pto-model-deck__edges path[data-kind="residual"]{stroke:color-mix(in srgb,var(--pto-model-deck-residual) 78%,transparent);stroke-width:2.1;stroke-dasharray:6 5}
 .pto-model-deck__edges path[data-kind="parameter"]{stroke:color-mix(in srgb,var(--pto-model-deck-state) 70%,transparent);stroke-dasharray:3 4}
 .pto-model-deck__edges path[data-kind="model-spine-front"],.pto-model-deck__edges path[data-kind="model-spine-block"]{display:none}
 .pto-model-deck[data-view="front"] .pto-model-deck__edges path[data-kind="model-spine-front"]{display:block}
@@ -369,10 +374,10 @@
 .pto-model-deck__side-ffn-label{font:800 11px/1 var(--font-mono);text-anchor:middle;paint-order:stroke;stroke:var(--background);stroke-width:4px;stroke-linejoin:round}
 .pto-model-deck__side-ffn-label.is-dense{fill:color-mix(in srgb,var(--primary) 78%,var(--foreground))}
 .pto-model-deck__side-ffn-label.is-moe{fill:color-mix(in srgb,var(--pto-model-deck-moe) 78%,var(--foreground))}
-.pto-model-deck__side-residual-spine{fill:none;stroke:var(--primary);stroke-width:1.35;stroke-opacity:.82;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 2px color-mix(in srgb,var(--primary) 34%,transparent))}
-.pto-model-deck__side-residual-connector{fill:none;stroke:var(--primary);stroke-width:1.35;stroke-opacity:.68;vector-effect:non-scaling-stroke;stroke-linecap:round}
-.pto-model-deck__side-residual-dot{fill:var(--background);stroke:var(--primary);stroke-width:1.15;vector-effect:non-scaling-stroke}
-.pto-model-deck__side-residual-label{fill:color-mix(in srgb,var(--primary) 76%,var(--foreground));font:800 11px/1 var(--font-mono);paint-order:stroke;stroke:var(--background);stroke-width:4px;stroke-linejoin:round}
+.pto-model-deck__side-residual-spine{fill:none;stroke:var(--pto-model-deck-residual);stroke-width:1.35;stroke-opacity:.82;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 2px color-mix(in srgb,var(--pto-model-deck-residual) 34%,transparent))}
+.pto-model-deck__side-residual-connector{fill:none;stroke:var(--pto-model-deck-residual);stroke-width:1.35;stroke-opacity:.68;vector-effect:non-scaling-stroke;stroke-linecap:round}
+.pto-model-deck__side-residual-dot{fill:var(--background);stroke:var(--pto-model-deck-residual);stroke-width:1.15;vector-effect:non-scaling-stroke}
+.pto-model-deck__side-residual-label{fill:color-mix(in srgb,var(--pto-model-deck-residual) 76%,var(--foreground));font:800 11px/1 var(--font-mono);paint-order:stroke;stroke:var(--background);stroke-width:4px;stroke-linejoin:round}
 .pto-model-deck[data-view="iso"] .pto-model-deck__interlayer-spine { display:block; }
 .pto-model-deck__interlayer-spine path { fill:none; stroke:color-mix(in srgb,var(--foreground) 28%,transparent); stroke-width:1; stroke-opacity:.25; vector-effect:non-scaling-stroke; stroke-linecap:round; stroke-linejoin:round; }
 .pto-model-deck__interlayer-spine path[data-stage-boundary="true"] { stroke:color-mix(in srgb,var(--success) 58%,var(--foreground)); stroke-width:1.3; stroke-opacity:.42; }
