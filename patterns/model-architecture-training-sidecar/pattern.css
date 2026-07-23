@@ -3,65 +3,208 @@
   --training-backward: var(--pto-model-deck-state, #8b5cf6);
   --training-flow: color-mix(in srgb, var(--foreground) 56%, var(--background));
   --training-flow-text: color-mix(in srgb, var(--foreground) 72%, var(--background));
-  --training-flow-arrow-opacity: .64;
+  --training-flow-arrow-opacity: .26;
   --training-residual: var(--pto-model-deck-residual, #8b5cf6);
   --training-parameter: var(--pto-model-deck-linear, #3b82f6);
   --training-metric-std: var(--pto-model-deck-norm, #38bdf8);
   --training-metric-amax: var(--warning, #f59e0b);
   --training-metric-latency: var(--pto-model-deck-moe, #ea580c);
   --training-forward-text: color-mix(in srgb, var(--training-forward) 72%, var(--foreground));
+  --training-layer-column: rgb(from color-mix(in srgb, var(--foreground) 7%, var(--background)) r g b / 1);
+  --training-layer-column-hover: rgb(from color-mix(in srgb, var(--primary) 15%, var(--background)) r g b / 1);
+  --training-operator-side-neutral: rgb(from color-mix(in srgb, var(--foreground) 24%, var(--surface-2)) r g b / 1);
   --pto-training-sidecar-scale: 1;
 }
 
 html[data-theme="light"] .pto-model-training-sidecar {
   --training-flow: color-mix(in srgb, var(--foreground) 64%, var(--background));
   --training-flow-text: color-mix(in srgb, var(--foreground) 78%, var(--background));
-  --training-flow-arrow-opacity: .78;
+  --training-flow-arrow-opacity: .3;
   --training-forward-text: color-mix(in srgb, var(--training-forward) 42%, var(--foreground));
 }
 
 .pto-model-training-sidecar .pto-model-deck__viewport { cursor: default; }
 .pto-model-training-sidecar .pto-model-deck__viewport.is-grabbing { cursor: grabbing; }
 
+.pto-model-training-sidecar[data-view="right"] .pto-model-deck__layer::after,
+.pto-model-training-sidecar[data-view="right"] .pto-model-deck__static::after,
+.pto-model-training-sidecar[data-view="right"] .pto-model-deck__layer .pto-model-deck__node::after,
+.pto-model-training-sidecar[data-view="right"] .pto-model-deck__static .pto-model-deck__node::after,
+.pto-model-training-sidecar[data-view="right"] .pto-model-deck__layer .pto-model-deck__experts::after {
+  display: none;
+  content: none;
+}
+
+.pto-model-training-sidecar[data-view="right"] .pto-model-deck__layer :is(.pto-model-deck__node,.pto-model-deck__experts,.pto-model-deck__cluster),
+.pto-model-training-sidecar[data-view="right"] .pto-model-deck__static :is(.pto-model-deck__node,.pto-model-deck__experts),
+.pto-model-training-sidecar[data-view="right"] :is(.pto-model-deck__layer,.pto-model-deck__static) > .pto-model-deck__edges {
+  opacity: 0;
+}
+
+.pto-model-training-sidecar[data-view="right"] .pto-model-deck__side-stage-boundary {
+  display: none;
+}
+
+.pto-model-training-sidecar[data-view="right"] .pto-model-deck__side-ffn-band {
+  fill: none;
+  stroke: color-mix(in srgb, var(--foreground) 10%, var(--background));
+}
+
+.pto-training-sidecar__scene {
+  position: absolute;
+  z-index: 28;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+  pointer-events: none;
+}
+
 .pto-training-sidecar__svg,
 .pto-training-sidecar__labels,
 .pto-training-sidecar__layer-hits {
   position: absolute;
-  inset: 0;
-  overflow: hidden;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
   pointer-events: none;
 }
 
 .pto-training-sidecar__svg {
   z-index: 28;
-  width: 100%;
-  height: 100%;
+  width: 1px;
+  height: 1px;
 }
 
 .pto-training-sidecar__layer-hits {
   z-index: 39;
-  width: 100%;
-  height: 100%;
+  width: 1px;
+  height: 1px;
 }
 
-.pto-model-training-sidecar.is-sidecar-dragging .pto-training-sidecar__svg,
-.pto-model-training-sidecar.is-sidecar-dragging .pto-training-sidecar__labels,
-.pto-model-training-sidecar.is-sidecar-dragging .pto-training-sidecar__layer-hits,
-.pto-model-training-sidecar.is-sidecar-dragging .pto-training-sidecar__focus,
-.pto-model-training-sidecar.is-sidecar-dragging .pto-training-sidecar__inspector {
-  will-change: transform;
-}
+.pto-training-sidecar__scene path,
+.pto-training-sidecar__scene rect,
+.pto-training-sidecar__scene circle { vector-effect: none; }
 
-.pto-model-training-sidecar.is-sidecar-dragging .pto-training-sidecar__semantic-label {
-  translate: var(--pto-sidecar-drag-inverse-x, 0) var(--pto-sidecar-drag-inverse-y, 0);
-}
-
-.pto-model-deck:not([data-view="right"]) .pto-training-sidecar__svg,
-.pto-model-deck:not([data-view="right"]) .pto-training-sidecar__labels,
-.pto-model-deck:not([data-view="right"]) .pto-training-sidecar__layer-hits,
+.pto-model-deck:not([data-view="right"]) .pto-training-sidecar__scene,
 .pto-model-deck:not([data-view="right"]) .pto-training-sidecar__focus,
+.pto-model-deck:not([data-view="right"]) .pto-training-sidecar__data-control,
 .pto-model-deck:not([data-view="right"]) .pto-training-sidecar__inspector {
   display: none;
+}
+
+.pto-training-sidecar__data-control {
+  position: relative;
+}
+
+.pto-training-sidecar__data-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pto-training-sidecar__data-toggle [data-metric-count] {
+  display: none;
+  min-width: 16px;
+  height: 16px;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  font: var(--type-micro);
+}
+
+.pto-training-sidecar__data-toggle [data-metric-count]:not(:empty) { display: inline-grid; }
+.pto-training-sidecar__data-toggle i { font: 900 12px/1 var(--font-sans); transition: transform 120ms ease; }
+.pto-training-sidecar__data-control.is-open .pto-training-sidecar__data-toggle i { transform: rotate(180deg); }
+
+.pto-training-sidecar__data-menu {
+  position: absolute;
+  z-index: 90;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 210px;
+  box-sizing: border-box;
+  display: none;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--background-elevated) 96%, transparent);
+  box-shadow: 0 16px 38px color-mix(in srgb, #000 22%, transparent);
+  pointer-events: auto;
+}
+
+.pto-training-sidecar__data-control.is-open .pto-training-sidecar__data-menu { display: grid; }
+
+.pto-training-sidecar__data-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+.pto-training-sidecar__data-actions button,
+.pto-training-sidecar__data-options button {
+  appearance: none;
+  min-height: 30px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--foreground-secondary);
+  font: var(--type-label);
+  cursor: pointer;
+}
+
+.pto-training-sidecar__data-actions button {
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+
+.pto-training-sidecar__data-options {
+  display: grid;
+  gap: 3px;
+}
+
+.pto-training-sidecar__data-options button {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  align-items: center;
+  text-align: left;
+}
+
+.pto-training-sidecar__data-options button span {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--foreground) 22%, transparent);
+  border-radius: 4px;
+  color: transparent;
+  font: 900 var(--font-size-body-sm)/1 var(--font-sans);
+}
+
+.pto-training-sidecar__data-actions button:hover,
+.pto-training-sidecar__data-actions button:focus-visible,
+.pto-training-sidecar__data-options button:hover,
+.pto-training-sidecar__data-options button:focus-visible {
+  background: var(--state-hover);
+  color: var(--foreground);
+  outline: none;
+}
+
+.pto-training-sidecar__data-options button.is-selected {
+  background: color-mix(in srgb, var(--primary) 11%, transparent);
+  color: var(--foreground);
+}
+
+.pto-training-sidecar__data-options button.is-selected span {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 
 .pto-training-sidecar__stage-guide,
@@ -78,8 +221,8 @@ html[data-theme="light"] .pto-model-training-sidecar {
 }
 
 .pto-training-sidecar__layer-guide {
-  stroke: color-mix(in srgb, var(--foreground) 13%, transparent);
-  stroke-width: calc(.75px * var(--pto-training-sidecar-scale));
+  stroke: color-mix(in srgb, var(--foreground) 20%, transparent);
+  stroke-width: calc(.9px * var(--pto-training-sidecar-scale));
   stroke-dasharray: 2 5;
   pointer-events: none;
 }
@@ -98,6 +241,30 @@ html[data-theme="light"] .pto-model-training-sidecar {
   pointer-events: stroke;
 }
 
+.pto-training-sidecar__residual-flow-arrow {
+  fill: none;
+  stroke: var(--training-flow);
+  stroke-width: calc(1.5px * var(--pto-training-sidecar-scale));
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-opacity: var(--training-flow-arrow-opacity);
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.pto-training-sidecar__residual-flow-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: calc(8px * var(--pto-training-sidecar-scale));
+  pointer-events: stroke;
+}
+
+.pto-training-sidecar__residual-flow-hit-dot {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
+}
+
 .pto-training-sidecar__flow-texture { pointer-events: none; }
 .pto-training-sidecar__flow-texture.is-forward,
 .pto-training-sidecar__flow-texture.is-backward { --flow-texture-color: var(--training-flow); }
@@ -110,7 +277,7 @@ html[data-theme="light"] .pto-model-training-sidecar {
 .pto-training-sidecar__flow-texture-arrow {
   fill: none;
   stroke: var(--flow-texture-color);
-  stroke-width: calc(2.4px * var(--pto-training-sidecar-scale));
+  stroke-width: calc(1.5px * var(--pto-training-sidecar-scale));
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-opacity: var(--training-flow-arrow-opacity);
@@ -232,12 +399,58 @@ html[data-theme="light"] .pto-model-training-sidecar {
 .pto-training-sidecar__metric-point:hover { stroke: color-mix(in srgb, var(--metric-color) 22%, transparent); }
 
 .pto-training-sidecar__operator-band {
-  fill: color-mix(in srgb, var(--operator-color) 4%, transparent);
-  stroke: color-mix(in srgb, var(--operator-color) 40%, transparent);
-  stroke-width: calc(1px * var(--pto-training-sidecar-scale));
-  stroke-dasharray: 4 4;
+  fill: none;
+  stroke: color-mix(in srgb, var(--foreground) 10%, var(--background));
+  stroke-width: calc(.8px * var(--pto-training-sidecar-scale));
+  stroke-dasharray: 3 5;
   vector-effect: non-scaling-stroke;
   pointer-events: all;
+}
+
+.pto-training-sidecar__operator-band:is(.is-input,.is-output) {
+  stroke: none;
+}
+
+.pto-training-sidecar__layer-column {
+  fill: var(--training-layer-column);
+  stroke: none;
+  pointer-events: none;
+}
+
+.pto-training-sidecar__layer-column.is-hovered {
+  fill: var(--training-layer-column-hover);
+}
+
+.pto-training-sidecar__operator-side {
+  fill: var(--training-operator-side-neutral);
+  stroke: none;
+  opacity: 1;
+  pointer-events: none;
+}
+
+.pto-training-sidecar__operator-side.is-hovered {
+  fill: var(--operator-side-color);
+}
+
+.pto-model-training-sidecar .pto-model-deck__side-residual-spine {
+  stroke-opacity: .34;
+  filter: none;
+}
+
+.pto-model-training-sidecar .pto-model-deck__side-residual-connector {
+  stroke-opacity: .3;
+}
+
+.pto-training-sidecar__static-connector {
+  fill: none;
+  stroke: rgb(from color-mix(in srgb, var(--foreground) 42%, var(--background)) r g b / 1);
+  stroke-width: calc(1.2px * var(--pto-training-sidecar-scale));
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.pto-training-sidecar__static-connector.is-residual-handoff {
+  stroke-width: calc(1.4px * var(--pto-training-sidecar-scale));
 }
 
 .pto-training-sidecar__selection {
@@ -249,21 +462,14 @@ html[data-theme="light"] .pto-model-training-sidecar {
 }
 
 .pto-training-sidecar__layer-hit {
-  fill: color-mix(in srgb, var(--primary) 0%, transparent);
+  fill: transparent;
+  stroke: none;
   pointer-events: all;
   cursor: pointer;
 }
 
-.pto-training-sidecar__layer-hit:hover {
-  fill: color-mix(in srgb, var(--primary) 12%, transparent);
-}
-
 .pto-training-sidecar__layer-hit:focus-visible {
   outline: none;
-  fill: color-mix(in srgb, var(--primary) 12%, transparent);
-  stroke: var(--primary);
-  stroke-width: 1.5;
-  vector-effect: non-scaling-stroke;
 }
 
 .pto-training-sidecar__labels { z-index: 32; }
@@ -280,21 +486,27 @@ html[data-theme="light"] .pto-model-training-sidecar {
 }
 
 .pto-training-sidecar__operator-label {
-  max-width: 340px;
+  max-width: none;
   box-sizing: border-box;
   overflow: visible;
-  padding: 2px 6px;
+  padding: 1px 5px;
   transform: translate(-50%, -50%) scale(var(--pto-training-sidecar-scale));
   transform-origin: 50% 50%;
-  border: 1px solid color-mix(in srgb, var(--operator-color) 46%, transparent);
+  border: 1px solid color-mix(in srgb, var(--foreground) 11%, var(--background));
   border-radius: 4px;
-  background: color-mix(in srgb, var(--background) 88%, var(--operator-color) 12%);
+  background: color-mix(in srgb, var(--foreground) 4%, var(--background));
   color: color-mix(in srgb, var(--operator-color) 64%, var(--foreground));
   font: 850 8.5px/1 var(--font-mono);
   text-align: center;
   text-overflow: clip;
-  white-space: normal;
+  white-space: nowrap;
   pointer-events: auto;
+}
+
+.pto-training-sidecar__operator-label.is-input {
+  transform: translate(-100%, -50%) scale(var(--pto-training-sidecar-scale));
+  transform-origin: 100% 50%;
+  text-align: right;
 }
 
 .pto-training-sidecar__semantic-label {
@@ -353,12 +565,26 @@ html[data-theme="light"] .pto-model-training-sidecar {
 .pto-training-sidecar__stage-label {
   transform: translate(-50%, -50%) scale(var(--pto-training-sidecar-scale));
   transform-origin: 50% 50%;
-  padding: 3px 8px;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 108px;
+  padding: 4px 9px;
   border: 1px solid color-mix(in srgb, var(--success) 24%, transparent);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--background) 90%, var(--success) 10%);
   color: color-mix(in srgb, var(--success) 72%, var(--foreground));
-  font: 800 9px/1 var(--font-mono);
+  font-family: var(--font-mono);
+  text-align: center;
+}
+
+.pto-training-sidecar__stage-label b {
+  font: 850 8.8px/1 var(--font-mono);
+}
+
+.pto-training-sidecar__stage-label span {
+  color: color-mix(in srgb, var(--success) 52%, var(--foreground-secondary));
+  font: 750 7.2px/1 var(--font-mono);
 }
 
 .pto-training-sidecar__loss-composition {
@@ -1102,6 +1328,12 @@ html[data-theme="light"] .pto-model-training-sidecar {
   color: color-mix(in srgb, var(--warning) 72%, var(--foreground));
   font: 850 10px/1 var(--font-mono);
   white-space: nowrap;
+}
+
+/* The data menu may expose any union of metric groups. JavaScript marks only
+   the inactive annotations; zoom and pan never participate in visibility. */
+.pto-model-training-sidecar .is-metric-hidden {
+  display: none !important;
 }
 
 /* The sidecar already owns the full-width Stage labels above the topology axis.

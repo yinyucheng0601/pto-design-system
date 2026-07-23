@@ -62,44 +62,184 @@
 
   function mount(rootInput,options={}){
     const root=qs(rootInput);if(!root||!global.PtoModelArchitecture3dDeck)return null;
-    let controller=null,raf=0,dragPreviewRaf=0,destroyed=false,selectedLayer=null,selectedDetail=null,selectedDetailKey=null,lossExpanded=false,fitZoom=1,dragging=false,dragOrigin=null,measurementCache=null,structureDirty=true;
+    const metricViewOptions=[
+      ['numerics','数值'],
+      ['gradient','梯度'],
+      ['performance','性能'],
+      ['moe','MoE'],
+      ['training','训练']
+    ];
+    const metricViewValues=new Set(metricViewOptions.map(([value])=>value));
+    const requestedMetricViews=Array.isArray(options.metricViews)?options.metricViews:(options.metricView&&options.metricView!=='structure'?[options.metricView]:[]);
+    let controller=null,raf=0,destroyed=false,selectedLayer=null,selectedDetail=null,selectedDetailKey=null,lossExpanded=false,fitZoom=1,dragging=false,hoveredLayer=null,measurementCache=null,structureDirty=true;
+    let activeMetricViews=new Set(requestedMetricViews.filter(value=>metricViewValues.has(value)));
     const context={step:options.step??18420,microbatch:options.microbatch??3,microbatchCount:options.microbatchCount??8};
     const topology=options.topology||{};
     const snapshots=new Map(Object.entries(options.snapshots||{}).map(([layer,data])=>[Number(layer),data]));
     const snapshotFor=(layer)=>snapshots.get(Number(layer))||previewSnapshot(Number(layer),{...context,stageRanges:controller?.config?.stageRanges,layerCount:controller?.config?.layerCount,firstMoeLayer:controller?.config?.firstMoeLayer,rank:topology.rank??null});
     const metricValue=(snapshot,key)=>key==='std'?(snapshot.metric?.std??snapshot.metric?.norm??snapshot.tensors?.hidden?.std):snapshot.metric?.[key];
-    const baseOptions={...options,showSideLabels:false,initialView:options.initialView||'right',onViewChange(view,api){options.onViewChange?.(view,api);queueSidecarFit();},onThemeChange(theme,api){options.onThemeChange?.(theme,api);schedule();},onParallelModeChange(mode,api){options.onParallelModeChange?.(mode,api);schedule();}};
+    const presetConfig=typeof options.preset==='string'?global.PtoModelArchitecture3dDeck.PRESETS?.[options.preset]:options.preset;
+    const sourceConfig=options.config||presetConfig||{},sourceDepthGap=Number(sourceConfig.depthGap)||46,sideDepthGap=Number(options.sideDepthGap)||Math.round(sourceDepthGap*1.26);
+    const baseOptions={...options,config:{...sourceConfig,depthGap:sideDepthGap},showSideLabels:false,initialView:options.initialView||'right',onViewChange(view,api){options.onViewChange?.(view,api);queueSidecarFit();},onThemeChange(theme,api){options.onThemeChange?.(theme,api);schedule();},onParallelModeChange(mode,api){options.onParallelModeChange?.(mode,api);schedule();},onZoomChange(zoom,api){options.onZoomChange?.(zoom,api);syncOverlayTransform();}};
     controller=global.PtoModelArchitecture3dDeck.render(root,baseOptions);if(!controller)return null;
     root.classList.add('pto-model-training-sidecar');root.dataset.trainingSidecar='true';
     const viewport=root.querySelector('.pto-model-deck__viewport');
+    const overlayScene=document.createElement('div');overlayScene.className='pto-training-sidecar__scene';overlayScene.setAttribute('aria-label','Training semantics canvas scene');
     const svg=document.createElementNS(NS,'svg');svg.classList.add('pto-training-sidecar__svg');svg.setAttribute('aria-label','Training semantics overlay');
     const labels=document.createElement('div');labels.className='pto-training-sidecar__labels';
     const layerHits=document.createElementNS(NS,'svg');layerHits.classList.add('pto-training-sidecar__layer-hits');layerHits.setAttribute('aria-label','Decoder Layer column hit areas');
     const focus=document.createElement('aside');focus.className='pto-training-sidecar__focus';focus.setAttribute('aria-live','polite');
+    const dataControl=document.createElement('div');dataControl.className='pto-model-deck__control pto-training-sidecar__data-control';dataControl.dataset.stageUi='';
+    dataControl.innerHTML=`<button class="pto-model-deck__button pto-training-sidecar__data-toggle" type="button" data-metric-menu-toggle aria-haspopup="true" aria-expanded="false">数据<span data-metric-count></span><i aria-hidden="true">⌄</i></button>
+      <div class="pto-training-sidecar__data-menu" role="menu" aria-label="数据标注多选">
+        <div class="pto-training-sidecar__data-actions">
+          <button type="button" data-metric-action="all">全选</button>
+          <button type="button" data-metric-action="none">全部隐藏</button>
+        </div>
+        <div class="pto-training-sidecar__data-options">${metricViewOptions.map(([value,labelText])=>`<button type="button" role="menuitemcheckbox" aria-checked="false" data-metric-view="${value}"><span aria-hidden="true">✓</span>${labelText}</button>`).join('')}</div>
+      </div>`;
+    const toolbar=root.querySelector('.pto-model-deck__toolbar');
+    if(toolbar)toolbar.insertBefore(dataControl,toolbar.children[2]||null);
     const tooltip=document.createElement('div');tooltip.className='pto-training-sidecar__tooltip';tooltip.setAttribute('role','tooltip');
     const detailPanel=document.createElement('aside');detailPanel.className='pto-training-sidecar__inspector';detailPanel.setAttribute('aria-live','polite');
-    viewport.append(svg,labels,layerHits,focus,tooltip,detailPanel);
+    overlayScene.append(svg,labels,layerHits);viewport.append(overlayScene,focus,tooltip,detailPanel);
+
+    function metricSummary(summaries){
+      return metricViewOptions.flatMap(([value])=>activeMetricViews.has(value)?summaries[value]||[]:[]);
+    }
+
+    function syncMetricViews(){
+      const values=metricViewOptions.map(([value])=>value).filter(value=>activeMetricViews.has(value));
+      root.dataset.metricViews=values.join(' ')||'none';
+      dataControl.querySelectorAll('[data-metric-view]').forEach(button=>{
+        const active=activeMetricViews.has(button.dataset.metricView);
+        button.classList.toggle('is-selected',active);button.setAttribute('aria-checked',String(active));
+      });
+      const toggle=dataControl.querySelector('[data-metric-menu-toggle]'),count=dataControl.querySelector('[data-metric-count]');
+      toggle?.classList.toggle('is-active',values.length>0);
+      if(count)count.textContent=values.length?String(values.length):'';
+      toggle?.setAttribute('aria-label',values.length?`数据标注：已显示 ${values.length} 类`:'数据标注：全部隐藏');
+    }
+
+    const metricElementSelector=[
+      '.pto-training-sidecar__metric-band','.pto-training-sidecar__metric-midline','.pto-training-sidecar__metric-line','.pto-training-sidecar__metric-point',
+      '.pto-training-sidecar__metric-label','.pto-training-sidecar__sample-label','.pto-training-sidecar__flow-texture','.pto-training-sidecar__hidden',
+      '.pto-training-sidecar__residual-flow-arrow','.pto-training-sidecar__residual-flow-hit','.pto-training-sidecar__residual-flow-hit-dot',
+      '.pto-training-sidecar__hidden-dot','.pto-training-sidecar__backward','.pto-training-sidecar__backward-dot','.pto-training-sidecar__parameter-stem',
+      '.pto-training-sidecar__parameter-dot','.pto-training-sidecar__step-gradient-dot','.pto-training-sidecar__optimizer','.pto-training-sidecar__communication',
+      '.pto-training-sidecar__comm-label','.pto-training-sidecar__value-label:not(.is-structure)','.pto-training-sidecar__loss-composition',
+      '.pto-training-sidecar__focus-node-metrics','.pto-training-sidecar__focus-graph-aux','.pto-training-sidecar__focus-backward'
+    ].join(',');
+    const metricGroupSelectors={
+      numerics:'.is-metric-std,.is-metric-amax,.pto-training-sidecar__sample-label,.pto-training-sidecar__residual-flow-arrow,.pto-training-sidecar__residual-flow-hit,.pto-training-sidecar__residual-flow-hit-dot,.pto-training-sidecar__focus-node-metrics',
+      gradient:'.pto-training-sidecar__flow-texture.is-backward,.pto-training-sidecar__backward,.pto-training-sidecar__backward-dot,.pto-training-sidecar__parameter-stem,.pto-training-sidecar__parameter-dot,.pto-training-sidecar__step-gradient-dot,.pto-training-sidecar__optimizer,.pto-training-sidecar__value-label.is-backward,.pto-training-sidecar__value-label.is-optimizer,.pto-training-sidecar__focus-node-metrics,.pto-training-sidecar__focus-backward',
+      performance:'.is-metric-latency,.pto-training-sidecar__sample-label,.pto-training-sidecar__communication,.pto-training-sidecar__comm-label,.pto-training-sidecar__focus-node-metrics',
+      moe:'.pto-training-sidecar__focus-node-metrics,.pto-training-sidecar__focus-graph-aux',
+      training:'.pto-training-sidecar__flow-texture.is-backward,.pto-training-sidecar__backward,.pto-training-sidecar__backward-dot,.pto-training-sidecar__parameter-stem,.pto-training-sidecar__parameter-dot,.pto-training-sidecar__step-gradient-dot,.pto-training-sidecar__optimizer,.pto-training-sidecar__value-label.is-backward,.pto-training-sidecar__value-label.is-optimizer,.pto-training-sidecar__value-label.is-checkpoint,.pto-training-sidecar__loss-composition,.pto-training-sidecar__focus-node-metrics,.pto-training-sidecar__focus-graph-aux,.pto-training-sidecar__focus-backward'
+    };
+    function applyMetricVisibility(){
+      root.querySelectorAll(metricElementSelector).forEach(node=>node.classList.add('is-metric-hidden'));
+      activeMetricViews.forEach(value=>root.querySelectorAll(metricGroupSelectors[value]||'').forEach(node=>node.classList.remove('is-metric-hidden')));
+    }
+
+    function syncOverlayTransform(){
+      if(!controller||!overlayScene)return;
+      overlayScene.style.left=`calc(50% + ${controller.state.panX}px)`;
+      overlayScene.style.top=`calc(50% + ${controller.state.panY}px)`;
+      overlayScene.style.transform=`scale(${controller.state.zoom})`;
+    }
 
     function geometry(){
       const width=viewport.clientWidth,height=viewport.clientHeight,base=viewport.getBoundingClientRect();
       const cards=Array.from(root.querySelectorAll('.pto-model-deck__layer[data-layer]'));
       if(!width||!height||!cards.length)return null;
-      const points=cards.map(card=>{const rect=card.getBoundingClientRect();return{layer:Number(card.dataset.layer),stage:Number(card.dataset.stage),x:rect.left+rect.width/2-base.left,top:rect.top-base.top,bottom:rect.bottom-base.top,card,rect};}).sort((a,b)=>a.layer-b.layer);
-      const rects=points.map(point=>point.rect),modelTop=Math.min(...rects.map(rect=>rect.top))-base.top,modelBottom=Math.max(...rects.map(rect=>rect.bottom))-base.top;
-      const centerOf=(selector)=>{const node=root.querySelector(selector),rect=node?.getBoundingClientRect();return rect?{x:rect.left+rect.width/2-base.left,y:rect.top+rect.height/2-base.top}:null;};
+      const zoom=Math.max(.001,controller.state.zoom),originX=width/2+controller.state.panX,originY=height/2+controller.state.panY;
+      const worldX=(screenX)=>(screenX-originX)/zoom,worldY=(screenY)=>(screenY-originY)/zoom;
+      const screenX=(worldValue)=>originX+worldValue*zoom,screenY=(worldValue)=>originY+worldValue*zoom;
+      const operatorGeometry=(node)=>{
+        const rect=node.getBoundingClientRect();if(rect.height<=.5)return null;
+        const computed=getComputedStyle(node),color=computed.getPropertyValue('--node-color').trim()||'var(--foreground-muted)';
+        return{node,op:node.dataset.op||'linear',color,top:worldY(rect.top-base.top),bottom:worldY(rect.bottom-base.top)};
+      };
+      const points=cards.map(card=>{
+        const rect=card.getBoundingClientRect(),operators=Array.from(card.querySelectorAll('.pto-model-deck__node,.pto-model-deck__experts')).map(operatorGeometry).filter(Boolean);
+        const cardTop=worldY(rect.top-base.top),cardBottom=worldY(rect.bottom-base.top),operatorTop=operators.length?Math.min(...operators.map(item=>item.top)):cardTop,operatorBottom=operators.length?Math.max(...operators.map(item=>item.bottom)):cardBottom;
+        return{layer:Number(card.dataset.layer),stage:Number(card.dataset.stage),x:worldX(rect.left+rect.width/2-base.left),top:operatorTop,bottom:operatorBottom,operatorTop,operatorBottom,operators,card,rect};
+      }).sort((a,b)=>a.layer-b.layer);
+      const modelTop=Math.min(...points.map(point=>point.operatorTop)),modelBottom=Math.max(...points.map(point=>point.operatorBottom));
+      const centerOf=(selector)=>{const node=root.querySelector(selector),rect=node?.getBoundingClientRect();return rect?{x:worldX(rect.left+rect.width/2-base.left),y:worldY(rect.top+rect.height/2-base.top)}:null;};
       const input=centerOf('.pto-model-deck__static--input [data-node="embedding"]')||{x:points[0].x-42,y:modelTop};
       const output=centerOf('.pto-model-deck__static--output [data-node="final_norm"]')||{x:points[points.length-1].x+42,y:modelTop};
-      const gap=points.length>1?Math.max(4,Math.abs(points[1].x-points[0].x)):12,scale=clamp(controller.state.zoom/Math.max(.001,fitZoom),.45,2.4);
+      const residualConnector=root.querySelector('.pto-model-deck__side-residual-connector[data-state-rail="0"]'),residualMatch=residualConnector?.getAttribute('d')?.match(/^M([-\d.]+),([-\d.]+)/);
+      const residualInputStart=residualMatch?{x:worldX(Number(residualMatch[1])),y:worldY(Number(residualMatch[2]))}:{x:input.x,y:modelTop-4/Math.max(.001,fitZoom)};
+      const residualRails=Array.from(root.querySelectorAll('.pto-model-deck__side-residual-spine[data-state-rail]')).map(node=>{
+        const match=node.getAttribute('d')?.match(/^M([-\d.]+),([-\d.]+)L([-\d.]+),([-\d.]+)$/);if(!match)return null;
+        return{rail:Number(node.dataset.stateRail),x0:worldX(Number(match[1])),y:worldY(Number(match[2])),x1:worldX(Number(match[3]))};
+      }).filter(Boolean).sort((a,b)=>a.rail-b.rail);
+      const gap=points.length>1?Math.max(4/fitZoom,Math.abs(points[1].x-points[0].x)):12/fitZoom,scale=1/Math.max(.001,fitZoom);
       const axisY=modelTop-250*scale;
       const stageY=axisY-32*scale;
       const metricY=axisY+38*scale;
-      const inputSummaryY=modelTop-100*scale;
+      const inputSummaryY=modelTop-78*scale;
       const hiddenY=modelTop-60*scale;
-      const embeddingY=modelTop-22*scale;
+      const embeddingY=modelTop-34*scale;
       const backwardY=modelBottom+28*scale;
       const parameterY=backwardY+34*scale;
       const optimizerY=parameterY+38*scale;
-      return{width,height,base,points,modelTop,modelBottom,input,output,gap,scale,axisY,stageY,metricY,inputSummaryY,hiddenY,embeddingY,backwardY,parameterY,optimizerY};
+      return{width,height,base,points,modelTop,modelBottom,input,output,residualInputStart,residualRails,gap,scale,axisY,stageY,metricY,inputSummaryY,hiddenY,embeddingY,backwardY,parameterY,optimizerY,worldX,worldY,screenX,screenY};
+    }
+
+    function layerColumnWidth(g){
+      return 10*g.scale;
+    }
+
+    function operatorSideWidth(g){
+      return 2*g.scale;
+    }
+
+    function renderLayerBackgrounds(g){
+      const width=layerColumnWidth(g),padding=2*g.scale;
+      g.points.forEach(point=>{
+        const background=document.createElementNS(NS,'rect');
+        background.setAttribute('class','pto-training-sidecar__layer-column');
+        background.dataset.layer=String(point.layer);
+        background.setAttribute('x',(point.x-width/2).toFixed(1));
+        background.setAttribute('y',(point.operatorTop-padding).toFixed(1));
+        background.setAttribute('width',width.toFixed(1));
+        background.setAttribute('height',Math.max(4*g.scale,point.operatorBottom-point.operatorTop+padding*2).toFixed(1));
+        background.setAttribute('rx',(2*g.scale).toFixed(1));
+        svg.appendChild(background);
+      });
+    }
+
+    function renderOperatorSides(g){
+      const width=operatorSideWidth(g),halfWidth=width/2,seen=new Set();
+      g.points.forEach(point=>{
+        point.operators.forEach(operator=>{
+          const key=`${point.layer}|${operator.op}|${operator.top.toFixed(1)}|${operator.bottom.toFixed(1)}`;if(seen.has(key))return;seen.add(key);
+          const bar=document.createElementNS(NS,'rect');
+          bar.setAttribute('class','pto-training-sidecar__operator-side');
+          bar.dataset.layer=String(point.layer);bar.dataset.op=operator.op;
+          bar.setAttribute('x',(point.x-halfWidth).toFixed(1));
+          bar.setAttribute('y',operator.top.toFixed(1));
+          bar.setAttribute('width',width.toFixed(1));
+          bar.setAttribute('height',Math.max(g.scale,operator.bottom-operator.top).toFixed(1));
+          bar.setAttribute('rx',Math.min(g.scale,width/2).toFixed(1));
+          bar.style.setProperty('--operator-side-color',operator.color);
+          svg.appendChild(bar);
+        });
+      });
+    }
+
+    function syncHoveredLayer(){
+      svg.querySelectorAll('.pto-training-sidecar__layer-column.is-hovered,.pto-training-sidecar__operator-side.is-hovered').forEach(node=>node.classList.remove('is-hovered'));
+      if(!Number.isFinite(hoveredLayer))return;
+      svg.querySelectorAll(`.pto-training-sidecar__layer-column[data-layer="${hoveredLayer}"],.pto-training-sidecar__operator-side[data-layer="${hoveredLayer}"]`).forEach(node=>node.classList.add('is-hovered'));
+    }
+
+    function setHoveredLayer(layer){
+      const next=layer===null||layer===undefined||!Number.isFinite(Number(layer))?null:Number(layer);if(next===hoveredLayer)return;
+      hoveredLayer=next;syncHoveredLayer();
     }
 
     function flowTexture(x0,x1,y,direction,scale,anchors=[]){
@@ -169,50 +309,46 @@
       const snapshot=snapshotFor(layer),sample=(salt,min,max)=>min+seeded(layer,index*7+salt)*(max-min);
       const mean=sample(31,-.008,.008),std=sample(32,.72,1.08),amax=sample(33,5.4,9.65),grad=sample(34,.28,1.08);
       const latencyBase=/expert/i.test(`${label} ${op}`)?.56:/attention/i.test(`${label} ${op}`)?.24:/comm|gather|scatter|dispatch|combine/i.test(`${label} ${op}`)?.13:/norm|add|merge/i.test(`${label} ${op}`)?.03:.09;
-      const latency=latencyBase+sample(35,.01,latencyBase*.62+.04),values=[],summary=[],descriptor=`${label} ${op}`;
+      const latency=latencyBase+sample(35,.01,latencyBase*.62+.04),values=[],summaries={numerics:[],gradient:[],performance:[],moe:[],training:[]},descriptor=`${label} ${op}`;
       let definition='该算子行展示与其对象类型匹配的诊断指标。',schema='Tensor',status=amax>9.35?'warning':'normal';
       if(/Router/i.test(descriptor)){
         schema='Router';
         const pmax=sample(36,.48,.72),imbalance=sample(37,1.02,1.18),entropy=sample(38,1.56,2.08);
-        summary.push(`Pmax ${pmax.toFixed(2)}`,`H ${entropy.toFixed(2)}`,`imb ${imbalance.toFixed(2)}×`);values.push(['Router Pmax',pmax.toFixed(3)],['Routing entropy',entropy.toFixed(2)],['Expert imbalance',`${imbalance.toFixed(2)}×`],['Latency',`${latency.toFixed(2)} ms`]);definition='Router 根据 token hidden state 产生 expert 概率与 Top-k routing map；诊断关注概率集中度、熵与 expert 负载失衡。';status=imbalance>1.15?'warning':status;
+        summaries.moe.push(`Pmax ${pmax.toFixed(2)}`,`H ${entropy.toFixed(2)}`,`imb ${imbalance.toFixed(2)}×`);summaries.performance.push(`${latency.toFixed(2)}ms`);summaries.training.push(`imb ${imbalance.toFixed(2)}×`);values.push(['Router Pmax',pmax.toFixed(3)],['Routing entropy',entropy.toFixed(2)],['Expert imbalance',`${imbalance.toFixed(2)}×`],['Latency',`${latency.toFixed(2)} ms`]);definition='Router 根据 token hidden state 产生 expert 概率与 Top-k routing map；诊断关注概率集中度、熵与 expert 负载失衡。';status=imbalance>1.15?'warning':status;
       }else if(/Dispatch|Combine|AllGather|Reduce-Scatter|comm/i.test(descriptor)){
         schema='Communication';
         const tokens=Math.round(sample(39,3584,4608)),bytes=sample(40,24,38);
-        const bandwidth=bytes/1024/(latency/1000);summary.push(`${bytes.toFixed(0)}MB`,`${bandwidth.toFixed(0)}GB/s`,`${latency.toFixed(2)}ms`);values.push(['Token count',tokens],['Payload',`${bytes.toFixed(1)} MB`],['Bandwidth',`${bandwidth.toFixed(1)} GB/s`],['Latency',`${latency.toFixed(2)} ms`]);definition=/Dispatch|Combine/i.test(label)?'Layer 内部的 EP token dispatch/combine 通信；通信对象只展示 payload、带宽和延迟。':'该算子执行 Layer 内部的集合通信；通信节点没有独立 parameter gradient。';
+        const bandwidth=bytes/1024/(latency/1000);summaries.performance.push(`${bytes.toFixed(0)}MB`,`${bandwidth.toFixed(0)}GB/s`,`${latency.toFixed(2)}ms`);if(/Dispatch|Combine/i.test(descriptor))summaries.moe.push(`${tokens} tok`,`${bytes.toFixed(0)}MB`);values.push(['Token count',tokens],['Payload',`${bytes.toFixed(1)} MB`],['Bandwidth',`${bandwidth.toFixed(1)} GB/s`],['Latency',`${latency.toFixed(2)} ms`]);definition=/Dispatch|Combine/i.test(label)?'Layer 内部的 EP token dispatch/combine 通信；通信对象只展示 payload、带宽和延迟。':'该算子执行 Layer 内部的集合通信；通信节点没有独立 parameter gradient。';
       }else if(!/mHC/i.test(descriptor)&&/Attention Core|DSA|SWA|FlashAttention/i.test(descriptor)){
         schema='Attention tensor';
         const logit=sample(41,11.8,15.6),pmax=sample(42,.46,.76),rowError=sample(43,.00004,.00032);
-        summary.push(`logit ±${logit.toFixed(1)}`,`Pmax ${pmax.toFixed(2)}`,`${latency.toFixed(2)}ms`);values.push(['Attention mode',attentionDescriptor(layer).label],['Kernel',attentionDescriptor(layer).kernel],['Logits range',`−${logit.toFixed(1)}…${logit.toFixed(1)}`],['Probability max',pmax.toFixed(3)],['Softmax row-sum error',rowError.toExponential(1)],['Latency',`${latency.toFixed(2)} ms`]);definition='Attention 语义由 Layer 配置决定；FlashAttention 只作为底层 kernel 单独记录。logits 与 Softmax probability 保持为不同对象。';
+        summaries.numerics.push(`logit ±${logit.toFixed(1)}`,`Pmax ${pmax.toFixed(2)}`);summaries.performance.push(`${latency.toFixed(2)}ms`);values.push(['Attention mode',attentionDescriptor(layer).label],['Kernel',attentionDescriptor(layer).kernel],['Logits range',`−${logit.toFixed(1)}…${logit.toFixed(1)}`],['Probability max',pmax.toFixed(3)],['Softmax row-sum error',rowError.toExponential(1)],['Latency',`${latency.toFixed(2)} ms`]);definition='Attention 语义由 Layer 配置决定；FlashAttention 只作为底层 kernel 单独记录。logits 与 Softmax probability 保持为不同对象。';
       }else if(/Expert/i.test(descriptor)){
         schema='Expert';
         const tokens=Math.round(sample(44,36,76)),load=sample(45,.72,.96);
-        summary.push(`${tokens} tok`,`${(load*100).toFixed(0)}% cap`,`${latency.toFixed(2)}ms`);values.push(['Assigned tokens',tokens],['Capacity utilization',`${(load*100).toFixed(0)}%`],['Output Amax',amax.toFixed(2)],['Latency',`${latency.toFixed(2)} ms`]);definition='Expert 对分配到本地的 token 执行 FFN；诊断关注 token 负载、容量利用率、输出范围和耗时。';
+        summaries.moe.push(`${tokens} tok`,`${(load*100).toFixed(0)}% cap`);summaries.numerics.push(`Amax ${amax.toFixed(1)}`);summaries.performance.push(`${latency.toFixed(2)}ms`);values.push(['Assigned tokens',tokens],['Capacity utilization',`${(load*100).toFixed(0)}%`],['Output Amax',amax.toFixed(2)],['Latency',`${latency.toFixed(2)} ms`]);definition='Expert 对分配到本地的 token 执行 FFN；诊断关注 token 负载、容量利用率、输出范围和耗时。';
       }else if(/mHC|Residual Add|Merge|Routed \+ Shared Add/i.test(descriptor)){
         schema='Residual / mHC';
         const inputNorm=sample(46,82,108),outputNorm=inputNorm*sample(47,.94,1.09),delta=Math.abs(outputNorm-inputNorm)/inputNorm,mixing=sample(48,.06,.22);
-        summary.push(`in ${inputNorm.toFixed(0)}`,`Δ ${(delta*100).toFixed(1)}%`,`mix ${mixing.toFixed(2)}`);values.push(['Input L2',inputNorm.toFixed(1)],['Output L2',outputNorm.toFixed(1)],['Increment ratio',`${(delta*100).toFixed(2)}%`],['Stream mixing spread',mixing.toFixed(3)],['Streams',controller.config.mhcStreams??4]);definition=/mHC/i.test(descriptor)?'mHC Mix/Merge 在四路状态之间执行训练配置定义的融合；这里不将未知融合矩阵假画为标准 Add。':'该分支汇合节点关注输入/输出范数与增量比例。';
+        summaries.numerics.push(`in ${inputNorm.toFixed(0)}`,`Δ ${(delta*100).toFixed(1)}%`,`mix ${mixing.toFixed(2)}`);values.push(['Input L2',inputNorm.toFixed(1)],['Output L2',outputNorm.toFixed(1)],['Increment ratio',`${(delta*100).toFixed(2)}%`],['Stream mixing spread',mixing.toFixed(3)],['Streams',controller.config.mhcStreams??4]);definition=/mHC/i.test(descriptor)?'mHC Mix/Merge 在四路状态之间执行训练配置定义的融合；这里不将未知融合矩阵假画为标准 Add。':'该分支汇合节点关注输入/输出范数与增量比例。';
       }else if(/Norm/i.test(descriptor)){
         schema='Norm';
         const inputRms=sample(49,.84,1.17),outputRms=sample(50,.97,1.03),scaleDrift=sample(51,-.018,.018);
-        summary.push(`in ${inputRms.toFixed(2)}`,`out ${outputRms.toFixed(2)}`,`γΔ ${scaleDrift.toFixed(3)}`);values.push(['Input RMS',inputRms.toFixed(3)],['Output RMS',outputRms.toFixed(3)],['Scale drift',scaleDrift.toFixed(4)],['Latency',`${latency.toFixed(2)} ms`]);definition='Norm 诊断关注归一化前后 RMS 与可学习 scale 的漂移，不套用通用 activation 指标集合。';
+        summaries.numerics.push(`in ${inputRms.toFixed(2)}`,`out ${outputRms.toFixed(2)}`,`γΔ ${scaleDrift.toFixed(3)}`);summaries.performance.push(`${latency.toFixed(2)}ms`);values.push(['Input RMS',inputRms.toFixed(3)],['Output RMS',outputRms.toFixed(3)],['Scale drift',scaleDrift.toFixed(4)],['Latency',`${latency.toFixed(2)} ms`]);definition='Norm 诊断关注归一化前后 RMS 与可学习 scale 的漂移，不套用通用 activation 指标集合。';
       }else if(/Linear|Projection|Weight/i.test(descriptor)){
         schema='Parameter operator';
         const accumulated=snapshot.parameter.accumulatedGradient;
-        summary.push(`W ${snapshot.parameter.weightNorm.toFixed(1)}`,`∇ ${accumulated.norm.toFixed(2)}`,`Δ/W ${snapshot.parameter.updateRatio.toExponential(1)}`);values.push(['Weight L2',snapshot.parameter.weightNorm.toFixed(1)],['Step gradient L2',accumulated.norm.toFixed(3)],['Update / Weight',snapshot.parameter.updateRatio.toExponential(2)],['Weight version',`${snapshot.parameter.weightVersionBefore} → ${snapshot.parameter.weightVersionAfter}`],['Latency',`${latency.toFixed(2)} ms`]);definition='带参数算子展示 weight、step-accumulated gradient 与 update ratio；参数版本在 optimizer step 前后显式区分。';
+        summaries.gradient.push(`W ${snapshot.parameter.weightNorm.toFixed(1)}`,`∇ ${accumulated.norm.toFixed(2)}`,`Δ/W ${snapshot.parameter.updateRatio.toExponential(1)}`);summaries.training.push(`W v${snapshot.parameter.weightVersionBefore}→${snapshot.parameter.weightVersionAfter}`);summaries.performance.push(`${latency.toFixed(2)}ms`);values.push(['Weight L2',snapshot.parameter.weightNorm.toFixed(1)],['Step gradient L2',accumulated.norm.toFixed(3)],['Update / Weight',snapshot.parameter.updateRatio.toExponential(2)],['Weight version',`${snapshot.parameter.weightVersionBefore} → ${snapshot.parameter.weightVersionAfter}`],['Latency',`${latency.toFixed(2)} ms`]);definition='带参数算子展示 weight、step-accumulated gradient 与 update ratio；参数版本在 optimizer step 前后显式区分。';
       }else{
-        summary.push(`σ ${std.toFixed(2)}`,`Amax ${amax.toFixed(1)}`,`${latency.toFixed(2)}ms`);values.push(['Mean',mean.toFixed(4)],['Std σ',std.toFixed(3)],['Amax',amax.toFixed(2)],['Activation gradient L2',grad.toFixed(3)],['Latency',`${latency.toFixed(2)} ms`]);
+        summaries.numerics.push(`σ ${std.toFixed(2)}`,`Amax ${amax.toFixed(1)}`);summaries.gradient.push(`∇ ${grad.toFixed(2)}`);summaries.performance.push(`${latency.toFixed(2)}ms`);values.push(['Mean',mean.toFixed(4)],['Std σ',std.toFixed(3)],['Amax',amax.toFixed(2)],['Activation gradient L2',grad.toFixed(3)],['Latency',`${latency.toFixed(2)} ms`]);
       }
+      const summary=metricSummary(summaries);
       return{summary,detail:{key:`layer-${layer}-operator-${nodeId}`,title:`${label} · L${layer}`,category:`${schema} metric`,definition,values,status,statusLabel:status==='warning'?'关注：至少一项接近参考边界':'正常：指标位于参考范围',context:executionContext(snapshot,`L${layer} · ${nodeId}`)}};
     }
 
     function positionDetailPanel(){
-      if(!selectedDetail||!selectedDetailKey||!detailPanel.classList.contains('is-open'))return;
-      const target=root.querySelector(`[data-detail-key="${CSS.escape(selectedDetailKey)}"]`);if(!target)return;
-      const base=viewport.getBoundingClientRect(),rect=target.getBoundingClientRect(),panelWidth=detailPanel.offsetWidth||330,panelHeight=detailPanel.offsetHeight||280;
-      const rightSpace=base.right-rect.right,leftSpace=rect.left-base.left;
-      const left=rightSpace>=panelWidth+24?rect.right-base.left+12:leftSpace>=panelWidth+24?rect.left-base.left-panelWidth-12:clamp(rect.left+rect.width/2-base.left-panelWidth/2,12,base.width-panelWidth-12);
-      const top=clamp(rect.top+rect.height/2-base.top-panelHeight/2,72,base.height-panelHeight-16);
-      detailPanel.style.left=`${left}px`;detailPanel.style.right='auto';detailPanel.style.top=`${top}px`;
+      if(!selectedDetail||!detailPanel.classList.contains('is-open'))return;
+      detailPanel.style.left='auto';detailPanel.style.right='16px';detailPanel.style.top='108px';
     }
 
     function openDetail(detail,target=null){
@@ -229,16 +365,16 @@
       const rows=(controller.config.sideRows||[]).map(row=>{
         const nodes=g.points.flatMap(point=>row.ids.map(id=>point.card.querySelector(`[data-node="${CSS.escape(id)}"]`)).filter(Boolean));
         const rects=nodes.map(node=>node.getBoundingClientRect()).filter(rect=>rect.height>0);if(!rects.length)return null;
-        const left=Math.min(...rects.map(rect=>rect.left))-g.base.left-4,right=Math.max(...rects.map(rect=>rect.right))-g.base.left+4;
-        const top=Math.min(...rects.map(rect=>rect.top))-g.base.top-3,bottom=Math.max(...rects.map(rect=>rect.bottom))-g.base.top+3;
+        const left=g.worldX(Math.min(...rects.map(rect=>rect.left))-g.base.left)-4*g.scale,right=g.worldX(Math.max(...rects.map(rect=>rect.right))-g.base.left)+4*g.scale;
+        const top=g.worldY(Math.min(...rects.map(rect=>rect.top))-g.base.top)-3*g.scale,bottom=g.worldY(Math.max(...rects.map(rect=>rect.bottom))-g.base.top)+3*g.scale;
         const pseudo=getComputedStyle(nodes[0],'::after'),computed=getComputedStyle(nodes[0]),color=pseudo.backgroundColor&&pseudo.backgroundColor!=='rgba(0, 0, 0, 0)'?pseudo.backgroundColor:computed.getPropertyValue('--node-color').trim()||'var(--foreground-muted)';
         return{label:row.label,ids:row.ids,nodes,left,right,top,bottom,y:(top+bottom)/2,color};
       }).filter(Boolean).sort((a,b)=>a.y-b.y||a.left-b.left);
-      const merged=[];
+      const merged=[],mergeDistance=12*g.scale;
       rows.forEach(item=>{
         const match=merged.find(candidate=>{
           const overlap=Math.max(0,Math.min(candidate.right,item.right)-Math.max(candidate.left,item.left));
-          return Math.abs(candidate.y-item.y)<7&&overlap>Math.min(candidate.right-candidate.left,item.right-item.left)*.55;
+          return Math.abs(candidate.y-item.y)<mergeDistance&&overlap>Math.min(candidate.right-candidate.left,item.right-item.left)*.55;
         });
         if(!match){merged.push({...item});return;}
         match.label=`${match.label} / ${item.label}`;match.ids=[...new Set([...match.ids,...item.ids])];match.nodes.push(...item.nodes);match.left=Math.min(match.left,item.left);match.right=Math.max(match.right,item.right);match.top=Math.min(match.top,item.top);match.bottom=Math.max(match.bottom,item.bottom);match.y=(match.top+match.bottom)/2;
@@ -246,24 +382,18 @@
       return merged;
     }
 
-    function measureSummaryLabels(g){
-      return Array.from(root.querySelectorAll('.pto-model-deck__side-ffn-label')).map(node=>{const rect=node.getBoundingClientRect();return{left:rect.left-g.base.left,right:rect.right-g.base.left,y:rect.top+rect.height/2-g.base.top};});
-    }
-
-    function renderOperatorBands(g,measuredRows=operatorRows(g),summaryLabels=measureSummaryLabels(g)){
+    function renderOperatorBands(g,measuredRows=operatorRows(g)){
       measuredRows.forEach(item=>{
         const detail={title:item.label,category:'Operator row',definition:'该框对应侧视投影中同一计算高度上的算子集合；横向范围表示这些算子在哪些 Decoder Layers 中存在。',values:[['Operator IDs',item.ids.join(', ')],['投影范围',`${Math.round(item.left)}–${Math.round(item.right)} px`],['数据来源','模型结构']],status:'info',statusLabel:'结构标注：不进行数值异常判定'};
         const band=document.createElementNS(NS,'rect');band.setAttribute('class','pto-training-sidecar__operator-band');band.setAttribute('x',item.left.toFixed(1));band.setAttribute('y',item.top.toFixed(1));band.setAttribute('width',Math.max(8,item.right-item.left).toFixed(1));band.setAttribute('height',Math.max(8,item.bottom-item.top).toFixed(1));band.setAttribute('rx','4');band.style.setProperty('--operator-color',item.color);tip(band,`${item.label} · operator row`,detail);svg.appendChild(band);
-        const centerX=(item.left+item.right)/2,text=label(labels,'pto-training-sidecar__operator-label',item.label,centerX,item.y,`${item.label} · operator row`,detail);text.style.setProperty('--operator-color',item.color);
-        const half=Math.min((item.right-item.left)/2-4,Math.max(24,item.label.length*2.7)*g.scale),candidates=[centerX,item.left+half+7,item.right-half-7].filter(x=>x-half>=item.left&&x+half<=item.right);
-        const clear=candidates.find(x=>summaryLabels.every(summary=>Math.abs(summary.y-item.y)>=12||x+half<=summary.left-5||x-half>=summary.right+5));
-        if(Number.isFinite(clear))text.style.left=`${clear}px`;
+        const text=label(labels,'pto-training-sidecar__operator-label is-layer-row',item.label,(item.left+item.right)/2,item.y,`${item.label} · operator row`,detail);
+        text.style.setProperty('--operator-color',item.color);
       });
     }
 
     function measureStaticOperatorBands(g){
       const specs=[
-        ['input',['token_ids','positions','attention_context','embedding_weight'],'Token IDs / Position IDs / Attention Context / Embedding Weight'],
+        ['input',['token_ids','positions','attention_context','embedding_weight'],'Input IDs · Attn Context · Embedding W'],
         ['input',['embedding'],'Parallel Embedding'],
         ['output',['final_norm'],'Final RMSNorm'],['output',['lm_head_weight','lm_head'],'LM Head Weight / LM Head'],
         ['output',['logits_allgather'],'Logits All-Gather'],['output',['logits'],'Logits'],
@@ -274,21 +404,45 @@
       return specs.map(([kind,ids,text])=>{
         const scope=root.querySelector(`.pto-model-deck__static--${kind}`);if(!scope)return;
         const rects=ids.map(id=>scope.querySelector(`[data-node="${CSS.escape(id)}"]`)).filter(Boolean).map(node=>node.getBoundingClientRect()).filter(rect=>rect.height>0);if(!rects.length)return;
-        const left=Math.min(...rects.map(rect=>rect.left))-g.base.left-4,right=Math.max(...rects.map(rect=>rect.right))-g.base.left+4;
-        let top=Math.min(...rects.map(rect=>rect.top))-g.base.top-3,bottom=Math.max(...rects.map(rect=>rect.bottom))-g.base.top+3,y=(top+bottom)/2;
+        let left=g.worldX(Math.min(...rects.map(rect=>rect.left))-g.base.left)-4*g.scale,right=g.worldX(Math.max(...rects.map(rect=>rect.right))-g.base.left)+4*g.scale;
+        let top=g.worldY(Math.min(...rects.map(rect=>rect.top))-g.base.top)-3*g.scale,bottom=g.worldY(Math.max(...rects.map(rect=>rect.bottom))-g.base.top)+3*g.scale,y=(top+bottom)/2;
+        const operatorX=kind==='input'?g.input.x:g.output.x,labelGap=(kind==='input'?6:10)*g.scale;
         if(kind==='input'){
-          const laneY=ids.includes('embedding')?g.embeddingY:g.inputSummaryY,laneHeight=Math.max(16*g.scale,bottom-top);
-          y=laneY;top=y-laneHeight/2;bottom=y+laneHeight/2;
+          const embedding=ids.includes('embedding'),laneY=embedding?g.embeddingY:g.inputSummaryY,laneHeight=Math.max(16*g.scale,bottom-top),laneWidth=(embedding?184:330)*g.scale;
+          y=laneY;top=y-laneHeight/2;bottom=y+laneHeight/2;right=operatorX-labelGap;left=right-laneWidth;
+        }else{
+          const laneWidth=clamp(text.length*6.2,92,260)*g.scale;
+          left=operatorX+labelGap;right=left+laneWidth;
         }
-        return{kind,ids,text,left,right,top,bottom,y};
+        return{kind,ids,text,left,right,top,bottom,y,operatorX};
       }).filter(Boolean);
     }
 
     function renderStaticOperatorBands(g,measured=measureStaticOperatorBands(g)){
-      measured.forEach(({kind,ids,text,left,right,top,bottom,y})=>{
+      const sideWidth=operatorSideWidth(g),halfSide=sideWidth/2,columnWidth=layerColumnWidth(g),padding=2*g.scale;
+      ['input','output'].forEach(kind=>{
+        const items=measured.filter(item=>item.kind===kind);if(!items.length)return;
+        const operatorX=items[0].operatorX,top=Math.min(...items.map(item=>item.top))-padding,bottom=Math.max(...items.map(item=>item.bottom))+padding,column=document.createElementNS(NS,'rect');
+        column.setAttribute('class',`pto-training-sidecar__layer-column is-static is-${kind}`);
+        column.setAttribute('x',(operatorX-columnWidth/2).toFixed(1));column.setAttribute('y',top.toFixed(1));column.setAttribute('width',columnWidth.toFixed(1));column.setAttribute('height',Math.max(4*g.scale,bottom-top).toFixed(1));column.setAttribute('rx',(2*g.scale).toFixed(1));svg.appendChild(column);
+      });
+      const inputSummary=measured.find(item=>item.kind==='input'&&!item.ids.includes('embedding')),embedding=measured.find(item=>item.kind==='input'&&item.ids.includes('embedding'));
+      if(inputSummary&&embedding){
+        const x=inputSummary.operatorX,startY=inputSummary.bottom,endY=embedding.top;
+        svg.appendChild(path(`M${x.toFixed(1)} ${startY.toFixed(1)}L${x.toFixed(1)} ${endY.toFixed(1)}`,'pto-training-sidecar__static-connector'));
+        const residual=g.residualInputStart;
+        if(residual&&residual.y>embedding.bottom){
+          const bendY=(embedding.bottom+residual.y)/2;
+          svg.appendChild(path(`M${x.toFixed(1)} ${embedding.bottom.toFixed(1)}C${x.toFixed(1)} ${bendY.toFixed(1)} ${residual.x.toFixed(1)} ${bendY.toFixed(1)} ${residual.x.toFixed(1)} ${residual.y.toFixed(1)}`,'pto-training-sidecar__static-connector is-residual-handoff'));
+        }
+      }
+      measured.forEach(({kind,ids,text,left,right,top,bottom,y,operatorX})=>{
         const detail={title:text,category:kind==='input'?'Model input':'Model output',definition:kind==='input'?'模型入口算子：将离散输入和位置/上下文信息转换为进入 Decoder stack 的初始 hidden state。':'模型末端算子：将最终 hidden state 归一化并投影到词表 logits，或生成 MTP 辅助输出。',values:[['Node IDs',ids.join(', ')],['数据来源','模型结构']],status:'info',statusLabel:'结构标注：不进行数值异常判定'};
+        const leaderStart=kind==='input'?right:operatorX+halfSide,leaderEnd=kind==='input'?operatorX-halfSide:left;
+        svg.appendChild(path(`M${leaderStart.toFixed(1)} ${y.toFixed(1)}L${leaderEnd.toFixed(1)} ${y.toFixed(1)}`,'pto-training-sidecar__static-connector is-leader'));
+        const side=document.createElementNS(NS,'rect');side.setAttribute('class',`pto-training-sidecar__operator-side is-static is-${kind}`);side.setAttribute('x',(operatorX-halfSide).toFixed(1));side.setAttribute('y',top.toFixed(1));side.setAttribute('width',sideWidth.toFixed(1));side.setAttribute('height',Math.max(g.scale,bottom-top).toFixed(1));side.setAttribute('rx',Math.min(g.scale,halfSide).toFixed(1));svg.appendChild(side);
         const band=document.createElementNS(NS,'rect');band.setAttribute('class',`pto-training-sidecar__operator-band is-${kind}`);band.setAttribute('x',left.toFixed(1));band.setAttribute('y',top.toFixed(1));band.setAttribute('width',Math.max(8,right-left).toFixed(1));band.setAttribute('height',Math.max(8,bottom-top).toFixed(1));band.setAttribute('rx','4');band.style.setProperty('--operator-color',kind==='input'?'var(--pto-model-deck-embedding)':'var(--pto-model-deck-head)');tip(band,`${text} · ${kind==='input'?'model input':'model output'}`,detail);svg.appendChild(band);
-        const node=label(labels,`pto-training-sidecar__operator-label is-${kind}`,text,(left+right)/2,y,`${text} · ${kind==='input'?'model input':'model output'}`,detail);node.style.setProperty('--operator-color',kind==='input'?'var(--pto-model-deck-embedding)':'var(--pto-model-deck-head)');
+        const node=label(labels,`pto-training-sidecar__operator-label is-${kind}`,text,kind==='input'?right:(left+right)/2,y,`${text} · ${kind==='input'?'model input':'model output'}`,detail);node.style.setProperty('--operator-color',kind==='input'?'var(--pto-model-deck-embedding)':'var(--pto-model-deck-head)');
       });
     }
 
@@ -300,7 +454,7 @@
       ];
       const measured=[];specs.forEach(([selector,describe])=>root.querySelectorAll(selector).forEach(source=>{
         const rect=source.getBoundingClientRect();if(rect.width<2||rect.height<2)return;
-        measured.push({left:rect.left-g.base.left,top:rect.top-g.base.top,width:rect.width,height:rect.height,text:describe(source)});
+        measured.push({left:g.worldX(rect.left-g.base.left),top:g.worldY(rect.top-g.base.top),width:rect.width/controller.state.zoom,height:rect.height/controller.state.zoom,text:describe(source)});
       }));
       return measured;
     }
@@ -321,7 +475,7 @@
       const graphScale=clamp(Math.min((panelWidth-16)/graphWidth,(maxPanelHeight-headerHeight-footerHeight-8)/graphHeight),.38,1.08);
       const panelHeight=Math.min(maxPanelHeight,Math.ceil(headerHeight+graphHeight*graphScale+footerHeight+8));
       const panelTop=narrow?g.height-panelHeight-8:clamp((g.height-panelHeight)/2,8,g.height-panelHeight-8);
-      const left=narrow?8:clamp(point.x-panelWidth/2,8,g.width-panelWidth-8);
+      const left=narrow?8:clamp(g.screenX(point.x)-panelWidth/2,8,g.width-panelWidth-8);
       return{point,sourceGraph,panelWidth,panelTop,panelHeight,left,graphWidth,graphHeight,graphScale,headerHeight,footerHeight};
     }
 
@@ -381,14 +535,19 @@
         if(stateInput||stateOutput){
           displayLabel=`H${stateOutput?selectedLayer+1:selectedLayer} · mHC state ×${streams}`;
           const factor=stateOutput?1.012:1,amaxFactor=stateOutput?1.018:1;
-          summary=[`σ ${(hidden.std*factor).toFixed(2)}`,`Amax ${(hidden.amax*amaxFactor).toFixed(1)}`,`∇ ${activationGradient.norm.toFixed(2)}`];detail=stateOutput?outputDetail:hiddenDetail;
+          const summaries={
+            numerics:[`σ ${(hidden.std*factor).toFixed(2)}`,`Amax ${(hidden.amax*amaxFactor).toFixed(1)}`],
+            gradient:[`∇ ${activationGradient.norm.toFixed(2)}`],
+            performance:[],moe:[],training:[`H ×${streams}`]
+          };
+          summary=metricSummary(summaries);detail=stateOutput?outputDetail:hiddenDetail;
         }else{
           const metric=internalOperatorMetric(selectedLayer,semantic?.label||originalLabel,op,semantic?.index??nodeIndex,nodeId);summary=metric.summary;detail=metric.detail;
         }
         node.replaceChildren();
         const labelNode=document.createElement('span');labelNode.className='pto-training-sidecar__focus-node-label';labelNode.textContent=displayLabel;node.appendChild(labelNode);
         const metricNode=document.createElement('span');metricNode.className='pto-training-sidecar__focus-node-metrics';summary.forEach(value=>{const item=document.createElement('i');item.textContent=value;metricNode.appendChild(item);});node.appendChild(metricNode);
-        tip(node,`${displayLabel} · ${summary.join(' · ')}`,detail);
+        tip(node,summary.length?`${displayLabel} · ${summary.join(' · ')}`:displayLabel,detail);
       });
       if(!snapshot.module.dense){const aux=document.createElement('div');aux.className='pto-training-sidecar__focus-graph-aux';aux.textContent='Router Aux · balance 0.014 · z-loss 0.003 · λ from training job';graph.appendChild(aux);}
       focus.querySelector('.pto-training-sidecar__focus-graph-stage')?.appendChild(graph);
@@ -400,7 +559,8 @@
       const lastLayer=controller.config.layerCount-1,lastStage=stageForLayer(lastLayer,controller.config.stageRanges),snapshot=snapshotFor(lastLayer),loss=snapshot.metric.loss??2.84,mtpHeads=controller.config.mtpHeads??3;
       const job=options.trainingJob||{},moeWeight=job.lossWeights?.moeAux??'λ configured by training job',mtpWeight=job.lossWeights?.mtp??'λ configured by training job';
       const mtpParticipation=job.mtpLossParticipates===false?'not in current training objective':job.mtpLossParticipates===true?'included by training job':'participation from training job config';
-      const anchorX=clamp(g.output.x-12*g.scale,350*g.scale,g.width-8),anchorY=clamp(g.optimizerY+112*g.scale,110*g.scale,g.height-90*g.scale);
+      const worldLeft=g.worldX(0),worldRight=g.worldX(g.width),worldTop=g.worldY(0),worldBottom=g.worldY(g.height);
+      const anchorX=clamp(g.output.x-12*g.scale,worldLeft+350*g.scale,worldRight-8*g.scale),anchorY=clamp(g.optimizerY+112*g.scale,worldTop+110*g.scale,worldBottom-90*g.scale);
       const node=label(labels,'pto-training-sidecar__loss-composition','',anchorX,anchorY,'Loss composition · Main CE + Router Aux + MTP ×3 → Total Training Loss');
       node.removeAttribute('data-detail');node.removeAttribute('data-detail-key');node.removeAttribute('data-tip');node.removeAttribute('aria-label');
       node.classList.toggle('is-expanded',lossExpanded);node.classList.toggle('is-collapsed',!lossExpanded);
@@ -424,21 +584,24 @@
     }
 
     function render(){
-      raf=0;if(destroyed)return;clearDragPreview();
-      const state=controller.state,cacheKey=[viewport.clientWidth,viewport.clientHeight,state.view,state.zoom,state.panX,state.panY,state.rx,state.ry,state.expandedLayer,state.expansionDepth,selectedLayer].join('|');
-      let g,measuredRows,summaryLabels,staticBands,baseTips,focusLayout;
-      if(!structureDirty&&measurementCache?.key===cacheKey){({g,measuredRows,summaryLabels,staticBands,baseTips,focusLayout}=measurementCache);}else{
+      raf=0;if(destroyed)return;syncOverlayTransform();
+      const state=controller.state,cacheKey=[viewport.clientWidth,viewport.clientHeight,state.view,state.rx,state.ry,state.expandedLayer,state.expansionDepth,selectedLayer,fitZoom].join('|');
+      let g,measuredRows,staticBands,baseTips,focusLayout;
+      if(!structureDirty&&measurementCache?.key===cacheKey){({g,measuredRows,staticBands,baseTips,focusLayout}=measurementCache);}else{
         g=geometry();if(!g)return;
-        measuredRows=operatorRows(g);summaryLabels=measureSummaryLabels(g);staticBands=measureStaticOperatorBands(g);baseTips=measureBaseAnnotationTips(g);focusLayout=measureFocus(g);
-        measurementCache={key:cacheKey,g,measuredRows,summaryLabels,staticBands,baseTips,focusLayout};structureDirty=false;
+        measuredRows=operatorRows(g);staticBands=measureStaticOperatorBands(g);baseTips=measureBaseAnnotationTips(g);focusLayout=measureFocus(g);
+        measurementCache={key:cacheKey,g,measuredRows,staticBands,baseTips,focusLayout};structureDirty=false;
       }
       root.style.setProperty('--pto-training-sidecar-scale',g.scale.toFixed(4));
-      svg.setAttribute('viewBox',`0 0 ${g.width} ${g.height}`);layerHits.setAttribute('viewBox',`0 0 ${g.width} ${g.height}`);svg.replaceChildren();labels.replaceChildren();layerHits.replaceChildren();
+      svg.removeAttribute('viewBox');layerHits.removeAttribute('viewBox');svg.replaceChildren();labels.replaceChildren();layerHits.replaceChildren();
       const first=g.points[0],last=g.points[g.points.length-1],x0=Math.min(g.input.x,first.x),x1=Math.max(g.output.x,last.x);
       const stageRanges=controller.config.stageRanges||[],lastLayer=controller.config.layerCount-1,lastState=controller.config.layerCount;
-      stageRanges.slice(1).forEach(([lo])=>{const before=g.points.find(point=>point.layer===lo-1),after=g.points.find(point=>point.layer===lo);if(!before||!after)return;const x=(before.x+after.x)/2,guide=path(`M${x.toFixed(1)} ${(g.stageY-18*g.scale).toFixed(1)}L${x.toFixed(1)} ${(g.optimizerY+10*g.scale).toFixed(1)}`,'pto-training-sidecar__stage-guide');tip(guide,`PP boundary · L${lo-1}/L${lo} · spans all training lanes`);svg.append(guide);});
-      g.points.forEach(point=>svg.append(path(`M${point.x.toFixed(1)} ${(g.axisY+5*g.scale).toFixed(1)}L${point.x.toFixed(1)} ${g.optimizerY.toFixed(1)}`,'pto-training-sidecar__layer-guide')));
-      label(labels,'pto-training-sidecar__value-label','MODEL DEPTH / TOPOLOGY',first.x-78*g.scale,g.axisY-5*g.scale,'Model depth / topology axis · layer order, not runtime time');
+      const lowerTrainingVisible=activeMetricViews.has('gradient')||activeMetricViews.has('training'),structureBottom=lowerTrainingVisible?g.optimizerY+10*g.scale:g.modelBottom+2*g.scale;
+      renderLayerBackgrounds(g);
+      stageRanges.slice(1).forEach(([lo])=>{const before=g.points.find(point=>point.layer===lo-1),after=g.points.find(point=>point.layer===lo);if(!before||!after)return;const x=(before.x+after.x)/2,guide=path(`M${x.toFixed(1)} ${(g.stageY-18*g.scale).toFixed(1)}L${x.toFixed(1)} ${structureBottom.toFixed(1)}`,'pto-training-sidecar__stage-guide');tip(guide,`PP boundary · L${lo-1}/L${lo} · spans visible training lanes`);svg.append(guide);});
+      g.points.forEach(point=>svg.append(path(`M${point.x.toFixed(1)} ${(g.axisY+5*g.scale).toFixed(1)}L${point.x.toFixed(1)} ${structureBottom.toFixed(1)}`,'pto-training-sidecar__layer-guide')));
+      renderOperatorSides(g);
+      label(labels,'pto-training-sidecar__value-label is-structure','MODEL DEPTH / TOPOLOGY',first.x-78*g.scale,g.axisY-5*g.scale,'Model depth / topology axis · layer order, not runtime time');
 
       const metricRows=[
         {key:'std',name:'Std σ',color:'var(--training-metric-std)',min:.82,max:1.08,unit:'',precision:3},
@@ -449,24 +612,32 @@
         const {key,name,color,min,max,unit,precision}=metric,chartHeight=18*g.scale,rowStep=24*g.scale,top=g.metricY+row*rowStep,span=max-min,domainMin=min-span*.18,domainMax=max+span*.18;
         const yFor=(value)=>top+chartHeight*(1-clamp((value-domainMin)/(domainMax-domainMin),0,1));
         const band=document.createElementNS(NS,'rect'),bandTop=yFor(max),bandBottom=yFor(min);
-        band.setAttribute('class','pto-training-sidecar__metric-band');band.setAttribute('x',first.x.toFixed(1));band.setAttribute('y',bandTop.toFixed(1));band.setAttribute('width',Math.max(1,last.x-first.x).toFixed(1));band.setAttribute('height',Math.max(1,bandBottom-bandTop).toFixed(1));band.style.setProperty('--metric-color',color);svg.appendChild(band);
-        const midline=path(`M${first.x.toFixed(1)} ${yFor((min+max)/2).toFixed(1)}L${last.x.toFixed(1)} ${yFor((min+max)/2).toFixed(1)}`,'pto-training-sidecar__metric-midline');midline.style.setProperty('--metric-color',color);svg.appendChild(midline);
+        band.setAttribute('class',`pto-training-sidecar__metric-band is-metric-${key}`);band.setAttribute('x',first.x.toFixed(1));band.setAttribute('y',bandTop.toFixed(1));band.setAttribute('width',Math.max(1,last.x-first.x).toFixed(1));band.setAttribute('height',Math.max(1,bandBottom-bandTop).toFixed(1));band.style.setProperty('--metric-color',color);svg.appendChild(band);
+        const midline=path(`M${first.x.toFixed(1)} ${yFor((min+max)/2).toFixed(1)}L${last.x.toFixed(1)} ${yFor((min+max)/2).toFixed(1)}`,`pto-training-sidecar__metric-midline is-metric-${key}`);midline.style.setProperty('--metric-color',color);svg.appendChild(midline);
         const series=g.points.map(point=>({point,value:Number(metricValue(snapshotFor(point.layer),key))}));
-        const line=path(series.map(({point,value},index)=>`${index?'L':'M'}${point.x.toFixed(1)} ${yFor(value).toFixed(1)}`).join(' '),'pto-training-sidecar__metric-line');line.style.setProperty('--metric-color',color);tip(line,`${name} · L0–L${lastLayer} trend`,{title:`${name} · Layer trend`,category:'Metric line',definition:metricDetail(key,name,(min+max)/2,min,max,0).definition,values:[['参考范围',`${min}–${max}${unit}`],['横轴',`Decoder Layer L0–L${lastLayer}`]],status:'info',statusLabel:'折线显示逐 Layer 趋势；淡色带为参考范围'});svg.appendChild(line);
-        series.forEach(({point,value})=>{const dot=circle(point.x,yFor(value),2.1*g.scale,'pto-training-sidecar__metric-point');dot.style.setProperty('--metric-color',color);tip(dot,`L${point.layer} · ${name} ${value.toFixed(precision)}${unit}`,metricDetail(key,name,value,min,max,point.layer));svg.appendChild(dot);});
-        label(labels,'pto-training-sidecar__metric-label',`${name} · ${min}–${max}${unit}`,x0-20*g.scale,top+chartHeight/2,`${name} line chart · reference ${min}–${max}${unit}`,{title:name,category:'Metric line',definition:metricDetail(key,name,(min+max)/2,min,max,0).definition,values:[['参考范围',`${min}–${max}${unit}`],['横轴',`L0–L${lastLayer}`]],status:'info',statusLabel:'点击折线节点查看对应 Layer 数值'});
+        const line=path(series.map(({point,value},index)=>`${index?'L':'M'}${point.x.toFixed(1)} ${yFor(value).toFixed(1)}`).join(' '),`pto-training-sidecar__metric-line is-metric-${key}`);line.style.setProperty('--metric-color',color);tip(line,`${name} · L0–L${lastLayer} trend`,{title:`${name} · Layer trend`,category:'Metric line',definition:metricDetail(key,name,(min+max)/2,min,max,0).definition,values:[['参考范围',`${min}–${max}${unit}`],['横轴',`Decoder Layer L0–L${lastLayer}`]],status:'info',statusLabel:'折线显示逐 Layer 趋势；淡色带为参考范围'});svg.appendChild(line);
+        series.forEach(({point,value})=>{const dot=circle(point.x,yFor(value),2.1*g.scale,`pto-training-sidecar__metric-point is-metric-${key}`);dot.style.setProperty('--metric-color',color);tip(dot,`L${point.layer} · ${name} ${value.toFixed(precision)}${unit}`,metricDetail(key,name,value,min,max,point.layer));svg.appendChild(dot);});
+        label(labels,`pto-training-sidecar__metric-label is-metric-${key}`,`${name} · ${min}–${max}${unit}`,x0-20*g.scale,top+chartHeight/2,`${name} line chart · reference ${min}–${max}${unit}`,{title:name,category:'Metric line',definition:metricDetail(key,name,(min+max)/2,min,max,0).definition,values:[['参考范围',`${min}–${max}${unit}`],['横轴',`L0–L${lastLayer}`]],status:'info',statusLabel:'点击折线节点查看对应 Layer 数值'});
       });
 
-      renderOperatorBands(g,measuredRows,summaryLabels);
+      renderOperatorBands(g,measuredRows);
       renderStaticOperatorBands(g,staticBands);
       renderBaseAnnotationTips(g,baseTips);
 
-      const hiddenPoints=[{x:g.input.x},...g.points,{x:g.output.x}].sort((a,b)=>a.x-b.x);
       const layerAnchors=g.points.map(point=>point.x);
-      svg.append(flowTexture(hiddenPoints[0].x,hiddenPoints[hiddenPoints.length-1].x,g.hiddenY,'forward',g.scale,layerAnchors));
-      const hiddenPath=path(`M${hiddenPoints[0].x.toFixed(1)} ${g.hiddenY.toFixed(1)}L${hiddenPoints[hiddenPoints.length-1].x.toFixed(1)} ${g.hiddenY.toFixed(1)}`,'pto-training-sidecar__hidden');tip(hiddenPath,`Forward mHC state · H₀ ×4 → H${lastState} ×4`,{title:'Forward mHC state',category:'Tensor flow',definition:'Layer 之间向前传递的是四路 mHC state；只有跨 PP Stage 边界时才发生 activation Send/Recv。',values:[['路径',`H₀ ×4 → H₁ ×4 → … → H${lastState} ×4`],['上下文',`step ${context.step} · MB ${context.microbatch}/${context.microbatchCount}`]],status:'info',statusLabel:'数据依赖：非运行时间轴'});svg.append(hiddenPath);
-      g.points.forEach(point=>{const snapshot=snapshotFor(point.layer),hidden=snapshot.tensors.hidden,dot=circle(point.x,g.hiddenY,1.75,'pto-training-sidecar__hidden-dot'),status=hidden.amax>9.7?'abnormal':hidden.amax>9.35?'warning':'normal';tip(dot,`L${point.layer} · mHC state ×4 · σ ${hidden.std.toFixed(3)} · amax ${hidden.amax.toFixed(2)}`,{key:`hidden-state-L${point.layer}`,title:`mHC state · L${point.layer}`,category:'Tensor',definition:'该点表示对应 Decoder Layer 输出的四路 mHC state；跨 PP Stage 边界时通过 activation Send/Recv 传输。',values:[['Streams',controller.config.mhcStreams??4],['Mean',hidden.mean.toFixed(4)],['Std σ',hidden.std.toFixed(3)],['Amax',hidden.amax.toFixed(2)],['L2 proxy',hidden.norm.toFixed(1)]],status,statusLabel:status==='abnormal'?'异常：Amax 超出参考范围':status==='warning'?'关注：Amax 接近参考边界':'正常：mHC-state 统计位于参考范围',context:executionContext(snapshot,`L${point.layer} · ${snapshot.tensorName}`)});svg.append(dot);});
-      label(labels,'pto-training-sidecar__value-label is-forward',`mHC state · H₀ ×4 → Hₗ ×4 → H${lastState} ×4`,x0+112*g.scale,g.hiddenY-5*g.scale,'Forward four-stream mHC-state flow');
+      const forwardY=g.residualRails.length?g.residualRails.reduce((sum,rail)=>sum+rail.y,0)/g.residualRails.length:g.hiddenY;
+      const forwardDetail={title:'Forward mHC state',category:'Tensor flow',definition:'四条 residual rails 本身就是 Layer 间的 forward mHC state，不再另画一条重复的单路 forward lane。',values:[['路径',`H₀ ×4 → H₁ ×4 → … → H${lastState} ×4`],['上下文',`step ${context.step} · MB ${context.microbatch}/${context.microbatchCount}`]],status:'info',statusLabel:'数据依赖：非运行时间轴'};
+      g.residualRails.forEach(rail=>{
+        const hit=path(`M${rail.x0.toFixed(1)} ${rail.y.toFixed(1)}L${rail.x1.toFixed(1)} ${rail.y.toFixed(1)}`,'pto-training-sidecar__residual-flow-hit');tip(hit,`Forward mHC state · rail ${rail.rail+1}/4`,forwardDetail);svg.append(hit);
+      });
+      if(g.residualRails.length)for(let index=0;index<layerAnchors.length-1;index+=1){
+        const x=(layerAnchors[index]+layerAnchors[index+1])/2,halfWidth=Math.min(4*g.scale,(layerAnchors[index+1]-layerAnchors[index])*.26),halfHeight=5*g.scale;
+        svg.append(path(`M${(x-halfWidth).toFixed(1)} ${(forwardY-halfHeight).toFixed(1)}L${(x+halfWidth).toFixed(1)} ${forwardY.toFixed(1)}L${(x-halfWidth).toFixed(1)} ${(forwardY+halfHeight).toFixed(1)}`,'pto-training-sidecar__residual-flow-arrow'));
+      }
+      if(g.residualRails.length)g.points.forEach(point=>{
+        const snapshot=snapshotFor(point.layer),hidden=snapshot.tensors.hidden,status=hidden.amax>9.7?'abnormal':hidden.amax>9.35?'warning':'normal',hit=circle(point.x,forwardY,5*g.scale,'pto-training-sidecar__residual-flow-hit-dot');
+        tip(hit,`L${point.layer} · mHC state ×4 · σ ${hidden.std.toFixed(3)} · amax ${hidden.amax.toFixed(2)}`,{key:`hidden-state-L${point.layer}`,title:`mHC state · L${point.layer}`,category:'Tensor',definition:'该命中点覆盖当前 Layer 的四条 residual rails；它们共同表示对应 Decoder Layer 输出的四路 mHC state。',values:[['Streams',controller.config.mhcStreams??4],['Mean',hidden.mean.toFixed(4)],['Std σ',hidden.std.toFixed(3)],['Amax',hidden.amax.toFixed(2)],['L2 proxy',hidden.norm.toFixed(1)]],status,statusLabel:status==='abnormal'?'异常：Amax 超出参考范围':status==='warning'?'关注：Amax 接近参考边界':'正常：mHC-state 统计位于参考范围',context:executionContext(snapshot,`L${point.layer} · ${snapshot.tensorName}`)});svg.append(hit);
+      });
 
       svg.append(flowTexture(x0,x1,g.backwardY,'backward',g.scale,layerAnchors));
       const backwardPath=path(`M${x1.toFixed(1)} ${g.backwardY.toFixed(1)}L${x0.toFixed(1)} ${g.backwardY.toFixed(1)}`,'pto-training-sidecar__backward');tip(backwardPath,'Backward activation gradient · ∂L/∂Hₗ ×4',{title:'Activation gradient',category:'Tensor flow',definition:'跨 Layer 向后传递的是四路 mHC state 的激活梯度 ∂L/∂H，而不是参数梯度 ∂L/∂W。',values:[['方向',`L${lastLayer} → L0`],['符号','∂L/∂Hₗ ×4']],status:'info',statusLabel:'反向数据依赖'});svg.append(backwardPath);
@@ -480,50 +651,54 @@
       label(labels,'pto-training-sidecar__value-label is-backward','activation gradient ∂L/∂Hₗ ×4',x1-138*g.scale,g.backwardY-5*g.scale,'Backward activation gradient · not a parameter gradient');
 
       const optimizer=optimizerFlow(),parameter=snapshotFor(0).parameter,optimizerPath=path(`M${x0.toFixed(1)} ${g.optimizerY.toFixed(1)}L${x1.toFixed(1)} ${g.optimizerY.toFixed(1)}`,'pto-training-sidecar__optimizer');tip(optimizerPath,'Optimizer step · step-accumulated and synchronized parameter gradients',{title:'Optimizer step',category:'Parameter update',definition:'完成 microbatch 梯度累积与 DP Gradient Sync 后，执行 unscale / overflow check / clip 和 Optimizer；distributed optimizer 配置可继续执行 Param All-Gather。',values:[['Accumulation',`${context.microbatchCount}/${context.microbatchCount}`],['DP Gradient Sync',optimizer.method],['Param All-Gather',optimizer.allGather==null?'from training job config':optimizer.allGather?'yes':'not required by this path'],['Optimizer step',parameter.optimizerStep],['Weight version before',parameter.weightVersionBefore],['Weight version after',parameter.weightVersionAfter]],status:'normal',statusLabel:'正常：step 已具备更新条件',context:`optimizer_step ${parameter.optimizerStep}`});svg.append(optimizerPath);
-      label(labels,'pto-training-sidecar__value-label',optimizer.label,(x0+x1)/2,g.optimizerY-5*g.scale,'One logical optimizer step after accumulation and configured DP Gradient Sync');
+      label(labels,'pto-training-sidecar__value-label is-optimizer',optimizer.label,(x0+x1)/2,g.optimizerY-5*g.scale,'One logical optimizer step after accumulation and configured DP Gradient Sync');
 
-      stageRanges.slice(1).forEach(([lo])=>{const before=g.points.find(point=>point.layer===lo-1),after=g.points.find(point=>point.layer===lo);if(!before||!after)return;const x=(before.x+after.x)/2,forwardText=`PP boundary L${lo-1}/L${lo} · Send/Recv forward mHC state H ×4`,backwardText=`PP boundary L${lo-1}/L${lo} · Send/Recv backward activation gradient ∂L/∂H ×4`,forwardLine=path(`M${x.toFixed(1)} ${(g.hiddenY-7*g.scale).toFixed(1)}L${x.toFixed(1)} ${(g.hiddenY+7*g.scale).toFixed(1)}`,'pto-training-sidecar__communication is-forward'),backwardLine=path(`M${x.toFixed(1)} ${(g.backwardY-7*g.scale).toFixed(1)}L${x.toFixed(1)} ${(g.backwardY+7*g.scale).toFixed(1)}`,'pto-training-sidecar__communication is-backward');tip(forwardLine,forwardText,communicationDetail(lo,'forward',`pp-forward-boundary-${lo}-line`));tip(backwardLine,backwardText,communicationDetail(lo,'backward',`pp-backward-boundary-${lo}-line`));svg.append(forwardLine,backwardLine);label(labels,'pto-training-sidecar__comm-label is-forward','H×4 S/R',x,g.hiddenY-14*g.scale,forwardText,communicationDetail(lo,'forward',`pp-forward-boundary-${lo}-label`));label(labels,'pto-training-sidecar__comm-label is-backward','∂H×4 S/R',x,g.backwardY+15*g.scale,backwardText,communicationDetail(lo,'backward',`pp-backward-boundary-${lo}-label`));});
+      stageRanges.slice(1).forEach(([lo])=>{const before=g.points.find(point=>point.layer===lo-1),after=g.points.find(point=>point.layer===lo);if(!before||!after)return;const x=(before.x+after.x)/2,forwardText=`PP boundary L${lo-1}/L${lo} · Send/Recv forward mHC state H ×4`,backwardText=`PP boundary L${lo-1}/L${lo} · Send/Recv backward activation gradient ∂L/∂H ×4`,forwardLine=path(`M${x.toFixed(1)} ${(forwardY-7*g.scale).toFixed(1)}L${x.toFixed(1)} ${(forwardY+7*g.scale).toFixed(1)}`,'pto-training-sidecar__communication is-forward'),backwardLine=path(`M${x.toFixed(1)} ${(g.backwardY-7*g.scale).toFixed(1)}L${x.toFixed(1)} ${(g.backwardY+7*g.scale).toFixed(1)}`,'pto-training-sidecar__communication is-backward');tip(forwardLine,forwardText,communicationDetail(lo,'forward',`pp-forward-boundary-${lo}-line`));tip(backwardLine,backwardText,communicationDetail(lo,'backward',`pp-backward-boundary-${lo}-line`));svg.append(forwardLine,backwardLine);label(labels,'pto-training-sidecar__comm-label is-forward','H×4 S/R',x,forwardY-14*g.scale,forwardText,communicationDetail(lo,'forward',`pp-forward-boundary-${lo}-label`));label(labels,'pto-training-sidecar__comm-label is-backward','∂H×4 S/R',x,g.backwardY+15*g.scale,backwardText,communicationDetail(lo,'backward',`pp-backward-boundary-${lo}-label`));});
 
-      stageRanges.forEach(([lo,hi],stage)=>{const a=g.points.find(point=>point.layer===lo),b=g.points.find(point=>point.layer===hi);if(!a||!b)return;const ranks=rankGroupForStage(stage),parallel=parallelSummary(),deployment=ranks?`ranks ${ranks}`:parallel||'';label(labels,'pto-training-sidecar__stage-label',`PP Stage ${stage} · L${lo}–L${hi}${deployment?` · ${deployment}`:''}`,(a.x+b.x)/2,g.stageY,`Pipeline stage ${stage} · decoder layers ${lo}–${hi}${deployment?` · ${deployment}`:''}`);});
+      if(state.parallelMode!=='none')stageRanges.forEach(([lo,hi],stage)=>{
+        const a=g.points.find(point=>point.layer===lo),b=g.points.find(point=>point.layer===hi);if(!a||!b)return;
+        const ranks=rankGroupForStage(stage),parallel=parallelSummary(),deployment=ranks?`ranks ${ranks}`:parallel||'';
+        const node=label(labels,'pto-training-sidecar__stage-label','',(a.x+b.x)/2,g.stageY,`Pipeline stage ${stage} · decoder layers ${lo}–${hi}${deployment?` · ${deployment}`:''}`);
+        node.innerHTML=`<b>PP Stage ${stage} · L${lo}–L${hi}</b>${deployment?`<span>${esc(deployment)}</span>`:''}`;
+      });
 
       const samples=new Set([0,...stageRanges.map(([,hi])=>hi)].filter(layer=>layer>=0&&layer<=lastLayer));
       g.points.forEach(point=>{
         label(labels,'pto-training-sidecar__layer-number',`L${point.layer}`,point.x,g.axisY-7*g.scale,`Decoder Layer ${point.layer}`);
-        const hitWidth=Math.max(7*g.scale,Math.min(12*g.scale,g.gap*.46)),hit=document.createElementNS(NS,'rect');hit.setAttribute('class','pto-training-sidecar__layer-hit');hit.setAttribute('data-deck-no-drag','true');hit.dataset.layer=String(point.layer);hit.dataset.tip=`Layer L${point.layer} · 点击展开内部算子与指标`;hit.setAttribute('tabindex','0');hit.setAttribute('role','button');hit.setAttribute('aria-label',`展开 Layer ${point.layer}`);hit.setAttribute('x',(point.x-hitWidth/2).toFixed(1));hit.setAttribute('y',(g.modelTop-4*g.scale).toFixed(1));hit.setAttribute('width',hitWidth.toFixed(1));hit.setAttribute('height',Math.max(12,g.modelBottom-g.modelTop+8*g.scale).toFixed(1));hit.setAttribute('rx',(2*g.scale).toFixed(1));layerHits.appendChild(hit);
-        if(samples.has(point.layer)){const snapshot=snapshotFor(point.layer),std=Number(metricValue(snapshot,'std')),status=snapshot.metric.amax>9.35||snapshot.metric.latency>2.35?'warning':'normal';label(labels,'pto-training-sidecar__sample-label',`L${point.layer} · σ${std.toFixed(2)} · ${snapshot.metric.latency.toFixed(2)}ms`,point.x,g.metricY+76*g.scale,`L${point.layer} sample · Std σ ${std.toFixed(3)} · Amax ${snapshot.metric.amax.toFixed(2)} · Latency ${snapshot.metric.latency.toFixed(2)} ms`,{title:`Layer metric summary · L${point.layer}`,category:'Metric',definition:'选定 Layer 的 hidden-state 标准差、绝对最大值与执行耗时摘要。点击折线节点可查看各指标定义及独立阈值判断。',values:[['Std σ',std.toFixed(3)],['Amax',snapshot.metric.amax.toFixed(2)],['Latency',`${snapshot.metric.latency.toFixed(2)} ms`]],status,statusLabel:status==='warning'?'关注：至少一项接近参考边界':'正常：摘要指标均位于参考范围',context:executionContext(snapshot)});}
+        const hitWidth=layerColumnWidth(g),padding=2*g.scale,hit=document.createElementNS(NS,'rect');hit.setAttribute('class','pto-training-sidecar__layer-hit');hit.setAttribute('data-deck-no-drag','true');hit.dataset.layer=String(point.layer);hit.dataset.tip=`Layer L${point.layer} · 点击展开内部算子与指标`;hit.setAttribute('tabindex','0');hit.setAttribute('role','button');hit.setAttribute('aria-label',`展开 Layer ${point.layer}`);hit.setAttribute('x',(point.x-hitWidth/2).toFixed(1));hit.setAttribute('y',(point.operatorTop-padding).toFixed(1));hit.setAttribute('width',hitWidth.toFixed(1));hit.setAttribute('height',Math.max(4*g.scale,point.operatorBottom-point.operatorTop+padding*2).toFixed(1));hit.setAttribute('rx',(2*g.scale).toFixed(1));layerHits.appendChild(hit);
+        if(samples.has(point.layer)&&(activeMetricViews.has('numerics')||activeMetricViews.has('performance'))){
+          const snapshot=snapshotFor(point.layer),std=Number(metricValue(snapshot,'std')),status=snapshot.metric.amax>9.35||snapshot.metric.latency>2.35?'warning':'normal',sampleValues=[];
+          if(activeMetricViews.has('numerics'))sampleValues.push(`σ${std.toFixed(2)}`,`Amax ${snapshot.metric.amax.toFixed(1)}`);
+          if(activeMetricViews.has('performance'))sampleValues.push(`${snapshot.metric.latency.toFixed(2)}ms`);
+          const sampleText=`L${point.layer} · ${sampleValues.join(' · ')}`;
+          label(labels,'pto-training-sidecar__sample-label',sampleText,point.x,g.metricY+76*g.scale,`L${point.layer} sample · Std σ ${std.toFixed(3)} · Amax ${snapshot.metric.amax.toFixed(2)} · Latency ${snapshot.metric.latency.toFixed(2)} ms`,{title:`Layer metric summary · L${point.layer}`,category:'Metric',definition:'选定 Layer 的 hidden-state 标准差、绝对最大值与执行耗时摘要。点击折线节点可查看各指标定义及独立阈值判断。',values:[['Std σ',std.toFixed(3)],['Amax',snapshot.metric.amax.toFixed(2)],['Latency',`${snapshot.metric.latency.toFixed(2)} ms`]],status,statusLabel:status==='warning'?'关注：至少一项接近参考边界':'正常：摘要指标均位于参考范围',context:executionContext(snapshot)});
+        }
       });
 
       if(Number.isFinite(selectedLayer)){
-        const point=g.points.find(item=>item.layer===selectedLayer);if(point){const width=Math.max(18*g.scale,g.gap*1.8),selection=document.createElementNS(NS,'rect');selection.setAttribute('class','pto-training-sidecar__selection');selection.setAttribute('x',(point.x-width/2).toFixed(1));selection.setAttribute('y',(g.axisY-17*g.scale).toFixed(1));selection.setAttribute('width',width.toFixed(1));selection.setAttribute('height',Math.max(40*g.scale,g.optimizerY-g.axisY+25*g.scale).toFixed(1));selection.setAttribute('rx',(7*g.scale).toFixed(1));svg.insertBefore(selection,svg.children[1]||null);}
+        const point=g.points.find(item=>item.layer===selectedLayer);if(point){const width=Math.max(18*g.scale,g.gap*1.8),selection=document.createElementNS(NS,'rect');selection.setAttribute('class','pto-training-sidecar__selection');selection.setAttribute('x',(point.x-width/2).toFixed(1));selection.setAttribute('y',(g.axisY-17*g.scale).toFixed(1));selection.setAttribute('width',width.toFixed(1));selection.setAttribute('height',Math.max(40*g.scale,structureBottom-g.axisY+18*g.scale).toFixed(1));selection.setAttribute('rx',(7*g.scale).toFixed(1));svg.insertBefore(selection,svg.children[1]||null);}
       }
 
-      const semantic=[['指标层','Std σ / Amax / Latency',g.metricY+28*g.scale],['张量层 · 正向','Input / Hidden / Activation / Residual',g.hiddenY],['模块层','Embedding / Attention / MoE / Head',(g.modelTop+g.modelBottom)/2],['张量层 · 反向','Activation Gradient',g.backwardY],['参数层','Weight / Parameter Gradient / Optimizer State',(g.parameterY+g.optimizerY)/2]];
-      semantic.forEach(([title,sub,y])=>{const node=label(labels,'pto-training-sidecar__semantic-label','',14,y,`${title} · ${sub}`);node.innerHTML=`${esc(title)}<span>${esc(sub)}</span>`;});
+      const activeLabels=metricViewOptions.filter(([value])=>activeMetricViews.has(value)).map(([,labelText])=>labelText);
+      if(activeLabels.length){
+        const node=label(labels,'pto-training-sidecar__semantic-label','',g.worldX(14),g.metricY+28*g.scale,`数据标注 · ${activeLabels.join(' / ')}`);
+        node.innerHTML=`数据标注<span>${esc(activeLabels.join(' / '))}</span>`;
+      }
       renderLossComposition(g);
-      label(labels,'pto-training-sidecar__value-label','Checkpoint · every 1000 steps',g.output.x,g.optimizerY+25*g.scale,'Checkpoint save cadence · independent of optimizer-step cadence');
+      label(labels,'pto-training-sidecar__value-label is-checkpoint','Checkpoint · every 1000 steps',g.output.x,g.optimizerY+25*g.scale,'Checkpoint save cadence · independent of optimizer-step cadence');
       renderFocus(g,focusLayout);
+      applyMetricVisibility();
+      syncHoveredLayer();
       positionDetailPanel();
     }
 
     function schedule(structural=true){if(structural)structureDirty=true;if(!raf)raf=requestAnimationFrame(render);}
-    function clearDragPreview(){
-      if(dragPreviewRaf){cancelAnimationFrame(dragPreviewRaf);dragPreviewRaf=0;}
-      [svg,labels,layerHits,focus,detailPanel].forEach(node=>{node.style.transform='';});
-      labels.style.removeProperty('--pto-sidecar-drag-inverse-x');labels.style.removeProperty('--pto-sidecar-drag-inverse-y');root.classList.remove('is-sidecar-dragging');
-    }
-    function applyDragPreview(){
-      dragPreviewRaf=0;if(!dragging||!dragOrigin||destroyed)return;
-      const dx=controller.state.panX-dragOrigin.panX,dy=controller.state.panY-dragOrigin.panY,transform=`translate3d(${dx}px, ${dy}px, 0)`;
-      svg.style.transform=transform;labels.style.transform=transform;layerHits.style.transform=transform;focus.style.transform=transform;if(selectedDetail)detailPanel.style.transform=transform;
-      labels.style.setProperty('--pto-sidecar-drag-inverse-x',`${-dx}px`);labels.style.setProperty('--pto-sidecar-drag-inverse-y',`${-dy}px`);
-    }
-    function queueDragPreview(){if(!dragPreviewRaf)dragPreviewRaf=requestAnimationFrame(applyDragPreview);}
     function fitSidecar(){
       if(!controller||!viewport)return api;
       if(controller.state.view!=='right'){controller.fit();schedule();return api;}
       const width=Math.max(1,viewport.clientWidth),height=Math.max(1,viewport.clientHeight);
       const topReserve=Number(options.topLaneReserve)||260,bottomReserve=Number(options.bottomLaneReserve)||130;
-      const usableHeight=Math.max(420,height-topReserve-bottomReserve),zoom=clamp(Math.min(width/3000,usableHeight/1900),.12,.86);
+      const usableHeight=Math.max(420,height-topReserve-bottomReserve),zoom=clamp(Math.min(width/2100,usableHeight/1900),.12,.86);
       fitZoom=zoom;controller.setPose({zoom,panY:(topReserve-bottomReserve)/2});schedule();return api;
     }
     function queueSidecarFit(){requestAnimationFrame(fitSidecar);}
@@ -534,8 +709,24 @@
       if(selectedDetail)openDetail(null);schedule();options.onLayerSelect?.(selectedLayer===null?null:{layer:selectedLayer,snapshot:snapshotFor(selectedLayer)},api);return api;
     }
     function setLayerSnapshot(layer,data){const key=Number(layer);if(Number.isFinite(key)){if(data)snapshots.set(key,data);else snapshots.delete(key);schedule(false);}return api;}
+    function setMetricViews(values){
+      const next=new Set((Array.isArray(values)?values:[]).filter(value=>metricViewValues.has(value)));
+      const unchanged=next.size===activeMetricViews.size&&[...next].every(value=>activeMetricViews.has(value));if(unchanged)return api;
+      activeMetricViews=next;syncMetricViews();schedule(false);
+      const legacyValue=activeMetricViews.size===0?'structure':activeMetricViews.size===1?[...activeMetricViews][0]:'mixed';
+      options.onMetricViewsChange?.([...activeMetricViews],api);options.onMetricViewChange?.(legacyValue,api);return api;
+    }
+    function setMetricView(value){return setMetricViews(value==='structure'?[]:[value]);}
+    function toggleMetricView(value){if(!metricViewValues.has(value))return api;const next=new Set(activeMetricViews);if(next.has(value))next.delete(value);else next.add(value);return setMetricViews([...next]);}
     function eventLayer(event){const target=event.target.closest?.('.pto-training-sidecar__layer-hit');return target?Number(target.dataset.layer):null;}
     function click(event){const layer=eventLayer(event);if(layer!==null&&Number.isFinite(layer))selectLayer(layer===selectedLayer?null:layer);}
+    function layerHoverIn(event){const layer=eventLayer(event);if(layer!==null&&Number.isFinite(layer))setHoveredLayer(layer);}
+    function layerHoverOut(event){
+      const from=eventLayer(event),to=event.relatedTarget?.closest?.('.pto-training-sidecar__layer-hit'),toLayer=to?Number(to.dataset.layer):null;
+      if(from!==null&&from===toLayer)return;setHoveredLayer(toLayer);
+    }
+    function layerFocusIn(event){const layer=eventLayer(event);if(layer!==null&&Number.isFinite(layer))setHoveredLayer(layer);}
+    function layerFocusOut(event){const target=event.relatedTarget?.closest?.('.pto-training-sidecar__layer-hit');setHoveredLayer(target?Number(target.dataset.layer):null);}
     function detailClick(event){const target=event.target.closest?.('[data-detail]');if(!target||target.closest('.pto-training-sidecar__inspector')||target.classList.contains('pto-training-sidecar__layer-hit'))return;try{openDetail(JSON.parse(target.dataset.detail),target);}catch(error){openDetail({title:'Annotation',category:'Detail',definition:target.dataset.tip||'Sidecar annotation',status:'info',statusLabel:'语义说明'},target);}}
     function protectDetailPointer(event){if(event.target.closest?.('[data-detail],.pto-training-sidecar__inspector'))event.stopPropagation();}
     function keydown(event){
@@ -545,22 +736,32 @@
       if(event.key==='Escape'&&selectedLayer!==null){event.preventDefault();selectLayer(null);return;}
       if((event.key==='ArrowLeft'||event.key==='ArrowRight')&&selectedLayer!==null){event.preventDefault();selectLayer(selectedLayer+(event.key==='ArrowLeft'?-1:1));}
     }
-    function interaction(){if(lossExpanded)lossExpanded=false;schedule();}
+    function interaction(){syncOverlayTransform();}
     function tooltipTarget(event){return event.target.closest?.('[data-tip]');}
     function showTooltip(event){const target=tooltipTarget(event);if(!target)return;tooltip.textContent=target.dataset.tip;tooltip.classList.add('is-visible');moveTooltip(event);}
     function moveTooltip(event){if(!tooltip.classList.contains('is-visible'))return;const rect=viewport.getBoundingClientRect(),x=clamp(event.clientX-rect.left+12,8,rect.width-tooltip.offsetWidth-8),y=clamp(event.clientY-rect.top+12,8,rect.height-tooltip.offsetHeight-8);tooltip.style.left=`${x}px`;tooltip.style.top=`${y}px`;}
     function hideTooltip(event){if(event.relatedTarget?.closest?.('[data-tip]'))return;tooltip.classList.remove('is-visible');}
-    function pointerDown(event){if(event.button!==0||event.target.closest('[data-stage-ui],button,.pto-training-sidecar__layer-hit'))return;dragging=true;dragOrigin={panX:controller.state.panX,panY:controller.state.panY};root.classList.add('is-sidecar-dragging');tooltip.classList.remove('is-visible');}
-    function pointerMove(event){if(dragging)queueDragPreview();else moveTooltip(event);}
-    function pointerUp(){if(!dragging)return;dragging=false;dragOrigin=null;schedule();}
-    layerHits.addEventListener('click',click);layerHits.addEventListener('keydown',keydown);viewport.addEventListener('click',detailClick);viewport.addEventListener('pointerover',showTooltip);viewport.addEventListener('pointerdown',protectDetailPointer,true);viewport.addEventListener('pointerdown',pointerDown);viewport.addEventListener('pointermove',pointerMove);viewport.addEventListener('pointerup',pointerUp);viewport.addEventListener('pointercancel',pointerUp);viewport.addEventListener('pointerout',hideTooltip);viewport.addEventListener('wheel',interaction,{passive:true});
+    function pointerDown(event){if(event.button!==0||event.target.closest('[data-stage-ui],button,.pto-training-sidecar__layer-hit'))return;dragging=true;root.classList.add('is-sidecar-dragging');tooltip.classList.remove('is-visible');}
+    function pointerMove(event){if(dragging)syncOverlayTransform();else moveTooltip(event);}
+    function pointerUp(){if(!dragging)return;dragging=false;root.classList.remove('is-sidecar-dragging');syncOverlayTransform();}
+    function closeDataMenu(){dataControl.classList.remove('is-open');dataControl.querySelector('[data-metric-menu-toggle]')?.setAttribute('aria-expanded','false');}
+    function dataControlClick(event){
+      const toggle=event.target.closest('[data-metric-menu-toggle]'),action=event.target.closest('[data-metric-action]'),option=event.target.closest('[data-metric-view]');
+      if(toggle){const open=!dataControl.classList.contains('is-open');dataControl.classList.toggle('is-open',open);toggle.setAttribute('aria-expanded',String(open));return;}
+      if(action){setMetricViews(action.dataset.metricAction==='all'?metricViewOptions.map(([value])=>value):[]);return;}
+      if(option)toggleMetricView(option.dataset.metricView);
+    }
+    function dataOutsidePointer(event){if(!dataControl.contains(event.target))closeDataMenu();}
+    function dataMenuKeydown(event){if(event.key==='Escape'&&dataControl.classList.contains('is-open')){event.preventDefault();closeDataMenu();dataControl.querySelector('[data-metric-menu-toggle]')?.focus();}}
+    layerHits.addEventListener('click',click);layerHits.addEventListener('keydown',keydown);layerHits.addEventListener('pointerover',layerHoverIn);layerHits.addEventListener('pointerout',layerHoverOut);layerHits.addEventListener('focusin',layerFocusIn);layerHits.addEventListener('focusout',layerFocusOut);viewport.addEventListener('click',detailClick);viewport.addEventListener('pointerover',showTooltip);viewport.addEventListener('pointerdown',protectDetailPointer,true);viewport.addEventListener('pointerdown',pointerDown);viewport.addEventListener('pointermove',pointerMove);viewport.addEventListener('pointerup',pointerUp);viewport.addEventListener('pointercancel',pointerUp);viewport.addEventListener('pointerout',hideTooltip);viewport.addEventListener('wheel',interaction,{passive:true});
+    dataControl.addEventListener('click',dataControlClick);dataControl.addEventListener('keydown',dataMenuKeydown);document.addEventListener('pointerdown',dataOutsidePointer);syncMetricViews();syncOverlayTransform();
     const observer=global.ResizeObserver?new ResizeObserver(()=>{fitSidecar();schedule();}):null;observer?.observe(viewport);
     const fitButton=root.querySelector('[data-deck-fit]'),fitClick=()=>queueSidecarFit();fitButton?.addEventListener('click',fitClick);
     const baseDestroy=controller.destroy.bind(controller);
     const api={
-      root,base:controller,get selectedLayer(){return selectedLayer;},get selectedDetail(){return selectedDetail;},selectLayer,collapseLayer(){return selectLayer(null);},openDetail,closeDetail(){return openDetail(null);},setLayerSnapshot,
-      setView(view){controller.setView(view);queueSidecarFit();return api;},setParallelMode(mode){controller.setParallelMode(mode);schedule();return api;},setTheme(theme){controller.setTheme(theme);schedule();return api;},setZoom(value){controller.setZoom(value);schedule();return api;},setPose(pose){controller.setPose(pose);schedule();return api;},setFrontLayer(layer){controller.setFrontLayer(layer);schedule();return api;},selectNode(nodeId,layer){return controller.selectNode(nodeId,layer);},fit(){return fitSidecar();},refresh(){controller.refresh();schedule();return api;},
-      destroy(){destroyed=true;cancelAnimationFrame(raf);cancelAnimationFrame(dragPreviewRaf);observer?.disconnect();fitButton?.removeEventListener('click',fitClick);layerHits.removeEventListener('click',click);layerHits.removeEventListener('keydown',keydown);viewport.removeEventListener('click',detailClick);viewport.removeEventListener('pointerover',showTooltip);viewport.removeEventListener('pointerdown',protectDetailPointer,true);viewport.removeEventListener('pointerdown',pointerDown);viewport.removeEventListener('pointermove',pointerMove);viewport.removeEventListener('pointerup',pointerUp);viewport.removeEventListener('pointercancel',pointerUp);viewport.removeEventListener('pointerout',hideTooltip);viewport.removeEventListener('wheel',interaction);baseDestroy();}
+      root,base:controller,get selectedLayer(){return selectedLayer;},get selectedDetail(){return selectedDetail;},get metricView(){return activeMetricViews.size===0?'structure':activeMetricViews.size===1?[...activeMetricViews][0]:'mixed';},get metricViews(){return [...activeMetricViews];},selectLayer,collapseLayer(){return selectLayer(null);},openDetail,closeDetail(){return openDetail(null);},setLayerSnapshot,setMetricView,setMetricViews,toggleMetricView,
+      setView(view){controller.setView(view);queueSidecarFit();return api;},setParallelMode(mode){controller.setParallelMode(mode);schedule();return api;},setTheme(theme){controller.setTheme(theme);schedule();return api;},setZoom(value){controller.setZoom(value);syncOverlayTransform();return api;},setPose(pose){controller.setPose(pose);syncOverlayTransform();return api;},setFrontLayer(layer){controller.setFrontLayer(layer);schedule();return api;},selectNode(nodeId,layer){return controller.selectNode(nodeId,layer);},fit(){return fitSidecar();},refresh(){controller.refresh();schedule();return api;},
+      destroy(){destroyed=true;cancelAnimationFrame(raf);observer?.disconnect();fitButton?.removeEventListener('click',fitClick);dataControl.removeEventListener('click',dataControlClick);dataControl.removeEventListener('keydown',dataMenuKeydown);document.removeEventListener('pointerdown',dataOutsidePointer);layerHits.removeEventListener('click',click);layerHits.removeEventListener('keydown',keydown);layerHits.removeEventListener('pointerover',layerHoverIn);layerHits.removeEventListener('pointerout',layerHoverOut);layerHits.removeEventListener('focusin',layerFocusIn);layerHits.removeEventListener('focusout',layerFocusOut);viewport.removeEventListener('click',detailClick);viewport.removeEventListener('pointerover',showTooltip);viewport.removeEventListener('pointerdown',protectDetailPointer,true);viewport.removeEventListener('pointerdown',pointerDown);viewport.removeEventListener('pointermove',pointerMove);viewport.removeEventListener('pointerup',pointerUp);viewport.removeEventListener('pointercancel',pointerUp);viewport.removeEventListener('pointerout',hideTooltip);viewport.removeEventListener('wheel',interaction);baseDestroy();}
     };
     requestAnimationFrame(()=>{fitSidecar();if(options.initialLayer!==null&&options.initialLayer!==undefined&&Number.isFinite(Number(options.initialLayer)))selectLayer(Number(options.initialLayer));});
     return api;
