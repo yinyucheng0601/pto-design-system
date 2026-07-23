@@ -231,7 +231,7 @@
 .pto-model-training-hover-title small {
   display: block;
   color: var(--foreground-muted);
-  font: var(--text-mono);
+  font: var(--type-mono);
 }
 
 .pto-model-training-hover-title strong {

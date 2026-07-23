@@ -3,6 +3,14 @@
   "name": "Model Architecture 3D Deck",
   "type": "hybrid",
   "description": "Reusable CSS 3D model architecture deck with projected parallel annotations, PP partition wireframes, side-view operator labels, and iso/front/right view switching.",
+  "typography": {
+    "bodyMinimumPx": 14,
+    "uiMinimumPx": 12,
+    "microLabelMinimumPx": 11,
+    "dataVizMinimumPx": 9,
+    "dataVizExceptionReason": "Projected node, cluster, expert, and parallel-annotation labels are geometry-bound marks inside a zoomable 3D canvas.",
+    "dataVizFallback": "Wheel zoom, fit/view controls, and projected annotation detail keep the same values available at a readable scale."
+  },
   "source": {
     "visualContract": "/Users/yin/pto/pangu-moe-trainviz/op-rank-time-openpangu-flash-events.html",
     "colorReference": "patterns/model-graphviz/assets/openpangu_2_0_flash_pass_ir_capsule_modelviz.html",

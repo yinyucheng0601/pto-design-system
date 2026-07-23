@@ -30,6 +30,7 @@ design-system-share/
 │   └── tokens.js                ← 生成产物，不手改
 ├── css/style.css                ← 真正的 class 实现
 ├── scripts/audit-theme.mjs      ← light/dark token、硬编码颜色、对比度检查
+├── scripts/audit-typography.mjs ← 14px 正文基线、token 完整性、data-viz 小字号例外检查
 ├── assets/                      ← pattern 运行时需要的 SVG 资源（例如 fx.svg）
 ├── swimlane/styles.css          ← swimlane 模块样式（预览页要用）
 └── patterns/                    ← 页面级 / 可视化级复用 pattern，优先级高于基础组件拼装

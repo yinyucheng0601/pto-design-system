@@ -3,6 +3,14 @@
   "name": "Model Architecture Training Sidecar",
   "type": "hybrid",
   "description": "A non-destructive training-semantics overlay for the canonical model-architecture-3d-deck right view, with four-stream mHC state flow, backward activation gradients, explicit microbatch/step parameter-gradient lifecycles, configured optimizer synchronization, loss composition, metric strips, selectable Layer focus lenses, and click-through annotation inspectors.",
+  "typography": {
+    "bodyMinimumPx": 14,
+    "uiMinimumPx": 12,
+    "microLabelMinimumPx": 11,
+    "dataVizMinimumPx": 5.2,
+    "dataVizExceptionReason": "Layer, operator, metric, loss-flow, and focus-graph labels are geometry-bound marks scaled with the shared zoomable canvas scene.",
+    "dataVizFallback": "Canvas zoom, the expanded Layer focus lens, tooltips, and the fixed 14px Inspector prose expose the same information readably."
+  },
   "source": {
     "basePattern": "patterns/model-architecture-3d-deck",
     "patternHtml": "patterns/model-architecture-training-sidecar/pattern.html",

@@ -51,7 +51,7 @@
   --ide-frame-pane-border: var(--border-subtle);
   --ide-frame-header-height: 32px;
   --ide-frame-title-font: 600 12.5px / 1.2 var(--font-sans);
-  --ide-frame-meta-font: 500 11px / 1.35 var(--font-mono);
+  --ide-frame-meta-font: 500 var(--font-size-body-sm) / 1.35 var(--font-mono);
   --ide-frame-icon-stroke: #ffffff;
   --ide-frame-icon-stroke-inverse: #101010;
   --ide-frame-icon-opacity-strong: 0.90;
@@ -130,7 +130,7 @@
 
 .pto-ide-frame-preview h1 {
   margin: 0;
-  font: var(--text-display);
+  font: var(--type-display);
   letter-spacing: 0;
 }
 
@@ -138,7 +138,7 @@
   max-width: 920px;
   margin: 0;
   color: var(--foreground-secondary);
-  font: var(--text-body);
+  font: var(--type-body);
 }
 
 .pto-ide-frame-preview__stack {
@@ -149,7 +149,7 @@
 
 .pto-ide-frame-preview__label {
   color: var(--foreground-muted);
-  font: var(--text-mono);
+  font: var(--type-mono);
 }
 
 .pto-ide-frame {
@@ -763,7 +763,7 @@
   overflow: auto;
   padding: 8px 12px 18px;
   color: var(--foreground-secondary);
-  font: var(--text-mono);
+  font: var(--type-mono);
 }
 
 .pto-ide-frame__terminal-line {

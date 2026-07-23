@@ -61,17 +61,21 @@ All variables are defined in `tokens/foundation.css` and `tokens/semantic.css`. 
 
 ## Typography
 
-Use the body font stack (`--font-sans`) by default. Use `--font-mono` only for code, IDs, numeric readouts.
+Use the body font stack (`--font-sans`) by default. Use `--font-mono` only for code, IDs, numeric readouts. Body copy and explanatory text use 14px; dense UI and form labels use at least 12px. Reserve 11px for short micro labels, badges, and data-viz ticks.
 
-| Role | Size | Weight | Token |
+| Role | Size | Weight | Composite token |
 |---|---|---|---|
-| display | 28px | 700 | `--font-size-display-lg` |
-| title-1 | 20px | 600 | `--font-size-title-md` |
-| title-2 | 16px | 600 | `--font-size-title-sm` |
-| body | 14px | 400 | `--font-size-body-md` |
-| body-sm | 12px | 400 | `--font-size-body-sm` |
-| label | 11px | 500 | `--font-size-label-xs` + `--letter-spacing-label: 0.5px` |
-| mono | 12px | 500 | `--font-mono`, `--font-size-body-sm` |
+| display | 28px | 700 | `--type-display` |
+| title-1 | 20px | 600 | `--type-title-1` |
+| title-2 | 16px | 600 | `--type-title-2` |
+| title-3 | 14px | 600 | `--type-title-3` |
+| body | 14px | 400 | `--type-body` |
+| body-sm | 12px | 400 | `--type-body-sm` |
+| label | 12px | 500 | `--type-label` |
+| micro | 11px | 500 | `--type-micro` |
+| mono | 12px | 500 | `--type-mono` |
+
+Use the `--type-*` composite tokens with the `font` property. Use `--font-sans` and `--font-mono` only with `font-family`; use `--foreground`, `--foreground-secondary`, and `--foreground-muted` only for text color. Do not reuse one custom property across these categories.
 
 ---
 

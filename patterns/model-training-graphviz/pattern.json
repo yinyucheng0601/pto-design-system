@@ -3,6 +3,14 @@
   "name": "Model Training Graphviz",
   "type": "hybrid",
   "description": "Training-time preset for model architecture evidence overlays. The pattern is now a thin wrapper around model-graphviz renderController: model-graphviz owns evidence hover panels, edge type tags, phase/focus-driven node selection, related-node emphasis, hierarchy-aware focus, and drag pan / Command-wheel zoom without viewport jumping. This wrapper maps trainingEvidence and controller.setPhase() onto the shared base controller while preserving the training preview and product API.",
+  "typography": {
+    "bodyMinimumPx": 14,
+    "uiMinimumPx": 12,
+    "microLabelMinimumPx": 11,
+    "dataVizMinimumPx": 9.5,
+    "dataVizExceptionReason": "Training edge tags are SVG marks coupled to the zoomable base graph geometry.",
+    "dataVizFallback": "Command-wheel zoom and hover evidence panels expose the full edge meaning at a readable scale."
+  },
   "source": {
     "visualContract": [
       "Profiling_Insight_and_Tool/AI_Profiling_Tool/graph-evidence-workbench.html",

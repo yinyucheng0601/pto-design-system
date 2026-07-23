@@ -55,6 +55,12 @@ typography:
     letterSpacing: 0
   label:
     fontFamily: "Inter, Source Han Sans SC, PingFang SC, Noto Sans SC, sans-serif"
+    fontSize: 12px
+    fontWeight: 500
+    lineHeight: 1.2
+    letterSpacing: 0.5px
+  micro:
+    fontFamily: "Inter, Source Han Sans SC, PingFang SC, Noto Sans SC, sans-serif"
     fontSize: 11px
     fontWeight: 500
     lineHeight: 1.2
@@ -358,7 +364,7 @@ For training-time model architecture overlays, reuse pattern id `model-training-
 
 For split-pane resize behavior, reuse pattern id `workbench-shell`. It is a resize kernel, not an application shell. The canonical contract is `patterns/workbench-shell/pattern.css` plus `patterns/workbench-shell/pattern.js`. Use `window.PtoWorkbenchShell.initResizablePanes`, `createSplitGutter`, or `initNestedResizablePanes` for horizontal, vertical, and nested splits with min sizes, default ratio sizes, localStorage persistence, callbacks, keyboard resize, and destroy lifecycle. Pane sizes divide the space left after fixed gutters, so drag bars must not push the last pane outside the frame. Do not put page background, pane background, topbar, brand, title, subtitle, badge, pane header typography, canvas controls, or fixed preview height assumptions into `workbench-shell`. `initWorkbenchShell` and `initCanvasControls` remain compatibility APIs only and are deprecated for new pages.
 
-For PTO IDE framework shells, reuse pattern id `ide-frame`. The canonical contract is `patterns/ide-frame/pattern.css` plus `patterns/ide-frame/pattern.js`; load `patterns/ide-frame/vscode.css` for VS Code webviews. `ide-frame` owns a TRAE-like IDE frame: 4:3 host window ratio, the accepted standalone PTO IDE skin, transparent top chrome without divider borders or macOS traffic-light controls, dense 12-13px pane titles, mono metadata, utility window controls, optional activity rail, pane headers, pane-local preview tabs, domain toolbars, generic preview surfaces, renderer slots, inspector docks, optional floating playback mounting, and split initialization. The accepted standalone skin is defined in `pattern.css`: `--ide-gradient-bg` and `--ide-aura-bg` provide a 100%-intensity multi-point gradient/aura background; `--ide-frame-pane-fill` is `color-mix(... 80%, transparent)`; `--ide-frame-pane-header-fill` is 72%; `--ide-frame-pane-backdrop-filter` is `blur(18px) saturate(1.18)`; and `--ide-frame-pane-shadow` provides the soft pane lift. Product pages must not recreate those values locally or replace them with opaque panels. Standalone pages may hide the left activity rail with `hidden`, `data-activity-rail="hidden"`, or `data-hide-activity-rail="true"` when the product flow does not need search/git/terminal navigation. Standalone explorer starts at 300px by default through `data-pixel-sizes`, then the remaining panes divide the remaining width by ratio. Tabs belong inside the preview/editor pane, not in a separate top-level chrome band. Playback must use `floating-playback-control`; do not recreate a footer playback bar, scrubber, collapse state, or shell chrome in `ide-frame`. It must not ship business content: no file names, kernel names, graph node data, timeline lanes, trace data, inspector values, placeholder tab names, placeholder code rows, or default textual slot content. Consuming pages provide all domain content and renderers. It must call the `workbench-shell` resize helper and must not override `.pto-workbench-shell__*` internals. Use `data-host="standalone"` when PTO owns topbar, navigation, preview-pane tabs, and status strip; use `data-host="vscode-webview"` when VS Code owns explorer, editor tabs, search, git, terminal, settings, command palette, keybindings, global status, notifications, progress, theme colors, and baseline fonts.
+For PTO IDE framework shells, reuse pattern id `ide-frame`. The canonical contract is `patterns/ide-frame/pattern.css` plus `patterns/ide-frame/pattern.js`; load `patterns/ide-frame/vscode.css` for VS Code webviews. `ide-frame` owns a TRAE-like IDE frame: 4:3 host window ratio, the accepted standalone PTO IDE skin, transparent top chrome without divider borders or macOS traffic-light controls, dense 12-13px pane titles and mono metadata, with dense typography limited to chrome while pane body copy, descriptions, help, empty states, and Inspector prose remain on the 14px body role, utility window controls, optional activity rail, pane headers, pane-local preview tabs, domain toolbars, generic preview surfaces, renderer slots, inspector docks, optional floating playback mounting, and split initialization. The accepted standalone skin is defined in `pattern.css`: `--ide-gradient-bg` and `--ide-aura-bg` provide a 100%-intensity multi-point gradient/aura background; `--ide-frame-pane-fill` is `color-mix(... 80%, transparent)`; `--ide-frame-pane-header-fill` is 72%; `--ide-frame-pane-backdrop-filter` is `blur(18px) saturate(1.18)`; and `--ide-frame-pane-shadow` provides the soft pane lift. Product pages must not recreate those values locally or replace them with opaque panels. Standalone pages may hide the left activity rail with `hidden`, `data-activity-rail="hidden"`, or `data-hide-activity-rail="true"` when the product flow does not need search/git/terminal navigation. Standalone explorer starts at 300px by default through `data-pixel-sizes`, then the remaining panes divide the remaining width by ratio. Tabs belong inside the preview/editor pane, not in a separate top-level chrome band. Playback must use `floating-playback-control`; do not recreate a footer playback bar, scrubber, collapse state, or shell chrome in `ide-frame`. It must not ship business content: no file names, kernel names, graph node data, timeline lanes, trace data, inspector values, placeholder tab names, placeholder code rows, or default textual slot content. Consuming pages provide all domain content and renderers. It must call the `workbench-shell` resize helper and must not override `.pto-workbench-shell__*` internals. Use `data-host="standalone"` when PTO owns topbar, navigation, preview-pane tabs, and status strip; use `data-host="vscode-webview"` when VS Code owns explorer, editor tabs, search, git, terminal, settings, command palette, keybindings, global status, notifications, progress, theme colors, and baseline fonts.
 
 For floating playback controls, reuse pattern id `floating-playback-control`. The canonical contract is `patterns/floating-playback-control/pattern.css` plus state helpers in `pattern.js`, extracted from the `mem_viewer` bottom toolbar. Pages own step data, timers, and renderer updates, but use `.pto-floating-playback*`, `window.PtoFloatingPlaybackControl.init`, and `initScrubberHover` for chrome, collapse state, collapsed play/pause icon, and scrubber hover behavior. Do not redefine floating-shell styling, range thumb, tooltip, or collapse synchronization locally.
 
@@ -426,6 +432,11 @@ Do not reuse visualization colors as generic panel backgrounds.
 - Titles should be compact and controlled, not editorially oversized
 - Labels and metadata should be explicit and easy to scan
 - Code and numeric identifiers should always use mono
+- Body copy, descriptions, inspector prose, help text, and empty-state explanations use 14px with 1.5 line height
+- Dense controls, form labels, tables, trees, code, and metadata never render below 12px
+- 11px is reserved for short micro labels, badges, and visualization ticks; it must not carry prose
+- Text below 11px is forbidden outside an explicitly documented zoomable data-visualization exception with a readable tooltip or detail view
+- Do not solve overflow by shrinking content with `zoom`, `transform: scale(...)`, or a smaller body token; change the layout, wrapping, truncation, or scrolling strategy
 
 ### Hierarchy
 
@@ -580,7 +591,7 @@ Generated artifacts:
 
 must be generated from those CSS sources with `python3 tokens/generate_tokens.py`, not edited by hand.
 
-Before sharing the bundle, run `node scripts/audit-theme.mjs` to check light/dark token coverage, hard-coded UI color counts in shared CSS, and baseline contrast ratios.
+Before sharing the bundle, run `rtk node scripts/audit-theme.mjs` to check light/dark token coverage, hard-coded UI color counts in shared CSS, and baseline contrast ratios. Run `rtk node scripts/audit-typography.mjs` to verify typography token integrity, the 14px body baseline, and unapproved sub-11px text.
 
 ### Review Rule
 

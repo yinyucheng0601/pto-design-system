@@ -54,7 +54,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font: var(--text-title-2);
+  font: var(--type-title-2);
   font-weight: 800;
   pointer-events: none;
 }
@@ -68,7 +68,7 @@
   border-radius: var(--tag-radius);
   background: var(--comp-tag-bg);
   color: var(--foreground-secondary);
-  font: var(--text-label);
+  font: var(--type-label);
 }
 
 .pto-model-deck__control {
@@ -111,7 +111,7 @@
   min-width: 46px;
   text-align: center;
   color: var(--foreground-secondary);
-  font: var(--text-mono);
+  font: var(--type-mono);
 }
 
 .pto-model-deck__viewport {
