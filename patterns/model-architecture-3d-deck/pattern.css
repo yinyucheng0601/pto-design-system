@@ -159,11 +159,11 @@
 .pto-model-deck__layer:hover,
 .pto-model-deck__layer.is-selected { --deck-opacity: 1; }
 
-.pto-model-deck[data-view="iso"] .pto-model-deck__layer[data-stage-role="first"] {
+.pto-model-deck[data-view="iso"] .pto-model-deck__layer[data-stage-role="model-first"] {
   opacity: 1;
 }
 
-.pto-model-deck[data-view="iso"] .pto-model-deck__layer[data-stage-role="repeat"] {
+.pto-model-deck[data-view="iso"] .pto-model-deck__layer:not([data-stage-role="model-first"]) {
   opacity: .08;
   --pto-model-deck-norm: var(--foreground-muted);
   --pto-model-deck-attention: var(--foreground-muted);
@@ -181,13 +181,13 @@
   --pto-model-deck-parameter: var(--foreground-muted);
   --pto-model-deck-state: var(--foreground-muted);
 }
-.pto-model-deck[data-view="iso"] .pto-model-deck__layer[data-stage-role="repeat"] .pto-model-deck__node,
-.pto-model-deck[data-view="iso"] .pto-model-deck__layer[data-stage-role="repeat"] .pto-model-deck__experts {
+.pto-model-deck[data-view="iso"] .pto-model-deck__layer:not([data-stage-role="model-first"]) .pto-model-deck__node,
+.pto-model-deck[data-view="iso"] .pto-model-deck__layer:not([data-stage-role="model-first"]) .pto-model-deck__experts {
   background:var(--node-color);
   box-shadow:none;
 }
-.pto-model-deck[data-view="iso"] .pto-model-deck__layer[data-stage-role="repeat"]:hover,
-.pto-model-deck[data-view="iso"] .pto-model-deck__layer[data-stage-role="repeat"].is-hover {
+.pto-model-deck[data-view="iso"] .pto-model-deck__layer:not([data-stage-role="model-first"]):hover,
+.pto-model-deck[data-view="iso"] .pto-model-deck__layer:not([data-stage-role="model-first"]).is-hover {
   opacity: 1;
   --pto-model-deck-norm: inherit;
   --pto-model-deck-attention: inherit;
@@ -205,14 +205,14 @@
   --pto-model-deck-parameter: inherit;
   --pto-model-deck-state: inherit;
 }
-.pto-model-deck[data-view="iso"] .pto-model-deck__layer[data-stage-role="repeat"]:hover .pto-model-deck__node,
-.pto-model-deck[data-view="iso"] .pto-model-deck__layer[data-stage-role="repeat"]:hover .pto-model-deck__experts,
-.pto-model-deck[data-view="iso"] .pto-model-deck__layer[data-stage-role="repeat"].is-hover .pto-model-deck__node,
-.pto-model-deck[data-view="iso"] .pto-model-deck__layer[data-stage-role="repeat"].is-hover .pto-model-deck__experts {
+.pto-model-deck[data-view="iso"] .pto-model-deck__layer:not([data-stage-role="model-first"]):hover .pto-model-deck__node,
+.pto-model-deck[data-view="iso"] .pto-model-deck__layer:not([data-stage-role="model-first"]):hover .pto-model-deck__experts,
+.pto-model-deck[data-view="iso"] .pto-model-deck__layer:not([data-stage-role="model-first"]).is-hover .pto-model-deck__node,
+.pto-model-deck[data-view="iso"] .pto-model-deck__layer:not([data-stage-role="model-first"]).is-hover .pto-model-deck__experts {
   background:linear-gradient(180deg,var(--node-color) 0%,color-mix(in srgb,var(--node-color) 75%,#000) 100%);
   box-shadow:inset 0 0 8px rgba(255,255,255,.25),inset 0 1px 0 rgba(255,255,255,.15),0 2px 5px rgba(0,0,0,.18);
 }
-.pto-model-deck[data-view="iso"] .pto-model-deck__layer[data-stage-role="repeat"].is-selected {
+.pto-model-deck[data-view="iso"] .pto-model-deck__layer:not([data-stage-role="model-first"]).is-selected {
   opacity: .28;
 }
 .pto-model-deck[data-view="front"] .pto-model-deck__layer { opacity: 0; pointer-events: none; }
@@ -383,6 +383,11 @@
 .pto-model-deck__interlayer-spine path[data-stage-boundary="true"] { stroke:color-mix(in srgb,var(--success) 58%,var(--foreground)); stroke-width:1.3; stroke-opacity:.42; }
 .pto-model-deck__interlayer-spine path[data-kind="input"],
 .pto-model-deck__interlayer-spine path[data-kind="output"] { stroke:color-mix(in srgb,var(--primary) 64%,var(--foreground)); stroke-width:1.3; stroke-opacity:.46; }
+.pto-model-deck[data-view="iso"] .pto-model-deck__interlayer-spine path[data-kind="output"] {
+  stroke: color-mix(in srgb, var(--foreground-muted) 28%, transparent);
+  stroke-width: 1;
+  stroke-opacity: .2;
+}
 .pto-model-deck__interlayer-spine path.is-selected { stroke:var(--primary); stroke-width:2.6; stroke-opacity:1; }
 .pto-model-deck__pp-labels { z-index:21; display:none; }
 .pto-model-deck[data-view="iso"][data-parallel="pp"] .pto-model-deck__pp-wireframe,

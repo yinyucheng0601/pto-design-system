@@ -62,7 +62,7 @@
 
   function mount(rootInput,options={}){
     const root=qs(rootInput);if(!root||!global.PtoModelArchitecture3dDeck)return null;
-    let controller=null,raf=0,dragPreviewRaf=0,destroyed=false,selectedLayer=null,selectedDetail=null,selectedDetailKey=null,fitZoom=1,dragging=false,dragOrigin=null,measurementCache=null,structureDirty=true;
+    let controller=null,raf=0,dragPreviewRaf=0,destroyed=false,selectedLayer=null,selectedDetail=null,selectedDetailKey=null,lossExpanded=false,fitZoom=1,dragging=false,dragOrigin=null,measurementCache=null,structureDirty=true;
     const context={step:options.step??18420,microbatch:options.microbatch??3,microbatchCount:options.microbatchCount??8};
     const topology=options.topology||{};
     const snapshots=new Map(Object.entries(options.snapshots||{}).map(([layer,data])=>[Number(layer),data]));
@@ -402,7 +402,14 @@
       const mtpParticipation=job.mtpLossParticipates===false?'not in current training objective':job.mtpLossParticipates===true?'included by training job':'participation from training job config';
       const anchorX=clamp(g.output.x-12*g.scale,350*g.scale,g.width-8),anchorY=clamp(g.optimizerY+112*g.scale,110*g.scale,g.height-90*g.scale);
       const node=label(labels,'pto-training-sidecar__loss-composition','',anchorX,anchorY,'Loss composition · Main CE + Router Aux + MTP ×3 → Total Training Loss');
-      node.innerHTML=`<strong>Training objective · output tail</strong><div class="pto-training-sidecar__loss-input">LM Head logits + shifted target token IDs / labels</div><div class="pto-training-sidecar__loss-terms"><button type="button" data-loss="main">Main CE <b>${loss.toFixed(2)}</b></button><span>+</span><button type="button" data-loss="moe">Router Aux <b>${esc(moeWeight)}</b></button><span>+</span><button type="button" data-loss="mtp">MTP ×${mtpHeads} <b>${esc(mtpWeight)}</b></button></div><button type="button" class="pto-training-sidecar__loss-total" data-loss="total">Total Training Loss</button><small>PP${lastStage??'?'} · beside LM Head / logits · MTP: ${esc(mtpParticipation)}</small>`;
+      node.removeAttribute('data-detail');node.removeAttribute('data-detail-key');node.removeAttribute('data-tip');node.removeAttribute('aria-label');
+      node.classList.toggle('is-expanded',lossExpanded);node.classList.toggle('is-collapsed',!lossExpanded);
+      if(!lossExpanded){
+        node.innerHTML=`<button type="button" class="pto-training-sidecar__loss-summary" data-loss-toggle aria-expanded="false"><span>Training objective</span><b>CE + Aux + MTP ×${mtpHeads} → Total</b><i>展开</i></button>`;
+        node.querySelector('[data-loss-toggle]')?.addEventListener('click',event=>{event.stopPropagation();lossExpanded=true;schedule(false);});return;
+      }
+      node.innerHTML=`<div class="pto-training-sidecar__loss-header"><strong>Training objective · output tail</strong><button type="button" data-loss-toggle aria-label="收起 Training objective" aria-expanded="true">−</button></div><div class="pto-training-sidecar__loss-input">LM Head logits + shifted target token IDs / labels</div><div class="pto-training-sidecar__loss-terms"><button type="button" data-loss="main">Main CE <b>${loss.toFixed(2)}</b></button><span>+</span><button type="button" data-loss="moe">Router Aux <b>${esc(moeWeight)}</b></button><span>+</span><button type="button" data-loss="mtp">MTP ×${mtpHeads} <b>${esc(mtpWeight)}</b></button></div><button type="button" class="pto-training-sidecar__loss-total" data-loss="total">Total Training Loss</button><small>PP${lastStage??'?'} · beside LM Head / logits · MTP: ${esc(mtpParticipation)}</small>`;
+      node.querySelector('[data-loss-toggle]')?.addEventListener('click',event=>{event.stopPropagation();lossExpanded=false;schedule(false);});
       tip(node.querySelector('[data-loss="main"]'),'Main CE Loss · LM Head logits + shifted target labels',{title:'Main CE Loss',category:'Training objective',definition:'Final Norm 与 LM Head 产生 logits；主损失由 logits 与 shifted target token IDs / labels 计算 CrossEntropy。',values:[['当前值',loss.toFixed(2)],['输入','LM Head logits + shifted target labels']],status:'normal',statusLabel:'正常：位于参考范围',context:`step ${context.step} · MB ${context.microbatch}/${context.microbatchCount} · PP${lastStage??'?'} · LM Head logits · target labels`});
       tip(node.querySelector('[data-loss="moe"]'),'MoE Router Aux Loss · coefficient from training job',{title:'MoE Router Aux Loss',category:'Training objective',definition:'Router balance / z-loss 等辅助项是否进入总目标以及具体系数必须由真实训练任务配置决定。',values:[['Coefficient',moeWeight],['Router diagnostics','balance 0.014 · z-loss 0.003']],status:'info',statusLabel:'需要训练任务配置确认'});
       tip(node.querySelector('[data-loss="mtp"]'),`MTP Loss ×${mtpHeads} · coefficient and participation from training job`,{title:`MTP Loss ×${mtpHeads}`,category:'Training objective',definition:'公开模型结构确认有 3 个 MTP head，但当前预览不假定具体训练 Loss 权重或参与状态。',values:[['Heads',mtpHeads],['Coefficient',mtpWeight],['Participation',mtpParticipation]],status:'info',statusLabel:'需要训练任务配置确认'});
@@ -522,6 +529,7 @@
     function queueSidecarFit(){requestAnimationFrame(fitSidecar);}
     function selectLayer(layer){
       selectedLayer=layer===null||layer===undefined||!Number.isFinite(Number(layer))?null:clamp(Number(layer),0,controller.config.layerCount-1);
+      if(selectedLayer!==null)lossExpanded=false;
       controller.setLayerExpansion?.(selectedLayer,selectedLayer===null?0:(Number(options.layerExpansionDepth)||640));
       if(selectedDetail)openDetail(null);schedule();options.onLayerSelect?.(selectedLayer===null?null:{layer:selectedLayer,snapshot:snapshotFor(selectedLayer)},api);return api;
     }
@@ -537,7 +545,7 @@
       if(event.key==='Escape'&&selectedLayer!==null){event.preventDefault();selectLayer(null);return;}
       if((event.key==='ArrowLeft'||event.key==='ArrowRight')&&selectedLayer!==null){event.preventDefault();selectLayer(selectedLayer+(event.key==='ArrowLeft'?-1:1));}
     }
-    function interaction(){schedule();}
+    function interaction(){if(lossExpanded)lossExpanded=false;schedule();}
     function tooltipTarget(event){return event.target.closest?.('[data-tip]');}
     function showTooltip(event){const target=tooltipTarget(event);if(!target)return;tooltip.textContent=target.dataset.tip;tooltip.classList.add('is-visible');moveTooltip(event);}
     function moveTooltip(event){if(!tooltip.classList.contains('is-visible'))return;const rect=viewport.getBoundingClientRect(),x=clamp(event.clientX-rect.left+12,8,rect.width-tooltip.offsetWidth-8),y=clamp(event.clientY-rect.top+12,8,rect.height-tooltip.offsetHeight-8);tooltip.style.left=`${x}px`;tooltip.style.top=`${y}px`;}

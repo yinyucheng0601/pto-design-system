@@ -71,7 +71,7 @@
   function expertPoolHtml(nodes){const box={x:300,y:700,w:140,h:52},expanded={x:260,y:688,w:236,h:126};nodes.expert_pool={...box,id:'expert_pool',op:'moe'};return `<div class="pto-model-deck__experts opv-cssdeck-experts is-collapsed" data-node="expert_pool" data-op="moe" role="button" tabindex="0" aria-expanded="false" aria-label="Expert Pool · 72 experts" data-collapsed-x="${box.x}" data-collapsed-y="${box.y}" data-collapsed-w="${box.w}" data-collapsed-h="${box.h}" data-expanded-x="${expanded.x}" data-expanded-y="${expanded.y}" data-expanded-w="${expanded.w}" data-expanded-h="${expanded.h}" style="left:${box.x}px;top:${box.y}px;width:${box.w}px;height:${box.h}px"></div>`;}
   function layerHtml(layer,config){
     const stage=config.stageRanges.findIndex(([lo,hi])=>layer>=lo&&layer<=hi);
-    const first=config.representativeLayers.includes(layer);
+    const stageFirst=config.representativeLayers.includes(layer),stageRole=layer===0?'model-first':stageFirst?'stage-first':'repeat';
     const dense=layer<config.firstMoeLayer,stageRange=config.stageRanges[stage],blockPost=config.blockPostLayers.includes(layer);
     const attn=config.dsaLayers.includes(layer)?'DSA':'SWA',attentionLabel=attn==='DSA'?`DSA · Sparse Global · top-k ${config.indexTopK??'configured'}`:`SWA · Sliding Window ${config.slidingWindow??'configured'}`,nodes={},parts=[];
     parts.push(`<div class="pto-model-deck__layer-label opv-cssgraph__layer-label">L${layer}<span>PP${stage} · L${stageRange[0]}-${stageRange[1]} · ${dense?'Dense':'MoE'} · ${attn}${blockPost?' · block-post':''}</span></div>`);
@@ -115,7 +115,7 @@
     else edges.push(['pre_mlp_norm','gate'],['gate','a2a_dispatch','comm'],['a2a_dispatch','expert_pool','comm'],['expert_pool','a2a_combine','comm'],['a2a_combine','moe_branch_add'],['pre_mlp_norm','shared_expert'],['shared_expert','moe_branch_add'],['moe_branch_add','post_mlp_norm']);
     edges.push(['post_mlp_norm','ffn_residual_add'],['mhc_attention_post','ffn_residual_add','residual','right','right',{mode:'elbow',viaX:668}]);
     if(blockPost)edges.push(['ffn_residual_add','block_post_norm'],['block_post_norm','mhc_state_out','state-spine']);else edges.push(['ffn_residual_add','mhc_state_out','state-spine']);
-    return `<section class="pto-model-deck__layer opv-cssdeck-card${layer===config.frontLayer?' is-front-layer':''}" data-layer="${layer}" data-stage="${stage}" data-stage-role="${first?'first':'repeat'}" data-stage-sample="true" style="--deck-opacity:${(1-.38*(layer/45)).toFixed(3)};transform:translate3d(0,0,${-layer*config.depthGap}px)"><div class="pto-model-deck__graph opv-cssgraph">${edgesHtml(nodes,edges)}${parts.join('')}</div></section>`;
+    return `<section class="pto-model-deck__layer opv-cssdeck-card${layer===config.frontLayer?' is-front-layer':''}" data-layer="${layer}" data-stage="${stage}" data-stage-role="${stageRole}" data-stage-sample="true" style="--deck-opacity:${(1-.38*(layer/45)).toFixed(3)};transform:translate3d(0,0,${-layer*config.depthGap}px)"><div class="pto-model-deck__graph opv-cssgraph">${edgesHtml(nodes,edges)}${parts.join('')}</div></section>`;
   }
   function staticHtml(kind,config){
     const input=kind==='input',nodes={},parts=[];
