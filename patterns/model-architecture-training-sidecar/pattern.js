@@ -348,8 +348,9 @@
           kv_a_proj:480,kv_causal_conv:480,kv_residual_add:480,kv_a_norm:480,kv_b_proj:480,key_tensor:480,
           gate:180,a2a_dispatch:180,expert_pool:360,shared_expert:540,a2a_combine:360,moe_branch_add:360
         }[node.dataset.node];
-        const compactCenterX=normalizedCenter??cx;
-        const box={x:compactCenterX-targetWidth/2,y:cy-targetHeight/2,w:targetWidth,h:targetHeight};boxes.set(node.dataset.node,box);
+        const normalizedRow={a2a_dispatch:726,expert_pool:726,shared_expert:726}[node.dataset.node];
+        const compactCenterX=normalizedCenter??cx,compactCenterY=normalizedRow??cy;
+        const box={x:compactCenterX-targetWidth/2,y:compactCenterY-targetHeight/2,w:targetWidth,h:targetHeight};boxes.set(node.dataset.node,box);
         node.style.left=`${box.x}px`;node.style.top=`${box.y}px`;node.style.width=`${box.w}px`;node.style.height=`${box.h}px`;
       });
       const pointFor=(box,side)=>side==='right'?{x:box.x+box.w,y:box.y+box.h/2}:side==='left'?{x:box.x,y:box.y+box.h/2}:side==='top'?{x:box.x+box.w/2,y:box.y}:{x:box.x+box.w/2,y:box.y+box.h};
