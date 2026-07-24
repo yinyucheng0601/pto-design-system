@@ -173,14 +173,14 @@
       const centerOf=(selector)=>{const node=root.querySelector(selector),rect=node?.getBoundingClientRect();return rect?{x:worldX(rect.left+rect.width/2-base.left),y:worldY(rect.top+rect.height/2-base.top)}:null;};
       const input=centerOf('.pto-model-deck__static--input [data-node="embedding"]')||{x:points[0].x-42,y:modelTop};
       const output=centerOf('.pto-model-deck__static--output [data-node="final_norm"]')||{x:points[points.length-1].x+42,y:modelTop};
-      const residualConnector=root.querySelector('.pto-model-deck__side-residual-connector[data-state-rail="0"]'),residualMatch=residualConnector?.getAttribute('d')?.match(/^M([-\d.]+),([-\d.]+)/);
+      const residualConnector=root.querySelector('.pto-model-deck__side-residual-connector[data-state-rail="0"]'),residualMatch=residualConnector?.getAttribute('d')?.match(/([-\d.]+),([-\d.]+)$/);
       const residualInputStart=residualMatch?{x:worldX(Number(residualMatch[1])),y:worldY(Number(residualMatch[2]))}:{x:input.x,y:modelTop-4/Math.max(.001,fitZoom)};
       const residualRails=Array.from(root.querySelectorAll('.pto-model-deck__side-residual-spine[data-state-rail]')).map(node=>{
         const match=node.getAttribute('d')?.match(/^M([-\d.]+),([-\d.]+)L([-\d.]+),([-\d.]+)$/);if(!match)return null;
         return{rail:Number(node.dataset.stateRail),x0:worldX(Number(match[1])),y:worldY(Number(match[2])),x1:worldX(Number(match[3]))};
       }).filter(Boolean).sort((a,b)=>a.rail-b.rail);
       const gap=points.length>1?Math.max(4/fitZoom,Math.abs(points[1].x-points[0].x)):12/fitZoom,scale=1/Math.max(.001,fitZoom);
-      const axisY=modelTop-250*scale;
+      const axisY=modelTop-(activeMetricViews.size?250:150)*scale;
       const stageY=axisY-32*scale;
       const metricY=axisY+38*scale;
       const inputSummaryY=modelTop-78*scale;
@@ -351,7 +351,22 @@
 
     function positionDetailPanel(){
       if(!selectedDetail||!detailPanel.classList.contains('is-open'))return;
-      detailPanel.style.left='auto';detailPanel.style.right='16px';detailPanel.style.top='108px';
+      const target=selectedDetailKey
+        ?focus.querySelector(`[data-detail-key="${CSS.escape(selectedDetailKey)}"]`)||root.querySelector(`[data-detail-key="${CSS.escape(selectedDetailKey)}"]`)
+        :null;
+      const viewportRect=viewport.getBoundingClientRect(),panelWidth=detailPanel.offsetWidth||330,panelHeight=detailPanel.offsetHeight||414,gap=12,padding=12;
+      if(!target){
+        detailPanel.style.left='auto';detailPanel.style.right='16px';detailPanel.style.top='108px';detailPanel.style.bottom='auto';return;
+      }
+      const targetRect=target.getBoundingClientRect(),targetLeft=targetRect.left-viewportRect.left,targetRight=targetRect.right-viewportRect.left,targetCenterY=targetRect.top-viewportRect.top+targetRect.height/2;
+      const rightCandidate=targetRight+gap,leftCandidate=targetLeft-panelWidth-gap;
+      const left=rightCandidate+panelWidth<=viewportRect.width-padding
+        ?rightCandidate
+        :leftCandidate>=padding
+          ?leftCandidate
+          :clamp(targetLeft+(targetRect.width-panelWidth)/2,padding,Math.max(padding,viewportRect.width-panelWidth-padding));
+      const top=clamp(targetCenterY-panelHeight/2,padding,Math.max(padding,viewportRect.height-panelHeight-padding));
+      detailPanel.style.left=`${left}px`;detailPanel.style.right='auto';detailPanel.style.top=`${top}px`;detailPanel.style.bottom='auto';
     }
 
     function openDetail(detail,target=null){
@@ -472,9 +487,9 @@
       if(!Number.isFinite(selectedLayer))return null;
       const point=g.points.find(item=>item.layer===selectedLayer);if(!point)return;
       const sourceGraph=point.card.querySelector('.pto-model-deck__graph');if(!sourceGraph)return null;
-      const graphWidth=720,graphHeight=1124,worldPerScreen=1/Math.max(.001,controller.state.zoom);
-      const panelWidth=600,panelTop=point.operatorTop,panelHeight=point.operatorBottom-point.operatorTop;
-      const graphScale=1,graphOffsetY=point.cardTop-point.operatorTop;
+      const graphWidth=activeMetricViews.size?1000:720,graphHeight=1124,worldPerScreen=1/Math.max(.001,controller.state.zoom);
+      const panelWidth=activeMetricViews.size?1000:600,panelTop=point.cardTop,panelHeight=graphHeight;
+      const graphScale=1,graphOffsetY=0;
       const left=point.x-panelWidth/2;
       return{point,sourceGraph,panelWidth,panelTop,panelHeight,left,graphWidth,graphHeight,graphScale,graphOffsetY,worldPerScreen};
     }
@@ -482,53 +497,22 @@
     function renderFocus(g,layout=measureFocus(g)){
       root.classList.toggle('has-expanded-layer',Boolean(layout));
       if(!layout){focus.classList.remove('is-open','is-flipping');focus.removeAttribute('data-layer');focus.replaceChildren();return;}
-      const {panelWidth,panelTop,panelHeight,left,graphScale,graphOffsetY,worldPerScreen}=layout,snapshot=snapshotFor(selectedLayer);
+      const {panelWidth,panelTop,panelHeight,left,graphWidth,graphScale,graphOffsetY,worldPerScreen}=layout,snapshot=snapshotFor(selectedLayer);
       const hidden=snapshot.tensors.hidden,activationGradient=snapshot.tensors.activationGradient,streams=controller.config.mhcStreams??4;
       const hiddenStatus=hidden.amax>9.35?'warning':'normal',hiddenDetail={key:`layer-${selectedLayer}-hidden-input`,title:`mHC state · H${selectedLayer} ×${streams}`,category:'Layer tensor',definition:'当前 Layer 的输入是四路 mHC state。Attention 和 FFN 均通过训练配置定义的 Mix/Merge 变换四路状态；没有可靠融合矩阵时不画成标准 Add。',values:[['Streams',streams],['Mean',hidden.mean.toFixed(4)],['Std σ',hidden.std.toFixed(3)],['Amax',hidden.amax.toFixed(2)],['L2 proxy',hidden.norm.toFixed(1)],['Activation gradient L2',activationGradient.norm.toFixed(3)]],status:hiddenStatus,statusLabel:hiddenStatus==='warning'?'关注：Amax 接近参考边界':'正常：指标位于参考范围',context:executionContext(snapshot,`L${selectedLayer}`)};
       const outputDetail={...hiddenDetail,key:`layer-${selectedLayer}-hidden-output`,title:`Output mHC state · H${selectedLayer+1} ×${streams}`,definition:'FFN Mix/Merge 后的四路 mHC state，也是下一 Layer 输入；若位于 PP 边界则通过 activation Send/Recv 传输。'};
       const attention=attentionDescriptor(selectedLayer);
       const layerChanged=focus.dataset.layer!==String(selectedLayer);
       focus.style.setProperty('--pto-training-focus-scale',worldPerScreen.toFixed(4));focus.style.setProperty('--pto-training-focus-graph-scale',graphScale.toFixed(4));focus.style.left=`${left}px`;focus.style.top=`${panelTop}px`;focus.style.width=`${panelWidth}px`;focus.style.height=`${panelHeight}px`;focus.dataset.layer=String(selectedLayer);focus.classList.add('is-open');
-      focus.innerHTML=`<button class="pto-training-sidecar__focus-close" type="button" aria-label="收起 Layer">×</button><div class="pto-training-sidecar__focus-graph-stage" style="top:${graphOffsetY}px"></div>`;
+      focus.innerHTML=`<button class="pto-training-sidecar__focus-close" type="button" aria-label="收起 Layer">×</button><div class="pto-training-sidecar__focus-graph-stage" style="top:${graphOffsetY}px;width:${graphWidth}px"></div>`;
       const graph=layout.sourceGraph.cloneNode(true);graph.classList.add('pto-training-sidecar__focus-graph');
+      graph.style.width=`${graphWidth}px`;
       graph.querySelectorAll('.is-selected').forEach(node=>node.classList.remove('is-selected'));
       const semanticById=new Map();(controller.config.sideRows||[]).forEach((row,index)=>row.ids.forEach(id=>semanticById.set(id,{label:row.ids.includes('attention_core')?attention.label:row.label,index})));
       const graphNodes=Array.from(graph.querySelectorAll('[data-node]'));
-      const graphEdges=graph.querySelector('.pto-model-deck__edges');graphEdges?.setAttribute('viewBox','0 0 720 1124');
-      const boxes=new Map();
-      graphNodes.forEach(node=>{
-        const x=parseFloat(node.style.left)||0,y=parseFloat(node.style.top)||0,w=parseFloat(node.style.width)||196,h=parseFloat(node.style.height)||30,cx=x+w/2,cy=y+h/2;
-        const add=node.dataset.op==='add',state=node.dataset.op==='mhc-state',addSize=Math.min(w,h),targetWidth=add?addSize:state?190:168,targetHeight=add?addSize:h;
-        const normalizedCenter={
-          q_a_proj:240,q_causal_conv:240,q_residual_add:240,q_a_norm:240,q_b_proj:240,query_tensor:240,
-          kv_a_proj:480,kv_causal_conv:480,kv_residual_add:480,kv_a_norm:480,kv_b_proj:480,key_tensor:480,
-          gate:180,a2a_dispatch:180,expert_pool:360,shared_expert:540,a2a_combine:360,moe_branch_add:360
-        }[node.dataset.node];
-        const compactCenterX=state?540:(normalizedCenter??cx),compactCenterY=cy;
-        const box={x:compactCenterX-targetWidth/2,y:compactCenterY-targetHeight/2,w:targetWidth,h:targetHeight};boxes.set(node.dataset.node,box);
-        node.style.left=`${box.x}px`;node.style.top=`${box.y}px`;node.style.width=`${box.w}px`;node.style.height=`${box.h}px`;
-      });
-      const pointFor=(box,side)=>side==='right'?{x:box.x+box.w,y:box.y+box.h/2}:side==='left'?{x:box.x,y:box.y+box.h/2}:side==='top'?{x:box.x+box.w/2,y:box.y}:{x:box.x+box.w/2,y:box.y+box.h};
-      Array.from(graphEdges?.querySelectorAll('path')||[]).forEach(edge=>{
-        const sourceId=edge.dataset.source,targetId=edge.dataset.target,source=boxes.get(sourceId),target=boxes.get(targetId);if(!source||!target)return;
-        const kind=edge.dataset.kind||'activation',mhcRail=kind==='state-spine'||(sourceId==='mhc_state_in'&&targetId==='mhc_attention_post')||(sourceId==='mhc_attention_post'&&targetId==='ffn_residual_add');
-        let p0=pointFor(source,'bottom'),p1=pointFor(target,'top'),d;
-        if(sourceId==='a2a_dispatch'&&targetId==='expert_pool'){
-          p0=pointFor(source,'right');p1=pointFor(target,'left');const mid=(p0.x+p1.x)/2;d=`M${p0.x} ${p0.y}C${mid} ${p0.y},${mid} ${p1.y},${p1.x} ${p1.y}`;
-        }else if(sourceId==='shared_expert'&&targetId==='moe_branch_add'){
-          p0=pointFor(source,'right');p1=pointFor(target,'right');d=`M${p0.x} ${p0.y}L624 ${p0.y}L624 ${p1.y}L${p1.x} ${p1.y}`;
-        }else if(kind==='residual'&&(sourceId==='mhc_state_in'||sourceId==='mhc_attention_post')){
-          p0=pointFor(source,'right');p1=pointFor(target,'right');d=`M${p0.x} ${p0.y}L620 ${p0.y}L620 ${p1.y}L${p1.x} ${p1.y}`;
-        }else if(Math.abs(p0.x-p1.x)<8){d=`M${p0.x} ${p0.y}L${p1.x} ${p1.y}`;
-        }else{const mid=(p0.y+p1.y)/2;d=`M${p0.x} ${p0.y}C${p0.x} ${mid},${p1.x} ${mid},${p1.x} ${p1.y}`;}
-        edge.setAttribute('d',d);
-        if(mhcRail){
-          edge.classList.add('is-focus-mhc-rail');
-          [-4.5,-1.5,1.5,4.5].forEach((offset,index)=>{
-            const rail=index?edge.cloneNode(true):edge;rail.setAttribute('transform',`translate(${offset} ${offset})`);rail.dataset.rail=String(index+1);if(index)edge.after(rail);
-          });
-        }
-      });
+      const dataMode=activeMetricViews.size>0,presentations=new Map();
+      graph.classList.toggle('has-focus-data',dataMode);
+      if(dataMode)graph.querySelectorAll('.pto-model-deck__cluster').forEach(cluster=>{cluster.style.left='24px';cluster.style.width=`${graphWidth-48}px`;});
       graphNodes.forEach((node,nodeIndex)=>{
         const nodeId=node.dataset.node,op=node.dataset.op||'',semantic=semanticById.get(nodeId),originalLabel=node.textContent.trim()||semantic?.label||node.getAttribute('aria-label')?.split('·')[0]||nodeId;
         const stateInput=nodeId==='mhc_state_in',stateOutput=nodeId==='mhc_state_out';
@@ -545,9 +529,82 @@
         }else{
           const metric=internalOperatorMetric(selectedLayer,semantic?.label||originalLabel,op,semantic?.index??nodeIndex,nodeId);summary=metric.summary;detail=metric.detail;
         }
+        presentations.set(nodeId,{displayLabel,summary,detail});
+      });
+      const graphEdges=graph.querySelector('.pto-model-deck__edges');graphEdges?.setAttribute('viewBox',`0 0 ${graphWidth} 1124`);if(graphEdges)graphEdges.style.width=`${graphWidth}px`;
+      const boxes=new Map(),layoutByNode=new Map(),layoutGroups=new Map();
+      graphNodes.forEach(node=>{
+        const nodeId=node.dataset.node,add=node.dataset.op==='add',state=node.dataset.op==='mhc-state';
+        const attentionBranch=/^(q_|kv_|query_tensor|key_tensor)/.test(nodeId),moeOuter=/^(gate|a2a_dispatch|expert_pool|shared_expert)$/.test(nodeId);
+        const group=state?'state':attentionBranch?'attention-branch':moeOuter?'moe-outer':'center';
+        const presentation=presentations.get(nodeId),summaryItems=presentation?.summary?.slice(0,3)||[],showData=dataMode&&summaryItems.length>0&&!add;
+        const labelScreenWidth=clamp(String(presentation?.displayLabel||'').length*6+18,82,160);
+        const metricCharacters=summaryItems.reduce((sum,value)=>sum+String(value).length,0);
+        const metricScreenWidth=showData?clamp(metricCharacters*5.5+Math.max(0,summaryItems.length-1)*6+8,54,176):0;
+        const maxWidth=state?340:attentionBranch?420:nodeId==='a2a_dispatch'?340:moeOuter?300:380;
+        layoutByNode.set(nodeId,{add,state,attentionBranch,moeOuter,group,showData,labelScreenWidth,maxWidth});
+        if(!add){
+          const aggregate=layoutGroups.get(group)||{labelScreenWidth:0,metricScreenWidth:0,showData:false,maxWidth:0};
+          aggregate.labelScreenWidth=Math.max(aggregate.labelScreenWidth,labelScreenWidth);
+          aggregate.metricScreenWidth=Math.max(aggregate.metricScreenWidth,metricScreenWidth);
+          aggregate.showData ||= showData;
+          aggregate.maxWidth=Math.max(aggregate.maxWidth,maxWidth);
+          layoutGroups.set(group,aggregate);
+        }
+      });
+      layoutGroups.forEach(group=>{
+        const desiredWidth=(group.labelScreenWidth+group.metricScreenWidth+(group.showData?4:0))*worldPerScreen;
+        const minWidth=(group.showData?140:82)*worldPerScreen;
+        group.width=dataMode?clamp(desiredWidth,minWidth,group.maxWidth):168;
+        group.labelWidth=group.labelScreenWidth*worldPerScreen;
+      });
+      graphNodes.forEach(node=>{
+        const x=parseFloat(node.style.left)||0,y=parseFloat(node.style.top)||0,w=parseFloat(node.style.width)||196,h=parseFloat(node.style.height)||30,cx=x+w/2,cy=y+h/2;
+        const nodeId=node.dataset.node,{add,state,group,showData}=layoutByNode.get(nodeId),addSize=Math.min(w,h),groupLayout=layoutGroups.get(group);
+        const targetWidth=add?addSize:groupLayout?.width??168,targetHeight=add?addSize:showData?Math.max(h,38):h;
+        const normalizedCenter=(dataMode?{
+          q_a_proj:250,q_causal_conv:250,q_residual_add:250,q_a_norm:250,q_b_proj:250,query_tensor:250,
+          kv_a_proj:750,kv_causal_conv:750,kv_residual_add:750,kv_a_norm:750,kv_b_proj:750,key_tensor:750,
+          gate:170,a2a_dispatch:170,expert_pool:500,shared_expert:830,a2a_combine:500,moe_branch_add:500
+        }:{
+          q_a_proj:240,q_causal_conv:240,q_residual_add:240,q_a_norm:240,q_b_proj:240,query_tensor:240,
+          kv_a_proj:480,kv_causal_conv:480,kv_residual_add:480,kv_a_norm:480,kv_b_proj:480,key_tensor:480,
+          gate:180,a2a_dispatch:180,expert_pool:360,shared_expert:540,a2a_combine:360,moe_branch_add:360
+        })[nodeId];
+        const compactCenterX=state?(dataMode?790:540):(normalizedCenter??(dataMode?cx*graphWidth/720:cx)),compactCenterY=cy;
+        const box={x:compactCenterX-targetWidth/2,y:compactCenterY-targetHeight/2,w:targetWidth,h:targetHeight};boxes.set(nodeId,box);
+        node.style.left=`${box.x}px`;node.style.top=`${box.y}px`;node.style.width=`${box.w}px`;node.style.height=`${box.h}px`;
+        if(showData)node.style.setProperty('--pto-training-focus-label-width',`${groupLayout.labelWidth}px`);
+        else node.style.removeProperty('--pto-training-focus-label-width');
+      });
+      const pointFor=(box,side)=>side==='right'?{x:box.x+box.w,y:box.y+box.h/2}:side==='left'?{x:box.x,y:box.y+box.h/2}:side==='top'?{x:box.x+box.w/2,y:box.y}:{x:box.x+box.w/2,y:box.y+box.h};
+      Array.from(graphEdges?.querySelectorAll('path')||[]).forEach(edge=>{
+        const sourceId=edge.dataset.source,targetId=edge.dataset.target,source=boxes.get(sourceId),target=boxes.get(targetId);if(!source||!target)return;
+        const kind=edge.dataset.kind||'activation',mhcRail=kind==='state-spine'||(sourceId==='mhc_state_in'&&targetId==='mhc_attention_post')||(sourceId==='mhc_attention_post'&&targetId==='ffn_residual_add');
+        let p0=pointFor(source,'bottom'),p1=pointFor(target,'top'),d;
+        if(sourceId==='a2a_dispatch'&&targetId==='expert_pool'){
+          p0=pointFor(source,'right');p1=pointFor(target,'left');const mid=(p0.x+p1.x)/2;d=`M${p0.x} ${p0.y}C${mid} ${p0.y},${mid} ${p1.y},${p1.x} ${p1.y}`;
+        }else if(sourceId==='shared_expert'&&targetId==='moe_branch_add'){
+          const routeX=dataMode?graphWidth-20:624;p0=pointFor(source,'right');p1=pointFor(target,'right');d=`M${p0.x} ${p0.y}L${routeX} ${p0.y}L${routeX} ${p1.y}L${p1.x} ${p1.y}`;
+        }else if(kind==='residual'&&(sourceId==='mhc_state_in'||sourceId==='mhc_attention_post')){
+          const routeX=dataMode?graphWidth-30:620;p0=pointFor(source,'right');p1=pointFor(target,'right');d=`M${p0.x} ${p0.y}L${routeX} ${p0.y}L${routeX} ${p1.y}L${p1.x} ${p1.y}`;
+        }else if(Math.abs(p0.x-p1.x)<8){d=`M${p0.x} ${p0.y}L${p1.x} ${p1.y}`;
+        }else{const mid=(p0.y+p1.y)/2;d=`M${p0.x} ${p0.y}C${p0.x} ${mid},${p1.x} ${mid},${p1.x} ${p1.y}`;}
+        edge.setAttribute('d',d);
+        if(mhcRail){
+          edge.classList.add('is-focus-mhc-rail');
+          [-4.5,-1.5,1.5,4.5].forEach((offset,index)=>{
+            const rail=index?edge.cloneNode(true):edge;rail.setAttribute('transform',`translate(${offset} ${offset})`);rail.dataset.rail=String(index+1);if(index)edge.after(rail);
+          });
+        }
+      });
+      graphNodes.forEach(node=>{
+        const nodeId=node.dataset.node,{displayLabel,summary,detail}=presentations.get(nodeId);
         node.replaceChildren();
         const labelNode=document.createElement('span');labelNode.className='pto-training-sidecar__focus-node-label';labelNode.textContent=displayLabel;node.appendChild(labelNode);
-        if(summary.length){const metricNode=document.createElement('span');metricNode.className='pto-training-sidecar__focus-node-metrics';summary.forEach(value=>{const item=document.createElement('i');item.textContent=value;metricNode.appendChild(item);});node.appendChild(metricNode);}
+        const showData=summary.length>0&&node.dataset.op!=='add';
+        node.classList.toggle('has-focus-data',showData);
+        if(showData){const metricNode=document.createElement('span');metricNode.className='pto-training-sidecar__focus-node-metrics';summary.slice(0,3).forEach(value=>{const item=document.createElement('i');item.textContent=value;metricNode.appendChild(item);});node.appendChild(metricNode);}
         tip(node,summary.length?`${displayLabel} · ${summary.join(' · ')}`:displayLabel,detail);
       });
       if(!snapshot.module.dense&&(activeMetricViews.has('moe')||activeMetricViews.has('training'))){const aux=document.createElement('div');aux.className='pto-training-sidecar__focus-graph-aux';aux.textContent='Router Aux · balance 0.014 · z-loss 0.003 · λ from training job';graph.appendChild(aux);}
@@ -671,7 +728,7 @@
       const samples=new Set([0,...stageRanges.map(([,hi])=>hi)].filter(layer=>layer>=0&&layer<=lastLayer));
       g.points.forEach(point=>{
         label(labels,'pto-training-sidecar__layer-number',`L${point.layer}`,point.x,g.axisY-7*g.scale,`Decoder Layer ${point.layer}`);
-        const hitWidth=layerColumnWidth(g),padding=2*g.scale,hit=document.createElementNS(NS,'rect');hit.setAttribute('class','pto-training-sidecar__layer-hit');hit.setAttribute('data-deck-no-drag','true');hit.dataset.layer=String(point.layer);hit.dataset.tip=`Layer L${point.layer} · 点击展开内部算子与指标`;hit.setAttribute('tabindex','0');hit.setAttribute('role','button');hit.setAttribute('aria-label',`展开 Layer ${point.layer}`);hit.setAttribute('x',(point.x-hitWidth/2).toFixed(1));hit.setAttribute('y',(point.operatorTop-padding).toFixed(1));hit.setAttribute('width',hitWidth.toFixed(1));hit.setAttribute('height',Math.max(4*g.scale,point.operatorBottom-point.operatorTop+padding*2).toFixed(1));hit.setAttribute('rx',(2*g.scale).toFixed(1));layerHits.appendChild(hit);
+        const hitWidth=layerColumnWidth(g),padding=2*g.scale,hit=document.createElementNS(NS,'rect');hit.setAttribute('class','pto-training-sidecar__layer-hit');hit.setAttribute('data-deck-no-drag','true');hit.dataset.layer=String(point.layer);hit.dataset.tip=`Layer L${point.layer} · 点击展开内部算子与指标`;hit.setAttribute('tabindex','0');hit.setAttribute('role','button');hit.setAttribute('aria-label',`展开 Layer ${point.layer}`);hit.setAttribute('x',(point.x-hitWidth/2).toFixed(1));hit.setAttribute('y',(point.operatorTop-padding).toFixed(1));hit.setAttribute('width',hitWidth.toFixed(1));hit.setAttribute('height',Math.max(4*g.scale,point.operatorBottom-point.operatorTop+padding*2).toFixed(1));hit.setAttribute('rx',(2*g.scale).toFixed(1));hit.addEventListener('click',activateLayerHit);hit.addEventListener('keydown',activateLayerHit);layerHits.appendChild(hit);
         if(samples.has(point.layer)&&(activeMetricViews.has('numerics')||activeMetricViews.has('performance'))){
           const snapshot=snapshotFor(point.layer),std=Number(metricValue(snapshot,'std')),status=snapshot.metric.amax>9.35||snapshot.metric.latency>2.35?'warning':'normal',sampleValues=[];
           if(activeMetricViews.has('numerics'))sampleValues.push(`σ${std.toFixed(2)}`,`Amax ${snapshot.metric.amax.toFixed(1)}`);
@@ -742,7 +799,8 @@
       const width=Math.max(1,viewport.clientWidth),height=Math.max(1,viewport.clientHeight);
       const topReserve=Number(options.topLaneReserve)||260,bottomReserve=Number(options.bottomLaneReserve)||130;
       const usableHeight=Math.max(420,height-topReserve-bottomReserve),zoom=clamp(Math.min(width/2100,usableHeight/1900),.12,.86);
-      fitZoom=zoom;controller.setPose({zoom,panY:(topReserve-bottomReserve)/2});schedule();return api;
+      const compactStructureShift=activeMetricViews.size===0?100:0;
+      fitZoom=zoom;controller.setPose({zoom,panY:(topReserve-bottomReserve)/2-compactStructureShift});schedule();return api;
     }
     function queueSidecarFit(){requestAnimationFrame(fitSidecar);}
     function closeSelectedLayer(afterLayer=null){
@@ -779,14 +837,22 @@
     function setMetricViews(values){
       const next=new Set((Array.isArray(values)?values:[]).filter(value=>metricViewValues.has(value)));
       const unchanged=next.size===activeMetricViews.size&&[...next].every(value=>activeMetricViews.has(value));if(unchanged)return api;
-      activeMetricViews=next;syncMetricViews();schedule(false);
+      activeMetricViews=next;syncMetricViews();schedule();
+      if(selectedLayer!==null)requestAnimationFrame(queueExpandedLayerFit);
+      else requestAnimationFrame(fitSidecar);
       const legacyValue=activeMetricViews.size===0?'structure':activeMetricViews.size===1?[...activeMetricViews][0]:'mixed';
       options.onMetricViewsChange?.([...activeMetricViews],api);options.onMetricViewChange?.(legacyValue,api);return api;
     }
     function setMetricView(value){return setMetricViews(value==='structure'?[]:[value]);}
     function toggleMetricView(value){if(!metricViewValues.has(value))return api;const next=new Set(activeMetricViews);if(next.has(value))next.delete(value);else next.add(value);return setMetricViews([...next]);}
     function eventLayer(event){const target=event.target.closest?.('.pto-training-sidecar__layer-hit');return target?Number(target.dataset.layer):null;}
-    function click(event){const layer=eventLayer(event);if(layer!==null&&Number.isFinite(layer))selectLayer(layer===selectedLayer?null:layer);}
+    function activateLayerHit(event){
+      if(event.type==='keydown'&&event.key!=='Enter'&&event.key!==' ')return;
+      const layer=Number(event.currentTarget.dataset.layer);
+      if(!Number.isFinite(layer))return;
+      event.preventDefault();event.stopPropagation();
+      selectLayer(layer===selectedLayer?null:layer);
+    }
     function layerHoverIn(event){const layer=eventLayer(event);if(layer!==null&&Number.isFinite(layer))setHoveredLayer(layer);}
     function layerHoverOut(event){
       const from=eventLayer(event),to=event.relatedTarget?.closest?.('.pto-training-sidecar__layer-hit'),toLayer=to?Number(to.dataset.layer):null;
@@ -804,8 +870,6 @@
     }
     function protectDetailPointer(event){if(event.target.closest?.('[data-detail],.pto-training-sidecar__inspector'))event.stopPropagation();}
     function keydown(event){
-      const layer=eventLayer(event);
-      if((event.key==='Enter'||event.key===' ')&&layer!==null&&Number.isFinite(layer)){event.preventDefault();selectLayer(layer===selectedLayer?null:layer);return;}
       if(event.key==='Escape'&&selectedDetail){event.preventDefault();openDetail(null);return;}
       if(event.key==='Escape'&&selectedLayer!==null){event.preventDefault();selectLayer(null);return;}
       if((event.key==='ArrowLeft'||event.key==='ArrowRight')&&selectedLayer!==null){event.preventDefault();selectLayer(selectedLayer+(event.key==='ArrowLeft'?-1:1));}
@@ -814,7 +878,7 @@
     function tooltipTarget(event){return event.target.closest?.('[data-tip]');}
     function showTooltip(event){const target=tooltipTarget(event);if(!target)return;tooltip.textContent=target.dataset.tip;tooltip.classList.add('is-visible');moveTooltip(event);}
     function moveTooltip(event){if(!tooltip.classList.contains('is-visible'))return;const rect=viewport.getBoundingClientRect(),x=clamp(event.clientX-rect.left+12,8,rect.width-tooltip.offsetWidth-8),y=clamp(event.clientY-rect.top+12,8,rect.height-tooltip.offsetHeight-8);tooltip.style.left=`${x}px`;tooltip.style.top=`${y}px`;}
-    function hideTooltip(event){if(event.relatedTarget?.closest?.('[data-tip]'))return;tooltip.classList.remove('is-visible');}
+    function hideTooltip(event){if(event?.relatedTarget?.closest?.('[data-tip]'))return;tooltip.classList.remove('is-visible');}
     function pointerDown(event){if(event.button!==0||event.target.closest('[data-stage-ui],button,.pto-training-sidecar__layer-hit'))return;dragging=true;root.classList.add('is-sidecar-dragging');tooltip.classList.remove('is-visible');}
     function pointerMove(event){if(dragging)syncOverlayTransform();else moveTooltip(event);}
     function pointerUp(){if(!dragging)return;dragging=false;root.classList.remove('is-sidecar-dragging');syncOverlayTransform();}
@@ -827,7 +891,7 @@
     }
     function dataOutsidePointer(event){if(!dataControl.contains(event.target))closeDataMenu();}
     function dataMenuKeydown(event){if(event.key==='Escape'&&dataControl.classList.contains('is-open')){event.preventDefault();closeDataMenu();dataControl.querySelector('[data-metric-menu-toggle]')?.focus();}}
-    layerHits.addEventListener('click',click);layerHits.addEventListener('keydown',keydown);layerHits.addEventListener('pointerover',layerHoverIn);layerHits.addEventListener('pointerout',layerHoverOut);layerHits.addEventListener('focusin',layerFocusIn);layerHits.addEventListener('focusout',layerFocusOut);viewport.addEventListener('click',detailClick);viewport.addEventListener('pointerover',showTooltip);viewport.addEventListener('pointerdown',protectDetailPointer,true);viewport.addEventListener('pointerdown',pointerDown);viewport.addEventListener('pointermove',pointerMove);viewport.addEventListener('pointerup',pointerUp);viewport.addEventListener('pointercancel',pointerUp);viewport.addEventListener('pointerout',hideTooltip);viewport.addEventListener('wheel',interaction,{passive:true});
+    layerHits.addEventListener('pointerover',layerHoverIn);layerHits.addEventListener('pointerout',layerHoverOut);layerHits.addEventListener('focusin',layerFocusIn);layerHits.addEventListener('focusout',layerFocusOut);viewport.addEventListener('click',detailClick);viewport.addEventListener('pointerover',showTooltip);viewport.addEventListener('pointerdown',protectDetailPointer,true);viewport.addEventListener('pointerdown',pointerDown);viewport.addEventListener('pointermove',pointerMove);viewport.addEventListener('pointerup',pointerUp);viewport.addEventListener('pointercancel',pointerUp);viewport.addEventListener('pointerout',hideTooltip);viewport.addEventListener('wheel',interaction,{passive:true});viewport.addEventListener('keydown',keydown);
     dataControl.addEventListener('click',dataControlClick);dataControl.addEventListener('keydown',dataMenuKeydown);document.addEventListener('pointerdown',dataOutsidePointer);syncMetricViews();syncOverlayTransform();
     const observer=global.ResizeObserver?new ResizeObserver(()=>{fitSidecar();schedule();}):null;observer?.observe(viewport);
     const fitButton=root.querySelector('[data-deck-fit]'),fitClick=()=>queueSidecarFit();fitButton?.addEventListener('click',fitClick);
@@ -835,7 +899,7 @@
     const api={
       root,base:controller,get selectedLayer(){return selectedLayer;},get selectedDetail(){return selectedDetail;},get metricView(){return activeMetricViews.size===0?'structure':activeMetricViews.size===1?[...activeMetricViews][0]:'mixed';},get metricViews(){return [...activeMetricViews];},selectLayer,collapseLayer(){return selectLayer(null);},openDetail,closeDetail(){return openDetail(null);},setLayerSnapshot,setMetricView,setMetricViews,toggleMetricView,
       setView(view){controller.setView(view);queueSidecarFit();return api;},setParallelMode(mode){controller.setParallelMode(mode);schedule();return api;},setTheme(theme){controller.setTheme(theme);schedule();return api;},setZoom(value){controller.setZoom(value);syncOverlayTransform();return api;},setPose(pose){controller.setPose(pose);syncOverlayTransform();return api;},setFrontLayer(layer){controller.setFrontLayer(layer);schedule();return api;},selectNode(nodeId,layer){return controller.selectNode(nodeId,layer);},fit(){return fitSidecar();},refresh(){controller.refresh();schedule();return api;},
-      destroy(){destroyed=true;cancelAnimationFrame(raf);cancelAnimationFrame(focusFitRaf);clearTimeout(focusTransitionTimer);observer?.disconnect();fitButton?.removeEventListener('click',fitClick);dataControl.removeEventListener('click',dataControlClick);dataControl.removeEventListener('keydown',dataMenuKeydown);document.removeEventListener('pointerdown',dataOutsidePointer);layerHits.removeEventListener('click',click);layerHits.removeEventListener('keydown',keydown);layerHits.removeEventListener('pointerover',layerHoverIn);layerHits.removeEventListener('pointerout',layerHoverOut);layerHits.removeEventListener('focusin',layerFocusIn);layerHits.removeEventListener('focusout',layerFocusOut);viewport.removeEventListener('click',detailClick);viewport.removeEventListener('pointerover',showTooltip);viewport.removeEventListener('pointerdown',protectDetailPointer,true);viewport.removeEventListener('pointerdown',pointerDown);viewport.removeEventListener('pointermove',pointerMove);viewport.removeEventListener('pointerup',pointerUp);viewport.removeEventListener('pointercancel',pointerUp);viewport.removeEventListener('pointerout',hideTooltip);viewport.removeEventListener('wheel',interaction);baseDestroy();}
+      destroy(){destroyed=true;cancelAnimationFrame(raf);cancelAnimationFrame(focusFitRaf);clearTimeout(focusTransitionTimer);observer?.disconnect();fitButton?.removeEventListener('click',fitClick);dataControl.removeEventListener('click',dataControlClick);dataControl.removeEventListener('keydown',dataMenuKeydown);document.removeEventListener('pointerdown',dataOutsidePointer);layerHits.removeEventListener('pointerover',layerHoverIn);layerHits.removeEventListener('pointerout',layerHoverOut);layerHits.removeEventListener('focusin',layerFocusIn);layerHits.removeEventListener('focusout',layerFocusOut);viewport.removeEventListener('click',detailClick);viewport.removeEventListener('pointerover',showTooltip);viewport.removeEventListener('pointerdown',protectDetailPointer,true);viewport.removeEventListener('pointerdown',pointerDown);viewport.removeEventListener('pointermove',pointerMove);viewport.removeEventListener('pointerup',pointerUp);viewport.removeEventListener('pointercancel',pointerUp);viewport.removeEventListener('pointerout',hideTooltip);viewport.removeEventListener('wheel',interaction);viewport.removeEventListener('keydown',keydown);baseDestroy();}
     };
     requestAnimationFrame(()=>{fitSidecar();if(options.initialLayer!==null&&options.initialLayer!==undefined&&Number.isFinite(Number(options.initialLayer)))selectLayer(Number(options.initialLayer));});
     return api;
