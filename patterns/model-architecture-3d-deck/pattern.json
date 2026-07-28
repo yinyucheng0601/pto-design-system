@@ -34,6 +34,11 @@
   "globalApi": "window.PtoModelArchitecture3dDeck",
   "requiredApis": [
     "render(root, options)",
+    "renderLayerScene(layer, options)",
+    "renderStaticScene(kind, options)",
+    "applyLayerContext(element, context)",
+    "applySemanticPalette(root, theme)",
+    "getConfig(options)",
     "controller.setView(view)",
     "controller.setParallelMode(mode)",
     "controller.setTheme(theme)",

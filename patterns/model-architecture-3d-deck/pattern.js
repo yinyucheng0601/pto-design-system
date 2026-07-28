@@ -37,7 +37,7 @@
       {kind:'tp',label:'TP ×2 · attention shard',nodeId:'attn_all_gather'},
       {kind:'ep',label:'EP ×8 · expert routing',nodeId:'expert_pool'},
       {kind:'pp',label:'PP ×4 · layer stages',nodeId:'post_mlp_norm'},
-      {kind:'dp',label:'DP ×16 · gradient replica',nodeId:'mhc_state_out'}
+      {kind:'dp',label:'DP ×4 · gradient replica',nodeId:'mhc_state_out'}
     ]
   };
   const PRESETS={'openpangu-flash':OPENPANGU_FLASH};
@@ -136,6 +136,56 @@
     const edges=[['decoder_exit_depth','final_norm','model-spine-depth'],['decoder_exit_front','final_norm','model-spine-front'],['decoder_exit_block','final_norm','model-spine-block'],['final_norm','lm_head'],['lm_head','logits_allgather','comm'],['logits_allgather','logits'],['lm_head_weight','lm_head','parameter'],['final_norm','mtp_input_norms','activation','right','right',{mode:'elbow',viaX:548}],['mtp_input_norms','mtp_eh_proj'],['mtp_eh_proj','mtp_decoder_layer'],['mtp_decoder_layer','mtp_shared_head'],['mtp_head_weight','mtp_shared_head','parameter'],['mtp_shared_head','mtp_logits']];
     return `<section class="pto-model-deck__static pto-model-deck__static--output opv-cssdeck-static opv-cssdeck-static--output" style="transform:translate3d(0,0,${-(config.layerCount+.5)*config.depthGap}px)"><div class="pto-model-deck__static-title opv-cssdeck-static__title">Main output + MTP tail · source checked</div>${edgesHtml(nodes,edges,{height:526})}${parts.join('')}</section>`;
   }
+  function elementFromHtml(markup){
+    const template=document.createElement('template');template.innerHTML=markup.trim();return template.content.firstElementChild;
+  }
+  function clearOwnership(node){
+    ['ownership','shardAxis','shardIndex','shardCount','replicaAxis'].forEach(key=>delete node.dataset[key]);
+  }
+  function applyOwnership(node,ownership){
+    clearOwnership(node);if(!ownership||!ownership.kind)return;
+    node.dataset.ownership=ownership.kind;
+    if(ownership.axis)node.dataset.shardAxis=ownership.axis;
+    if(Number.isFinite(ownership.index))node.dataset.shardIndex=String(ownership.index);
+    if(Number.isFinite(ownership.count))node.dataset.shardCount=String(ownership.count);
+    if(ownership.replicaAxis)node.dataset.replicaAxis=ownership.replicaAxis;
+  }
+  function applyLayerContext(element,context={}){
+    if(!element)return element;
+    element.dataset.renderContext=context.interactionMode||'overview';
+    if(Number.isFinite(Number(context.rank)))element.dataset.rank=String(Number(context.rank));
+    const ownershipMap=context.nodeOwnership||{};
+    element.querySelectorAll('[data-node]').forEach(node=>{
+      const ownership=typeof context.resolveOwnership==='function'
+        ?context.resolveOwnership(node.dataset.node,node,element)
+        :ownershipMap[node.dataset.node];
+      applyOwnership(node,ownership);
+    });
+    return element;
+  }
+  function renderLayerScene(layer,options={}){
+    const config=normalizeConfig(options);const next=Number(layer);
+    if(!Number.isInteger(next)||next<0||next>=config.layerCount)throw new RangeError(`Layer ${layer} is outside 0-${config.layerCount-1}`);
+    return applyLayerContext(elementFromHtml(layerHtml(next,config)),options.context||{});
+  }
+  function renderStaticScene(kind,options={}){
+    if(kind!=='input'&&kind!=='output')throw new TypeError('Static scene kind must be input or output');
+    return applyLayerContext(elementFromHtml(staticHtml(kind,normalizeConfig(options))),options.context||{});
+  }
+  function applySemanticPalette(root,theme='dark'){
+    if(!root)return null;
+    const shared=global.PtoModelGraphvizPattern?.modelArchitectureColormap?.({nodes:[],clusters:[]},{theme});
+    const semantic=shared?.semanticColors||{},io=shared?.ioColors||{};
+    const value=(entry,fallback)=>typeof entry==='string'?entry:(entry?.raw||entry?.color||fallback);
+    const colors={
+      embedding:value(semantic['sem:embedding'],COLOR_FALLBACKS.embedding),norm:value(semantic['sem:norm'],COLOR_FALLBACKS.norm),attention:value(semantic['sem:attention'],COLOR_FALLBACKS.attention),
+      linear:value(semantic['sem:linear'],COLOR_FALLBACKS.linear),head:value(semantic['sem:head'],COLOR_FALLBACKS.head),mlp:value(semantic['sem:mlp'],COLOR_FALLBACKS.mlp),act:value(semantic['sem:act'],COLOR_FALLBACKS.act),
+      gate:value(semantic['sem:gate'],COLOR_FALLBACKS.gate),moe:value(semantic['sem:moe'],COLOR_FALLBACKS.moe),comm:value(semantic['sem:comm'],COLOR_FALLBACKS.comm),decoder:value(semantic['module:decoder'],COLOR_FALLBACKS.decoder),
+      input:value(io.input,COLOR_FALLBACKS.input),output:value(io.output,COLOR_FALLBACKS.output),parameter:value(io.parameter,COLOR_FALLBACKS.parameter),state:value(io.state,COLOR_FALLBACKS.state)
+    };
+    if(theme==='light')colors.input=colors.output=colors.parameter=colors.state='#D7D7D7';
+    Object.entries(colors).forEach(([key,color])=>root.style.setProperty(`--pto-model-deck-${key}`,color));return colors;
+  }
   function shellHtml(config,options={}){
     const chrome=options.showChrome===false?'':`<div class="pto-model-deck__title">${esc(config.label)}<span>CSS 3D · ${config.layerCount} layers</span></div>
       <div class="pto-model-deck__toolbar" data-stage-ui>
@@ -179,20 +229,7 @@
     const state={view:VIEWS.has(options.initialView)?options.initialView:'iso',parallelMode:normalizeParallelMode(options.parallelMode),theme:initialTheme,zoom:Number(options.initialZoom)||.5,rx:-18,ry:-34,panX:0,panY:0,selected:null,expandedLayer:null,expansionDepth:0};
     let drag=null,raf=0,destroyed=false;
 
-    function applySemanticPalette(){
-      const shared=global.PtoModelGraphvizPattern?.modelArchitectureColormap?.({nodes:[],clusters:[]},{theme:state.theme});
-      const semantic=shared?.semanticColors||{};
-      const io=shared?.ioColors||{};
-      const value=(entry,fallback)=>typeof entry==='string'?entry:(entry?.raw||entry?.color||fallback);
-      const colors={
-        embedding:value(semantic['sem:embedding'],COLOR_FALLBACKS.embedding),norm:value(semantic['sem:norm'],COLOR_FALLBACKS.norm),attention:value(semantic['sem:attention'],COLOR_FALLBACKS.attention),
-        linear:value(semantic['sem:linear'],COLOR_FALLBACKS.linear),head:value(semantic['sem:head'],COLOR_FALLBACKS.head),mlp:value(semantic['sem:mlp'],COLOR_FALLBACKS.mlp),act:value(semantic['sem:act'],COLOR_FALLBACKS.act),
-        gate:value(semantic['sem:gate'],COLOR_FALLBACKS.gate),moe:value(semantic['sem:moe'],COLOR_FALLBACKS.moe),comm:value(semantic['sem:comm'],COLOR_FALLBACKS.comm),decoder:value(semantic['module:decoder'],COLOR_FALLBACKS.decoder),
-        input:value(io.input,COLOR_FALLBACKS.input),output:value(io.output,COLOR_FALLBACKS.output),parameter:value(io.parameter,COLOR_FALLBACKS.parameter),state:value(io.state,COLOR_FALLBACKS.state)
-      };
-      if(state.theme==='light')colors.input=colors.output=colors.parameter=colors.state='#D7D7D7';
-      Object.entries(colors).forEach(([key,color])=>root.style.setProperty(`--pto-model-deck-${key}`,color));
-    }
+    function syncSemanticPalette(){applySemanticPalette(root,state.theme);}
 
     function expandedOffset(layer){
       if(state.view!=='right'||!Number.isFinite(state.expandedLayer)||state.expansionDepth<=0)return 0;
@@ -226,7 +263,7 @@
       syncButtons();syncExpertExpansion();fit();options.onViewChange?.(state.view,api);return api;
     }
     function setParallelMode(mode){state.parallelMode=normalizeParallelMode(mode);syncButtons();syncExpertExpansion();scheduleOverlay();options.onParallelModeChange?.(state.parallelMode,api);return api;}
-    function setTheme(theme){state.theme=THEMES.has(theme)?theme:'dark';document.documentElement.dataset.theme=state.theme;applySemanticPalette();syncButtons();scheduleOverlay();options.onThemeChange?.(state.theme,api);return api;}
+    function setTheme(theme){state.theme=THEMES.has(theme)?theme:'dark';document.documentElement.dataset.theme=state.theme;syncSemanticPalette();syncButtons();scheduleOverlay();options.onThemeChange?.(state.theme,api);return api;}
     function setZoom(value){state.zoom=clamp(Number(value)||state.zoom,.12,1.2);apply();options.onZoomChange?.(state.zoom,api);return api;}
     function fit(){
       const width=Math.max(1,viewport.clientWidth),height=Math.max(1,viewport.clientHeight);
@@ -379,5 +416,9 @@
     setTheme(state.theme);Object.assign(state,VIEW_POSES[state.view]);syncExpertExpansion();if(externallyManaged){syncButtons();apply();}else requestAnimationFrame(fit);return api;
   }
 
-  global.PtoModelArchitecture3dDeck={PRESETS,VIEW_POSES,render:mount,mount};
+  global.PtoModelArchitecture3dDeck={
+    PRESETS,VIEW_POSES,render:mount,mount,
+    getConfig(options={}){return normalizeConfig(options);},
+    renderLayerScene,renderStaticScene,applyLayerContext,applySemanticPalette
+  };
 })(window);

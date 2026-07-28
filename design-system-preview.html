@@ -1757,6 +1757,10 @@
       height: 680px !important;
     }
 
+    #pattern-previews .preview-embed-frame[data-pattern-preview='model-parallel-rank-deck'] {
+      height: 760px !important;
+    }
+
     #pattern-previews .preview-embed-frame[data-pattern-preview='model-architecture-training-sidecar'] {
       height: 1400px !important;
     }
@@ -2162,6 +2166,7 @@
               <tr><td><code>memory-architecture-layout</code></td><td>Use <code>patterns/memory-architecture/pattern.js</code>. Call <code>window.PtoMemoryArchitecturePattern.renderArchitecture</code> to build the stage, <code>createRouteOverlay</code> for MTE routes, <code>attachHoverInteractions</code> for hardware tips, and <code>attachPathFocusInteractions</code> or <code>setPathFocus</code> / <code>clearPathFocus</code> for <code>ascend-hardware-map-v3</code>-style flow-step hover. Extend preset data for 910B/950; do not copy raw <code>mem_viewer</code> HTML, redraw route geometry locally, reimplement <code>is-path-focused</code> route glow, or change route <code>stroke-width</code> for hover/playback focus.</td></tr>
               <tr><td><code>hardware-architecture-viewport</code></td><td>Use <code>patterns/hardware-architecture-viewport/pattern.css</code> and <code>pattern.js</code>, then call <code>window.PtoHardwareArchitectureViewport.mount</code> for architecture-map host controls, detail visibility, zoom readout, iframe readiness, size sync, and the standard hardware postMessage protocol. Do not replace the shared dotted viewport, title toolbar, zoom cluster, or standard <code>hardware-ready</code> / <code>hardware-size</code> / <code>hardware-focus</code> messages with page-local variants.</td></tr>
               <tr><td><code>model-architecture-3d-deck</code></td><td>Use <code>patterns/model-architecture-3d-deck/pattern.css</code> and <code>pattern.js</code>, then call <code>window.PtoModelArchitecture3dDeck.render</code>. The shared hybrid renderer preserves the source openPangu 46-layer Dense/MoE/Sparse MLA/mHC/MTP architecture and owns dark/light switching, iso/front/right transforms, drag rotate/direct pan, wheel zoom, projected PP stage wireframes, DP/PP/TP/EP badges, and right-view operator labels. Pass model data and callbacks only; do not simplify the model graph, copy projection math, or hand-position labels in product CSS.</td></tr>
+              <tr><td><code>model-parallel-rank-deck</code></td><td>Load it after <code>model-architecture-3d-deck</code>, supply the pinned local Three.js module, and call <code>window.PtoModelParallelRankDeck.render</code>. The canonical demo compiles every original Layer Node, Cluster, and Edge into GPU batches inside 128 transparent Rank volumes for TP2 × PP4 × CP1 × EP8 × EDP2. Do not substitute glyphs, screenshots, representative Layers, or consumer-owned Layer styles.</td></tr>
               <tr><td><code>model-architecture-training-sidecar</code></td><td>Load it after <code>model-architecture-3d-deck</code> and call <code>window.PtoModelArchitectureTrainingSidecar.render</code>. It preserves the canonical right view as an immutable baseline and adds sibling overlays for forward hidden state, backward activation gradients, local parameter gradients, optimizer state, metric strips, mock context, and selectable Layer focus. Extend Layer internals only through <code>renderLayerDetail</code>; do not mutate or restyle the base deck.</td></tr>
               <tr><td><code>aic-core-object</code></td><td>Use <code>patterns/aic-core-object/pattern.js</code> and call <code>window.PtoAicCorePattern.render</code>. The shell is config-driven from the design draft; extend the preset data for 950B instead of cloning the generated DOM or restyling the chrome locally.</td></tr>
               <tr><td><code>aiv-core-object</code></td><td>Use <code>patterns/aiv-core-object/pattern.js</code> and call <code>window.PtoAivCorePattern.render</code> with <code>ascend910b</code> or <code>ascend950b</code>. The 910B preset is the simplified Scalar + UB + Vector object; the 950B preset keeps DCache, ICache, ND-DMA Cache, SIMT, SIMD, and Vector topology. Extend preset data instead of copying generated DOM or changing card geometry locally.</td></tr>
@@ -2487,6 +2492,27 @@
             <span class="token-badge">source: patterns/memory-architecture/pattern.js</span>
             <span class="token-badge">contract: shared presets + route overlay + hardware tips + path focus hover + graph-only pan/zoom viewport</span>
             <span class="state-badge">Pattern</span>
+          </div>
+        </article>
+
+        <article class="preview-card preview-card-full-row">
+          <div class="preview-card-head">
+            <h3 class="preview-card-title">模型并行 Rank Three.js Deck Pattern</h3>
+            <div class="preview-card-class">TP2 × PP4 × EP8 × EDP2：128 个透明 Rank 内编译 1472 个完整 Layer 载荷，支持并行拓扑变换、关系选中与双击进入 Rank</div>
+          </div>
+          <div class="preview-stage preview-stack">
+            <div class="preview-inline">
+              <a class="btn btn-ghost" href="./patterns/model-parallel-rank-deck/pattern.html?v=rank-packing-v1">查看完整示例</a>
+            </div>
+            <div class="preview-embed">
+              <iframe class="preview-embed-frame" data-pattern-preview="model-parallel-rank-deck" data-sync-theme-param="true" data-src="./patterns/model-parallel-rank-deck/pattern.html?embed=1&amp;v=rank-packing-v1" src="about:blank" title="Model Parallel Rank Three.js Deck Pattern Preview" loading="lazy"></iframe>
+            </div>
+          </div>
+          <div class="preview-meta">
+            <span class="token-badge">pattern id: model-parallel-rank-deck</span>
+            <span class="token-badge">payload: complete GPU scene records</span>
+            <span class="token-badge">topology: 128-rank demo</span>
+            <span class="state-badge">Three.js Hybrid Pattern</span>
           </div>
         </article>
 
@@ -3440,6 +3466,7 @@
         'memory-architecture',
         'hardware-architecture-viewport',
         'model-architecture-3d-deck',
+        'model-parallel-rank-deck',
         'model-architecture-training-sidecar',
         'aic-core-object',
         'aiv-core-object',

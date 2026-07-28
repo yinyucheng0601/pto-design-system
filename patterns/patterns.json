@@ -52,6 +52,11 @@
       "preview": "patterns/model-architecture-3d-deck/pattern.html"
     },
     {
+      "id": "model-parallel-rank-deck",
+      "path": "patterns/model-parallel-rank-deck/pattern.json",
+      "preview": "patterns/model-parallel-rank-deck/pattern.html"
+    },
+    {
       "id": "model-architecture-training-sidecar",
       "path": "patterns/model-architecture-training-sidecar/pattern.json",
       "preview": "patterns/model-architecture-training-sidecar/pattern.html"
