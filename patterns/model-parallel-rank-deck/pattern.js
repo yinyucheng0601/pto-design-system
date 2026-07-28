@@ -2,8 +2,11 @@
   'use strict';
 
   const AXES=['tp','pp','ep','edp'];
+  const GROUPING_ORDER=['pp','tp','ep','edp'];
   const SCENE_MODES=new Set(['packed','exploded','rank']);
-  const TOPOLOGY_MODES=new Set(['standard','pp','tp','ep','replica']);
+  const TOPOLOGY_MODES=new Set(['standard','pp','tp','ep','edp','replica']);
+  const MODE_TO_AXIS={pp:'pp',tp:'tp',ep:'ep',edp:'edp',replica:'edp'};
+  const AXIS_TO_MODE={pp:'pp',tp:'tp',ep:'ep',edp:'replica'};
   const THEMES=new Set(['dark','light']);
   const ISOMETRIC_POSE={rx:-35.264,ry:45};
   const DEFAULT_TOPOLOGY={
@@ -40,6 +43,9 @@
   const qs=(value,root=document)=>typeof value==='string'?root.querySelector(value):value;
   const copy=(value)=>JSON.parse(JSON.stringify(value));
   const finiteInt=(value,label,min=1)=>{const next=Number(value);if(!Number.isInteger(next)||next<min)throw new TypeError(`${label} must be an integer >= ${min}`);return next;};
+  const normalizeGroupingAxes=(value)=>{const selected=new Set((Array.isArray(value)?value:String(value||'').split(',')).map(item=>MODE_TO_AXIS[String(item).trim().toLowerCase()]).filter(axis=>AXES.includes(axis)));return GROUPING_ORDER.filter(axis=>selected.has(axis));};
+  const toggleGroupingAxis=(axesInput,mode)=>{const axes=normalizeGroupingAxes(axesInput),axis=MODE_TO_AXIS[String(mode||'').toLowerCase()];if(!axis)return axes;return normalizeGroupingAxes(axes.includes(axis)?axes.filter(item=>item!==axis):[...axes,axis]);};
+  const topologyModeForAxes=(axes)=>axes.length?AXIS_TO_MODE[axes[axes.length-1]]:'standard';
 
   function normalizeTopology(input={}){
     const dimensions={...DEFAULT_TOPOLOGY.dimensions,...(input.dimensions||{})};
@@ -134,6 +140,36 @@
     };
   }
 
+  function buildHierarchicalRankLayout(manifestsInput=[],axesInput=[],mode='exploded',topologyInput=DEFAULT_TOPOLOGY){
+    const manifests=[...manifestsInput],axes=normalizeGroupingAxes(axesInput),topology=normalizeTopology(topologyInput),d=topology.dimensions,multiplier=mode==='exploded'?1.18:1,positions=new Map(),frames=[];
+    if(!axes.length)return{positions,frames,width:0,height:0,depth:0};
+    const first=axes[0],secondaryAxes=new Set(axes.slice(1)),cTp=(d.tp-1)/2,cPp=(d.pp-1)/2,cEp=(d.ep-1)/2,cEdp=(d.edp-1)/2,cRep=(d.ep*d.edp-1)/2,epFirst=axes.includes('ep');
+    manifests.forEach(manifest=>{
+      const coordinate=manifest.coordinate,depthIndex=epFirst?coordinate.ep*d.edp+coordinate.edp:coordinate.edp*d.ep+coordinate.ep;let position;
+      if(first==='pp')position={x:(coordinate.pp-cPp)*RANK_STEP.x*2.35*multiplier,y:(cTp-coordinate.tp)*RANK_STEP.y*.78,z:(cRep-depthIndex)*RANK_STEP.z*multiplier};
+      else if(first==='tp')position={x:(coordinate.tp-cTp)*RANK_STEP.x*3.1*multiplier,y:(cPp-coordinate.pp)*RANK_STEP.y,z:(cRep-depthIndex)*RANK_STEP.z*multiplier};
+      else if(first==='ep')position={x:(coordinate.ep-cEp)*RANK_STEP.x*2.2*multiplier+(coordinate.tp-cTp)*RANK_STEP.x,y:(cPp-coordinate.pp)*RANK_STEP.y,z:(cEdp-coordinate.edp)*RANK_STEP.z*2.2};
+      else position={x:(coordinate.edp-cEdp)*RANK_STEP.x*3.2*multiplier+(coordinate.tp-cTp)*RANK_STEP.x,y:(cPp-coordinate.pp)*RANK_STEP.y,z:(cEp-coordinate.ep)*RANK_STEP.z*multiplier};
+      if(secondaryAxes.has('tp')){
+        if(first==='pp')position.y+=(cTp-coordinate.tp)*RANK_STEP.y*.62*multiplier;
+        else position.x+=(coordinate.tp-cTp)*RANK_STEP.x*.82*multiplier;
+      }
+      if(secondaryAxes.has('edp'))position.z+=(cEdp-coordinate.edp)*RANK_STEP.z*(epFirst?.72:1.5)*multiplier;
+      positions.set(manifest.rank,position);
+    });
+    axes.forEach((axis,level)=>{
+      const prefix=axes.slice(0,level+1),buckets=new Map();
+      manifests.forEach(manifest=>{const key=prefix.map(keyAxis=>`${keyAxis}:${manifest.coordinate[keyAxis]}`).join('|');if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(manifest);});
+      buckets.forEach(members=>{
+        const bounds={minX:Infinity,minY:Infinity,minZ:Infinity,maxX:-Infinity,maxY:-Infinity,maxZ:-Infinity};
+        members.forEach(manifest=>{const point=positions.get(manifest.rank);bounds.minX=Math.min(bounds.minX,point.x-RANK_SIZE.x/2);bounds.maxX=Math.max(bounds.maxX,point.x+RANK_SIZE.x/2);bounds.minY=Math.min(bounds.minY,point.y-RANK_SIZE.y/2);bounds.maxY=Math.max(bounds.maxY,point.y+RANK_SIZE.y/2);bounds.minZ=Math.min(bounds.minZ,point.z-RANK_SIZE.z/2);bounds.maxZ=Math.max(bounds.maxZ,point.z+RANK_SIZE.z/2);});
+        const padding=1.5+level*.35,path=prefix.map(pathAxis=>({axis:pathAxis,value:members[0].coordinate[pathAxis]}));frames.push({axis,value:members[0].coordinate[axis],level,path,ranks:members.map(item=>item.rank),center:{x:(bounds.minX+bounds.maxX)/2,y:(bounds.minY+bounds.maxY)/2,z:(bounds.minZ+bounds.maxZ)/2},size:{x:bounds.maxX-bounds.minX+padding,y:bounds.maxY-bounds.minY+padding,z:bounds.maxZ-bounds.minZ+padding}});
+      });
+    });
+    const bounds={minX:Infinity,minY:Infinity,minZ:Infinity,maxX:-Infinity,maxY:-Infinity,maxZ:-Infinity};positions.forEach(point=>{bounds.minX=Math.min(bounds.minX,point.x-RANK_SIZE.x/2);bounds.maxX=Math.max(bounds.maxX,point.x+RANK_SIZE.x/2);bounds.minY=Math.min(bounds.minY,point.y-RANK_SIZE.y/2);bounds.maxY=Math.max(bounds.maxY,point.y+RANK_SIZE.y/2);bounds.minZ=Math.min(bounds.minZ,point.z-RANK_SIZE.z/2);bounds.maxZ=Math.max(bounds.maxZ,point.z+RANK_SIZE.z/2);});
+    return{positions,frames,width:bounds.maxX-bounds.minX,height:bounds.maxY-bounds.minY,depth:bounds.maxZ-bounds.minZ};
+  }
+
   function numericStyle(element,key){const value=Number.parseFloat(element.style[key]);return Number.isFinite(value)?value:0;}
 
   function sampleSvgPath(pathData,curveSteps=5){
@@ -197,10 +233,10 @@
     let model=base.getConfig({preset:typeof options.model==='string'?options.model:(options.preset||'openpangu-flash'),config:typeof options.model==='object'?options.model:options.config});
     let topology=normalizeTopology(options.topology||DEFAULT_TOPOLOGY),partitionRules=options.partitionRules||{},plan=partitionModel(model,topology,partitionRules);
     const spec=buildModelSceneSpec(base,model),params=new URLSearchParams(global.location?.search||'');
-    const requestedScene=options.initialState?.sceneMode||params.get('scene')||'exploded',requestedTopology=options.initialState?.topologyMode||params.get('topology')||'standard';
+    const requestedScene=options.initialState?.sceneMode||params.get('scene')||'exploded',requestedTopology=options.initialState?.groupingAxes||options.initialState?.topologyMode||params.get('topology')||'standard',requestedGroupingAxes=normalizeGroupingAxes(requestedTopology);
     const requestedRank=options.initialState?.selectedRank??(params.has('rank')?Number(params.get('rank')):null),requestedLayer=options.initialState?.selectedLayer??(params.has('layer')?Number(params.get('layer')):null);
     const state={
-      sceneMode:SCENE_MODES.has(requestedScene)?requestedScene:'packed',topologyMode:TOPOLOGY_MODES.has(requestedTopology)?requestedTopology:'standard',
+      sceneMode:SCENE_MODES.has(requestedScene)?requestedScene:'packed',groupingAxes:requestedGroupingAxes,topologyMode:topologyModeForAxes(requestedGroupingAxes),
       theme:THEMES.has(options.initialState?.theme)?options.initialState.theme:(params.get('theme')==='light'?'light':document.documentElement.dataset.theme==='light'?'light':'dark'),
       selectedRank:Number.isInteger(requestedRank)&&plan.manifestByRank.has(requestedRank)?requestedRank:null,selectedLayer:Number.isInteger(requestedLayer)?requestedLayer:null,
       selectedNode:null,selectedGroup:null,hoveredRank:null,camera:{...ISOMETRIC_POSE,zoom:1,fitHalfHeight:72,target:{x:0,y:0,z:0}},ready:false
@@ -208,12 +244,26 @@
     if(state.sceneMode==='rank'&&state.selectedRank===null)state.sceneMode='packed';
     let destroyed=false,dirty=true,renderRaf=0,layoutTweenRaf=0,pointer=null,hoverRaf=0;
 
-    root.classList.add('pto-model-rank-deck','pto-model-rank-three');root.dataset.sharedPattern='model-parallel-rank-deck';root.dataset.sceneMode=state.sceneMode;root.dataset.topologyMode=state.topologyMode;root.dataset.theme=state.theme;
+    root.classList.add('pto-model-rank-deck','pto-model-rank-three');root.dataset.sharedPattern='model-parallel-rank-deck';root.dataset.sceneMode=state.sceneMode;root.dataset.topologyMode=state.topologyMode;root.dataset.groupingAxes=state.groupingAxes.join(' ');root.dataset.theme=state.theme;
+    const d=topology.dimensions;
     root.innerHTML=`
       <header class="pto-model-rank-deck__header" data-stage-ui>
         <div class="pto-model-rank-deck__identity"><b>${esc(model.label)}</b><span>Three.js / ${plan.topology.worldSize} ranks / complete Layer payload</span></div>
+        <div class="pto-model-rank-deck__grouping-panel" role="group" aria-label="当前范围下继续分组">
+          <button type="button" class="pto-model-rank-deck__scope" data-grouping-reset aria-label="恢复全部 ${plan.topology.worldSize} 个 Rank">
+            <span>当前范围</span><b data-grouping-scope>全部 · ${plan.topology.worldSize} Ranks</b>
+          </button>
+          <i aria-hidden="true"></i>
+          <span class="pto-model-rank-deck__grouping-prompt">继续按</span>
+          <div class="pto-model-rank-deck__grouping-actions">
+            <button type="button" data-topology-mode="pp" data-tip="按 Pipeline Stage 分组；再次点击取消这一层。"><b>PP</b><small>×${d.pp}</small></button>
+            <button type="button" data-topology-mode="tp" data-tip="在当前分组内继续按 Tensor Shard 分组；再次点击取消。"><b>TP</b><small>×${d.tp}</small></button>
+            <button type="button" data-topology-mode="ep" data-tip="在当前分组内继续按 Expert Shard 分组；再次点击取消。"><b>EP</b><small>×${d.ep}</small></button>
+            <button type="button" data-topology-mode="replica" data-tip="在当前分组内继续按 Expert-Data Replica 分组；再次点击取消。"><b>EDP</b><small>×${d.edp}</small></button>
+            <button type="button" data-dimension-static="cp" data-tip="当前 CP=1，没有产生 Rank 拆分。" disabled><b>CP</b><small>×${d.cp}</small></button>
+          </div>
+        </div>
         <div class="pto-model-rank-deck__toolbar" aria-label="Rank scene controls">
-          <div class="pto-model-rank-deck__control" role="group" aria-label="并行关系"><button type="button" data-topology-mode="standard" data-tip="ALL：显示所有 Rank，不按并行轴分类。">ALL</button><button type="button" data-topology-mode="pp" data-tip="PP：先按 Pipeline Stage 给全部 Rank 分类；再点一个 Rank 可聚焦它所属的 PP 通信组。">PP</button><button type="button" data-topology-mode="tp" data-tip="TP：先按 Tensor Shard 给全部 Rank 分类；再点一个 Rank可聚焦它所属的 TP 通信组。">TP</button><button type="button" data-topology-mode="ep" data-tip="EP：先按 Expert Shard 给全部 Rank 分类；再点一个 Rank 可聚焦它所属的 EP 通信组。">EP</button><button type="button" data-topology-mode="replica" data-tip="EDP：先按 Expert-Data Replica 给全部 Rank 分类；再点一个 Rank 可聚焦它所属的 EDP 通信组。">EDP</button></div>
           <div class="pto-model-rank-deck__control"><button type="button" data-rank-fit>适配</button><span data-rank-zoom>100%</span></div>
           <div class="pto-model-rank-deck__control"><button type="button" data-rank-theme>浅色</button></div>
         </div>
@@ -226,7 +276,7 @@
         <div class="pto-model-rank-deck__a11y" aria-live="polite"></div>
       </div>
       <aside class="pto-model-rank-deck__inspector" data-stage-ui aria-live="polite"></aside>`;
-    const viewport=root.querySelector('.pto-model-rank-deck__viewport'),canvasHost=root.querySelector('.pto-model-rank-deck__canvas'),inspector=root.querySelector('.pto-model-rank-deck__inspector'),tooltip=root.querySelector('.pto-model-rank-deck__tooltip'),groupBadge=root.querySelector('.pto-model-rank-deck__group-badge'),zoomReadout=root.querySelector('[data-rank-zoom]'),loading=root.querySelector('.pto-model-rank-deck__loading'),a11y=root.querySelector('.pto-model-rank-deck__a11y');
+    const viewport=root.querySelector('.pto-model-rank-deck__viewport'),canvasHost=root.querySelector('.pto-model-rank-deck__canvas'),inspector=root.querySelector('.pto-model-rank-deck__inspector'),tooltip=root.querySelector('.pto-model-rank-deck__tooltip'),groupBadge=root.querySelector('.pto-model-rank-deck__group-badge'),zoomReadout=root.querySelector('[data-rank-zoom]'),scopeReadout=root.querySelector('[data-grouping-scope]'),loading=root.querySelector('.pto-model-rank-deck__loading'),a11y=root.querySelector('.pto-model-rank-deck__a11y');
     base.applySemanticPalette(root,state.theme);
 
     const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
@@ -302,7 +352,7 @@
       batch.line=new THREE.LineSegments(geometry,material);batch.line.frustumCulled=false;scene.add(batch.line);
     });
 
-    let payloadVisibleRanks=null;
+    let payloadVisibleRanks=null,currentGroupingLayout=null;
     function labelLines(text,context,maxWidth){
       const words=String(text).trim().split(/\s+/);if(words.length<2||context.measureText(text).width<=maxWidth)return[String(text)];
       let best=[String(text)],bestWidth=Infinity;
@@ -338,19 +388,19 @@
     }
     function selectedGroup(){
       if(state.selectedGroup&&plan.groupById.has(state.selectedGroup))return plan.groupById.get(state.selectedGroup);
-      const axis=state.topologyMode==='replica'?'edp':state.topologyMode;if(!AXES.includes(axis)||state.selectedRank===null)return null;
+      const axis=state.groupingAxes[state.groupingAxes.length-1];if(!AXES.includes(axis)||state.selectedRank===null)return null;
       return(plan.groupByAxisRank[axis].get(state.selectedRank)||[])[0]||null;
     }
     function rankColor(manifest){
       const group=selectedGroup(),member=!group||group.ranks.includes(manifest.rank);let value='#64748b';
-      if(state.topologyMode==='pp')value=PP_COLORS[manifest.coordinate.pp%PP_COLORS.length];else if(state.topologyMode==='tp')value=TP_COLORS[manifest.coordinate.tp%TP_COLORS.length];else if(state.topologyMode==='ep')value=EP_COLORS[manifest.coordinate.ep%EP_COLORS.length];else if(state.topologyMode==='replica')value=EDP_COLORS[manifest.coordinate.edp%EDP_COLORS.length];
+      const axis=state.groupingAxes[state.groupingAxes.length-1];if(axis==='pp')value=PP_COLORS[manifest.coordinate.pp%PP_COLORS.length];else if(axis==='tp')value=TP_COLORS[manifest.coordinate.tp%TP_COLORS.length];else if(axis==='ep')value=EP_COLORS[manifest.coordinate.ep%EP_COLORS.length];else if(axis==='edp')value=EDP_COLORS[manifest.coordinate.edp%EDP_COLORS.length];
       tempColor.set(value);if(!member)tempColor.lerp(new THREE.Color(backgroundColor()),.985);if(manifest.rank===state.selectedRank)tempColor.lerp(new THREE.Color('#ffffff'),.28);return tempColor.clone();
     }
     function visualFactor(meta){const group=selectedGroup();if(group&&!group.ranks.includes(meta.rank))return .08;if(state.sceneMode==='rank'&&state.selectedRank!==null&&meta.rank!==state.selectedRank)return .035;if(state.selectedRank===meta.rank&&state.selectedLayer!==null&&meta.layer!==null&&meta.layer!==state.selectedLayer)return .26;return 1;}
     function fadedColor(value,factor){const color=new THREE.Color(value),background=new THREE.Color(backgroundColor());return color.lerp(background,1-factor);}
 
     function updateLayout(){
-      const mode=state.sceneMode==='packed'?'packed':'exploded',group=selectedGroup();payloadVisibleRanks=group?new Set(group.ranks):null;plan.manifests.forEach((manifest,index)=>{const p=layoutPosition(manifest.coordinate,topology,mode,state.topologyMode),hidden=state.sceneMode==='rank'&&state.selectedRank!==null&&manifest.rank!==state.selectedRank;rankPositions.set(manifest.rank,p);shellDisplayPositions.set(manifest.rank,{...p});dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(0,0,0);dummy.scale.setScalar(hidden?.0001:1);dummy.updateMatrix();rankMesh.setMatrixAt(index,dummy.matrix);rankMesh.setColorAt(index,rankColor(manifest));});rankMesh.instanceMatrix.needsUpdate=true;if(rankMesh.instanceColor)rankMesh.instanceColor.needsUpdate=true;
+      const mode=state.sceneMode==='packed'?'packed':'exploded',group=selectedGroup();currentGroupingLayout=state.groupingAxes.length?buildHierarchicalRankLayout(plan.manifests,state.groupingAxes,mode,topology):null;payloadVisibleRanks=group?new Set(group.ranks):null;plan.manifests.forEach((manifest,index)=>{const p=currentGroupingLayout?.positions.get(manifest.rank)||layoutPosition(manifest.coordinate,topology,mode,'standard'),hidden=state.sceneMode==='rank'&&state.selectedRank!==null&&manifest.rank!==state.selectedRank;rankPositions.set(manifest.rank,p);shellDisplayPositions.set(manifest.rank,{...p});dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(0,0,0);dummy.scale.setScalar(hidden?.0001:1);dummy.updateMatrix();rankMesh.setMatrixAt(index,dummy.matrix);rankMesh.setColorAt(index,rankColor(manifest));});rankMesh.instanceMatrix.needsUpdate=true;if(rankMesh.instanceColor)rankMesh.instanceColor.needsUpdate=true;
       layerMetas.forEach((meta,index)=>compose(meta,index,cardMesh));cardMesh.instanceMatrix.needsUpdate=true;
       clusterMetas.forEach((meta,index)=>compose(meta,index,clusterMesh));clusterMesh.instanceMatrix.needsUpdate=true;
       nodeBatches.forEach(batch=>{batch.metas.forEach((meta,index)=>compose(meta,index,batch.mesh));batch.mesh.instanceMatrix.needsUpdate=true;});
@@ -381,15 +431,14 @@
       [...parallelFrameGroup.children].forEach(child=>{parallelFrameGroup.remove(child);child.traverse(object=>{object.geometry?.dispose?.();if(Array.isArray(object.material))object.material.forEach(material=>material.dispose?.());else object.material?.dispose?.();});});
     }
     function updateParallelFrames(){
-      clearParallelFrames();parallelFrameGroup.visible=state.topologyMode==='pp'&&state.sceneMode!=='rank';if(!parallelFrameGroup.visible)return;
-      for(let stage=0;stage<topology.dimensions.pp;stage+=1){
-        const members=plan.manifests.filter(manifest=>manifest.coordinate.pp===stage),box=new THREE.Box3();
-        members.forEach(manifest=>{const p=rankPositions.get(manifest.rank);box.expandByPoint(new THREE.Vector3(p.x-RANK_SIZE.x/2,p.y-RANK_SIZE.y/2,p.z-RANK_SIZE.z/2));box.expandByPoint(new THREE.Vector3(p.x+RANK_SIZE.x/2,p.y+RANK_SIZE.y/2,p.z+RANK_SIZE.z/2));});
-        const center=box.getCenter(new THREE.Vector3()),size=box.getSize(new THREE.Vector3());size.add(new THREE.Vector3(1.5,1.5,1.5));
-        const geometry=new THREE.BoxGeometry(size.x,size.y,size.z),color=PP_COLORS[stage%PP_COLORS.length];
-        const fill=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color,transparent:true,opacity:.026,depthWrite:false,side:THREE.BackSide,toneMapped:false}));fill.position.copy(center);fill.userData.ppStage=stage;parallelFrameGroup.add(fill);
-        const edges=new THREE.LineSegments(new THREE.EdgesGeometry(geometry),new THREE.LineBasicMaterial({color,transparent:true,opacity:.88,depthTest:false,depthWrite:false}));edges.position.copy(center);edges.renderOrder=8;edges.userData.ppStage=stage;parallelFrameGroup.add(edges);
-      }
+      clearParallelFrames();parallelFrameGroup.visible=Boolean(currentGroupingLayout?.frames.length)&&state.sceneMode!=='rank';if(!parallelFrameGroup.visible)return;
+      const colorFor=(axis,value)=>axis==='pp'?PP_COLORS[value%PP_COLORS.length]:axis==='tp'?TP_COLORS[value%TP_COLORS.length]:axis==='ep'?EP_COLORS[value%EP_COLORS.length]:EDP_COLORS[value%EDP_COLORS.length];
+      const frames=currentGroupingLayout.frames,fillGeometry=new THREE.BoxGeometry(1,1,1),fillMaterial=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.009,depthWrite:false,vertexColors:true,side:THREE.BackSide,toneMapped:false}),fills=new THREE.InstancedMesh(fillGeometry,fillMaterial,frames.length),edgePositions=new Float32Array(frames.length*72),edgeColors=new Float32Array(frames.length*72);let positionCursor=0,colorCursor=0;
+      frames.forEach((frame,index)=>{
+        const color=new THREE.Color(colorFor(frame.axis,frame.value));color.lerp(new THREE.Color(backgroundColor()),Math.min(.56,frame.level*.18));dummy.position.set(frame.center.x,frame.center.y,frame.center.z);dummy.rotation.set(0,0,0);dummy.scale.set(frame.size.x,frame.size.y,frame.size.z);dummy.updateMatrix();fills.setMatrixAt(index,dummy.matrix);fills.setColorAt(index,color);positionCursor=boxEdges(frame.center,frame.size,edgePositions,positionCursor);for(let vertex=0;vertex<24;vertex+=1){edgeColors[colorCursor++]=color.r;edgeColors[colorCursor++]=color.g;edgeColors[colorCursor++]=color.b;}
+      });
+      fills.frustumCulled=false;fills.instanceMatrix.needsUpdate=true;if(fills.instanceColor)fills.instanceColor.needsUpdate=true;fills.userData.parallelFrames=frames;parallelFrameGroup.add(fills);
+      const edgeGeometry=new THREE.BufferGeometry();edgeGeometry.setAttribute('position',new THREE.BufferAttribute(edgePositions,3));edgeGeometry.setAttribute('color',new THREE.BufferAttribute(edgeColors,3));edgeGeometry.computeBoundingSphere();const edges=new THREE.LineSegments(edgeGeometry,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:.84,depthTest:false,depthWrite:false}));edges.frustumCulled=false;edges.renderOrder=8;edges.userData.parallelFrames=frames;parallelFrameGroup.add(edges);
     }
     function writeShellPositions(positionMap){
       plan.manifests.forEach((manifest,index)=>{const p=positionMap.get(manifest.rank);shellDisplayPositions.set(manifest.rank,{...p});dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(0,0,0);dummy.scale.setScalar(1);dummy.updateMatrix();rankMesh.setMatrixAt(index,dummy.matrix);rankMesh.setColorAt(index,rankColor(manifest));});rankMesh.instanceMatrix.needsUpdate=true;if(rankMesh.instanceColor)rankMesh.instanceColor.needsUpdate=true;
@@ -457,25 +506,37 @@
         <section><h3>Payload Signature <small>derived</small></h3><code>${esc(manifest.payloadSignature)}</code></section><div class="pto-model-rank-deck__source"><i data-source="official"></i>模型源信息 <i data-source="derived"></i>分组推导 <i data-source="demo"></i>演示映射</div>`;
     }
 
-    function updateButtons(){root.querySelectorAll('[data-scene-mode]').forEach(button=>button.classList.toggle('is-active',button.dataset.sceneMode===state.sceneMode));root.querySelectorAll('[data-topology-mode]').forEach(button=>button.classList.toggle('is-active',button.dataset.topologyMode===state.topologyMode));const rankButton=root.querySelector('[data-scene-mode="rank"]');if(rankButton)rankButton.disabled=state.selectedRank===null;root.querySelector('[data-rank-theme]').textContent=state.theme==='light'?'深色':'浅色';}
-    function updateUrl(){if(options.syncUrl===false||!global.history?.replaceState)return;const url=new URL(global.location.href);url.searchParams.set('scene',state.sceneMode);url.searchParams.set('topology',state.topologyMode);url.searchParams.set('theme',state.theme);if(state.selectedRank===null)url.searchParams.delete('rank');else url.searchParams.set('rank',state.selectedRank);if(state.selectedLayer===null)url.searchParams.delete('layer');else url.searchParams.set('layer',state.selectedLayer);global.history.replaceState(null,'',url);}
-    function sync({layout=false,refit=false}={}){root.dataset.sceneMode=state.sceneMode;root.dataset.topologyMode=state.topologyMode;root.dataset.theme=state.theme;document.documentElement.dataset.theme=state.theme;updateButtons();if(layout)updateLayout();else updateCommunication();updateColors();updateOperatorLabels();renderInspector();updateUrl();if(refit)fit();else setCamera();options.onStateChange?.(copy(state),api);}
-    function selectRank(rank){const next=Number(rank),manifest=plan.manifestByRank.get(next);if(!manifest)return null;state.selectedRank=next;const [segment]=manifest.layerSegments;if(state.selectedLayer===null||state.selectedLayer<segment.start||state.selectedLayer>segment.end)state.selectedLayer=segment.start;state.selectedNode=null;state.selectedGroup=null;a11y.textContent=`Selected Rank ${next}, Layer ${segment.start} to ${segment.end}`;sync({layout:state.sceneMode==='rank'||state.topologyMode!=='standard',refit:state.sceneMode==='rank'});options.onRankSelect?.(manifest,api);return manifest;}
+    function updateButtons(){
+      root.querySelectorAll('[data-scene-mode]').forEach(button=>button.classList.toggle('is-active',button.dataset.sceneMode===state.sceneMode));
+      root.querySelectorAll('[data-topology-mode]').forEach(button=>{const axis=MODE_TO_AXIS[button.dataset.topologyMode];button.classList.toggle('is-active',state.groupingAxes.includes(axis));button.setAttribute('aria-pressed',String(state.groupingAxes.includes(axis)));button.disabled=state.sceneMode==='rank';});
+      const rankButton=root.querySelector('[data-scene-mode="rank"]');if(rankButton)rankButton.disabled=state.selectedRank===null;
+      const scopeReset=root.querySelector('[data-grouping-reset]'),rankFocused=state.sceneMode==='rank'&&state.selectedRank!==null;
+      scopeReadout.textContent=rankFocused?`Rank ${state.selectedRank} · 1 Rank`:`全部 · ${plan.topology.worldSize} Ranks`;
+      if(scopeReset){scopeReset.classList.toggle('is-resettable',state.groupingAxes.length>0||rankFocused);scopeReset.setAttribute('aria-label',rankFocused||state.groupingAxes.length?`清除分组并恢复全部 ${plan.topology.worldSize} 个 Rank`:`当前范围：全部 ${plan.topology.worldSize} 个 Rank`);}
+      root.querySelector('[data-rank-theme]').textContent=state.theme==='light'?'深色':'浅色';
+    }
+    function updateUrl(){if(options.syncUrl===false||!global.history?.replaceState)return;const url=new URL(global.location.href);url.searchParams.set('scene',state.sceneMode);url.searchParams.set('topology',state.groupingAxes.length?state.groupingAxes.join(','):'standard');url.searchParams.set('theme',state.theme);if(state.selectedRank===null)url.searchParams.delete('rank');else url.searchParams.set('rank',state.selectedRank);if(state.selectedLayer===null)url.searchParams.delete('layer');else url.searchParams.set('layer',state.selectedLayer);global.history.replaceState(null,'',url);}
+    function sync({layout=false,refit=false}={}){state.topologyMode=topologyModeForAxes(state.groupingAxes);root.dataset.sceneMode=state.sceneMode;root.dataset.topologyMode=state.topologyMode;root.dataset.groupingAxes=state.groupingAxes.join(' ');root.dataset.theme=state.theme;document.documentElement.dataset.theme=state.theme;updateButtons();if(layout)updateLayout();else updateCommunication();updateColors();updateOperatorLabels();renderInspector();updateUrl();if(refit)fit();else setCamera();options.onStateChange?.(copy(state),api);}
+    function selectRank(rank){const next=Number(rank),manifest=plan.manifestByRank.get(next);if(!manifest)return null;state.selectedRank=next;const [segment]=manifest.layerSegments;if(state.selectedLayer===null||state.selectedLayer<segment.start||state.selectedLayer>segment.end)state.selectedLayer=segment.start;state.selectedNode=null;state.selectedGroup=null;a11y.textContent=`Selected Rank ${next}, Layer ${segment.start} to ${segment.end}`;sync({layout:state.sceneMode==='rank'||state.groupingAxes.length>0,refit:state.sceneMode==='rank'});options.onRankSelect?.(manifest,api);return manifest;}
     function clearRankSelection(){if(state.sceneMode==='rank'||state.selectedRank===null&&state.selectedGroup===null)return false;state.selectedRank=null;state.selectedLayer=null;state.selectedNode=null;state.selectedGroup=null;state.hoveredRank=null;tooltip.classList.remove('is-visible');a11y.textContent='Rank selection cleared';sync({layout:true});return true;}
     function enterRank(rank=state.selectedRank){if(selectRank(rank)===null)return api;state.sceneMode='rank';sync({layout:true,refit:true});return api;}
     function leaveRank(){if(state.sceneMode!=='rank')return api;state.sceneMode='exploded';state.selectedNode=null;sync({layout:true,refit:true});return api;}
     function setSceneMode(mode){if(!SCENE_MODES.has(mode))return api;if(mode==='rank')return enterRank();state.sceneMode=mode;state.selectedNode=null;sync({layout:true,refit:true});return api;}
-    function setTopologyMode(mode){if(!TOPOLOGY_MODES.has(mode))return api;const fromPositions=new Map([...shellDisplayPositions].map(([rank,p])=>[rank,{...p}]));state.topologyMode=mode;state.selectedRank=null;state.selectedLayer=null;state.selectedNode=null;state.selectedGroup=null;sync({layout:true,refit:true});animateTopologyLayout(fromPositions);return api;}
+    function setGroupingAxes(axesInput=[]){const axes=normalizeGroupingAxes(axesInput),fromPositions=new Map([...shellDisplayPositions].map(([rank,p])=>[rank,{...p}]));state.groupingAxes=axes;state.selectedRank=null;state.selectedLayer=null;state.selectedNode=null;state.selectedGroup=null;if(state.sceneMode==='rank')state.sceneMode='exploded';sync({layout:true,refit:true});animateTopologyLayout(fromPositions);return api;}
+    function setTopologyMode(mode){if(!TOPOLOGY_MODES.has(mode))return api;if(mode==='standard')return setGroupingAxes([]);return setGroupingAxes(toggleGroupingAxis(state.groupingAxes,mode));}
+    function resetGrouping(){
+      if(state.groupingAxes.length===0&&state.sceneMode!=='rank'&&state.selectedRank===null)return api;state.sceneMode='exploded';return setGroupingAxes([]);
+    }
     function setTheme(theme){state.theme=THEMES.has(theme)?theme:'dark';base.applySemanticPalette(root,state.theme);colors=palette();sync();options.onThemeChange?.(state.theme,api);return api;}
     function selectLayer(layer,rank=state.selectedRank){const next=Number(layer);if(rank!==state.selectedRank)selectRank(rank);const manifest=plan.manifestByRank.get(state.selectedRank),segment=manifest?.layerSegments[0];if(!segment||!Number.isInteger(next)||next<segment.start||next>segment.end)return null;state.selectedLayer=next;state.selectedNode=null;sync();options.onLayerSelect?.(next,manifest,api);return next;}
     function selectNode(nodeId,layer=state.selectedLayer,rank=state.selectedRank){const semanticId=`rank:${rank}/layer:${layer}/node:${nodeId}`,meta=sceneIndex.nodes.get(semanticId);if(!meta)return null;state.selectedNode=meta;state.selectedLayer=meta.layer;updateSelection();updateOperatorLabels();renderInspector();requestRender();options.onNodeSelect?.(meta,api);return meta;}
     function selectExpert(expertId){const next=Number(expertId);if(!Number.isInteger(next)||next<0||next>=model.routedExperts)return null;const baseManifest=plan.manifestByRank.get(state.selectedRank??0),ep=Math.floor(next/(model.routedExperts/topology.dimensions.ep)),target=plan.manifests.find(item=>item.coordinate.pp===baseManifest.coordinate.pp&&item.coordinate.tp===baseManifest.coordinate.tp&&item.coordinate.cp===baseManifest.coordinate.cp&&item.coordinate.edp===baseManifest.coordinate.edp&&item.coordinate.ep===ep);if(!target)return null;enterRank(target.rank);return target;}
-    function selectGroup(groupId){const group=plan.groupById.get(groupId);if(!group)return null;state.selectedGroup=group.id;state.topologyMode=group.axis==='edp'?'replica':group.axis;if(state.selectedRank===null||!group.ranks.includes(state.selectedRank))state.selectedRank=group.ranks[0];sync({layout:true});return group;}
+    function selectGroup(groupId){const group=plan.groupById.get(groupId);if(!group)return null;state.selectedGroup=group.id;if(!state.groupingAxes.includes(group.axis))state.groupingAxes=[...state.groupingAxes,group.axis];if(state.selectedRank===null||!group.ranks.includes(state.selectedRank))state.selectedRank=group.ranks[0];sync({layout:true});return group;}
     function setPose(pose={}){if(Number.isFinite(Number(pose.rx)))state.camera.rx=Number(pose.rx);if(Number.isFinite(Number(pose.ry)))state.camera.ry=Number(pose.ry);if(Number.isFinite(Number(pose.zoom)))state.camera.zoom=clamp(Number(pose.zoom),.2,5);setCamera();return api;}
 
     function rootClick(event){
-      const action=event.target.closest('[data-scene-mode],[data-topology-mode],[data-rank-fit],[data-rank-theme],[data-enter-selected],[data-inspector-layer],[data-inspector-node]');if(!action)return;
-      if(action.dataset.sceneMode)setSceneMode(action.dataset.sceneMode);else if(action.dataset.topologyMode)setTopologyMode(action.dataset.topologyMode);else if(action.hasAttribute('data-rank-fit'))fit();else if(action.hasAttribute('data-rank-theme'))setTheme(state.theme==='light'?'dark':'light');else if(action.hasAttribute('data-enter-selected'))state.sceneMode==='rank'?leaveRank():enterRank();else if(action.dataset.inspectorLayer)selectLayer(Number(action.dataset.inspectorLayer));else if(action.dataset.inspectorNode)selectNode(action.dataset.inspectorNode);
+      const action=event.target.closest('[data-scene-mode],[data-topology-mode],[data-grouping-reset],[data-rank-fit],[data-rank-theme],[data-enter-selected],[data-inspector-layer],[data-inspector-node]');if(!action)return;
+      if(action.dataset.sceneMode)setSceneMode(action.dataset.sceneMode);else if(action.dataset.topologyMode)setTopologyMode(action.dataset.topologyMode);else if(action.hasAttribute('data-grouping-reset'))resetGrouping();else if(action.hasAttribute('data-rank-fit'))fit();else if(action.hasAttribute('data-rank-theme'))setTheme(state.theme==='light'?'dark':'light');else if(action.hasAttribute('data-enter-selected'))state.sceneMode==='rank'?leaveRank():enterRank();else if(action.dataset.inspectorLayer)selectLayer(Number(action.dataset.inspectorLayer));else if(action.dataset.inspectorNode)selectNode(action.dataset.inspectorNode);
     }
     function pointerDown(event){if(event.button!==0)return;pointer={id:event.pointerId,x:event.clientX,y:event.clientY,rx:state.camera.rx,ry:state.camera.ry,moved:false};renderer.domElement.setPointerCapture?.(event.pointerId);viewport.classList.add('is-grabbing');}
     function pointerMove(event){
@@ -490,7 +551,7 @@
     function disposeObject(object){object.geometry?.dispose?.();if(Array.isArray(object.material))object.material.forEach(material=>material.dispose?.());else object.material?.dispose?.();}
     function destroy(){destroyed=true;cancelAnimationFrame(renderRaf);cancelAnimationFrame(layoutTweenRaf);cancelAnimationFrame(hoverRaf);resizeObserver?.disconnect();root.removeEventListener('click',rootClick);viewport.removeEventListener('keydown',keydown);renderer.domElement.removeEventListener('pointerdown',pointerDown);renderer.domElement.removeEventListener('pointermove',pointerMove);renderer.domElement.removeEventListener('pointerup',pointerUp);renderer.domElement.removeEventListener('pointercancel',pointerUp);renderer.domElement.removeEventListener('dblclick',doubleClick);renderer.domElement.removeEventListener('wheel',wheel);clearOperatorLabels();operatorLabelTextures.forEach(asset=>asset.texture.dispose());operatorLabelGeometry.dispose();scene.traverse(disposeObject);renderer.dispose();renderer.domElement.remove();}
     const ready=Promise.resolve();
-    const api={root,state,spec,get plan(){return plan;},sceneIndex,integrity,renderer,scene,camera,ready,setSceneMode,setTopologyMode,setTheme,setPose,fit,selectRank,enterRank,leaveRank,selectLayer,selectNode,selectExpert,selectGroup,getRankManifest(rank){return plan.manifestByRank.get(Number(rank))||null;},getState(){return copy(state);},getSceneStats(){return{rankVolumes:plan.stats.rankVolumes,layerInstances:plan.stats.layerInstances,staticInstances:plan.stats.staticInstances,nodeInstances:sceneIndex.nodes.size,edgeInstances:sceneIndex.edges.size,clusterInstances:clusterMetas.length,nodeBatches:nodeBatches.size,edgeBatches:edgeBatches.size,drawBatches:2+nodeBatches.size+edgeBatches.size+4+parallelFrameGroup.children.length,integrity:copy(integrity),renderer:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles}};},refresh(){resize();updateColors();return api;},destroy};
+    const api={root,state,spec,get plan(){return plan;},sceneIndex,integrity,renderer,scene,camera,ready,setSceneMode,setTopologyMode,setGroupingAxes,resetGrouping,setTheme,setPose,fit,selectRank,enterRank,leaveRank,selectLayer,selectNode,selectExpert,selectGroup,getRankManifest(rank){return plan.manifestByRank.get(Number(rank))||null;},getState(){return copy(state);},getSceneStats(){return{rankVolumes:plan.stats.rankVolumes,layerInstances:plan.stats.layerInstances,staticInstances:plan.stats.staticInstances,nodeInstances:sceneIndex.nodes.size,edgeInstances:sceneIndex.edges.size,clusterInstances:clusterMetas.length,nodeBatches:nodeBatches.size,edgeBatches:edgeBatches.size,drawBatches:2+nodeBatches.size+edgeBatches.size+4+parallelFrameGroup.children.length,integrity:copy(integrity),renderer:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles}};},refresh(){resize();updateColors();return api;},destroy};
 
     root.addEventListener('click',rootClick);viewport.addEventListener('keydown',keydown);renderer.domElement.addEventListener('pointerdown',pointerDown);renderer.domElement.addEventListener('pointermove',pointerMove);renderer.domElement.addEventListener('pointerup',pointerUp);renderer.domElement.addEventListener('pointercancel',pointerUp);renderer.domElement.addEventListener('dblclick',doubleClick);renderer.domElement.addEventListener('wheel',wheel,{passive:false});
     const resizeObserver=global.ResizeObserver?new ResizeObserver(resize):null;resizeObserver?.observe(viewport);
@@ -499,6 +560,6 @@
 
   global.PtoModelParallelRankDeck={
     DEFAULT_TOPOLOGY,ISOMETRIC_POSE,normalizeTopology,enumerateRanks,partitionModel,layoutPosition,
-    sampleSvgPath,parseTemplate,buildModelSceneSpec,render:mount,mount
+    normalizeGroupingAxes,toggleGroupingAxis,buildHierarchicalRankLayout,sampleSvgPath,parseTemplate,buildModelSceneSpec,render:mount,mount
   };
 })(window);

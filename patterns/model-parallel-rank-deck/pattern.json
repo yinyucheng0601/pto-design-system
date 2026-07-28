@@ -27,6 +27,8 @@
     "render(root, options)",
     "controller.setSceneMode(mode)",
     "controller.setTopologyMode(mode)",
+    "controller.setGroupingAxes(axes)",
+    "controller.resetGrouping()",
     "controller.setTheme(theme)",
     "controller.setPose(pose)",
     "controller.fit()",

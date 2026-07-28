@@ -22,9 +22,9 @@
   z-index: 80;
   inset: 0 344px auto 0;
   min-height: 58px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(180px,1fr) auto minmax(180px,1fr);
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-4);
   padding: 10px 12px 8px 16px;
   box-sizing: border-box;
@@ -61,6 +61,79 @@
 
 .pto-model-rank-deck__toolbar { justify-content: flex-end; flex-wrap: wrap; }
 
+.pto-model-rank-deck__grouping-panel {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 5px 4px 9px;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--background-elevated) 86%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb,#000 10%,transparent);
+}
+
+.pto-model-rank-deck__grouping-panel > i {
+  width: 1px;
+  height: 22px;
+  flex: 0 0 auto;
+  background: color-mix(in srgb, var(--foreground) 13%, transparent);
+}
+
+.pto-model-rank-deck__scope,
+.pto-model-rank-deck__grouping-actions button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.pto-model-rank-deck__scope {
+  min-width: 118px;
+  display: grid;
+  gap: 3px;
+  padding: 2px 5px;
+  text-align: left;
+}
+
+.pto-model-rank-deck__scope span {
+  color: var(--foreground-muted);
+  font: 700 9px/1 var(--font-sans);
+  letter-spacing: .08em;
+}
+
+.pto-model-rank-deck__scope b {
+  color: var(--foreground);
+  font: 800 11px/1 var(--font-mono);
+}
+
+.pto-model-rank-deck__scope.is-resettable:hover b,
+.pto-model-rank-deck__scope.is-resettable:focus-visible b { color: var(--primary); }
+.pto-model-rank-deck__scope:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: var(--radius-md); }
+
+.pto-model-rank-deck__grouping-prompt {
+  flex: 0 0 auto;
+  color: var(--foreground-muted);
+  font: 700 10px/1 var(--font-sans);
+}
+
+.pto-model-rank-deck__grouping-actions { display: flex; align-items: center; gap: 3px; }
+
+.pto-model-rank-deck__grouping-actions button {
+  position: relative;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 9px;
+  border-radius: var(--radius-pill);
+  color: var(--foreground-muted);
+}
+
+.pto-model-rank-deck__grouping-actions button b { font: 800 11px/1 var(--font-sans); }
+.pto-model-rank-deck__grouping-actions button small { color: currentColor; font: 700 10px/1 var(--font-mono); opacity: .72; }
+
 .pto-model-rank-deck__control {
   min-height: 34px;
   padding: 3px;
@@ -87,7 +160,8 @@
   border-radius: var(--radius-pill);
 }
 
-.pto-model-rank-deck__control button[data-tip]::after {
+.pto-model-rank-deck__control button[data-tip]::after,
+.pto-model-rank-deck__grouping-actions button[data-tip]::after {
   content: attr(data-tip);
   position: absolute;
   z-index: 140;
@@ -113,7 +187,9 @@
 }
 
 .pto-model-rank-deck__control button[data-tip]:hover::after,
-.pto-model-rank-deck__control button[data-tip]:focus-visible::after {
+.pto-model-rank-deck__control button[data-tip]:focus-visible::after,
+.pto-model-rank-deck__grouping-actions button[data-tip]:hover::after,
+.pto-model-rank-deck__grouping-actions button[data-tip]:focus-visible::after {
   transform: translateX(-50%) translateY(0);
   opacity: 1;
   visibility: visible;
@@ -121,13 +197,18 @@
 
 .pto-model-rank-deck__control button:hover,
 .pto-model-rank-deck__control button:focus-visible,
-.pto-model-rank-deck__control button.is-active {
+.pto-model-rank-deck__control button.is-active,
+.pto-model-rank-deck__grouping-actions button:hover,
+.pto-model-rank-deck__grouping-actions button:focus-visible,
+.pto-model-rank-deck__grouping-actions button.is-active {
   outline: none;
   color: var(--primary-foreground);
   background: var(--primary);
 }
 
-.pto-model-rank-deck__control button:disabled { opacity: .32; cursor: not-allowed; }
+.pto-model-rank-deck__control button:disabled,
+.pto-model-rank-deck__grouping-actions button:disabled { opacity: .32; cursor: not-allowed; }
+.pto-model-rank-deck__grouping-actions button:disabled:hover { color: var(--foreground-muted); background: transparent; }
 .pto-model-rank-deck__control [data-rank-zoom] { min-width: 42px; color: var(--foreground-secondary); font: var(--type-mono); text-align: center; }
 
 .pto-model-rank-deck__viewport {
@@ -601,14 +682,15 @@
 :root[data-theme="light"] .pto-model-rank-deck__header { background: color-mix(in srgb, var(--background) 94%, transparent); }
 
 @media (max-width: 1050px) {
-  .pto-model-rank-deck__header { right: 300px; }
+  .pto-model-rank-deck__header { right: 300px; grid-template-columns: auto minmax(130px,1fr); }
   .pto-model-rank-deck__viewport { right: 300px; }
   .pto-model-rank-deck__inspector { width: 300px; }
   .pto-model-rank-deck__identity { display: none; }
 }
 
 @media (max-width: 760px) {
-  .pto-model-rank-deck__header { right: 0; min-height: 92px; align-items: flex-start; overflow-x: auto; }
+  .pto-model-rank-deck__header { right: 0; min-height: 92px; grid-template-columns: 1fr auto; align-items: center; overflow-x: auto; }
+  .pto-model-rank-deck__grouping-panel { min-width: 490px; }
   .pto-model-rank-deck__viewport { inset: 93px 0 220px; }
   .pto-model-rank-deck__inspector { inset: auto 0 0; width: 100%; height: 220px; border-left: 0; border-top: 1px solid var(--border-default); }
   .pto-model-rank-deck__toolbar { flex-wrap: nowrap; }
