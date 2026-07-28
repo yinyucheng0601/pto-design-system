@@ -100,6 +100,9 @@ Selected Rank:
 - Non-selected Rank payloads are visually muted.
 - Selected Rank remains complete and pickable.
 - The first assigned Layer remains solid; every other Layer uses the light-blue ghost treatment at 40% opacity in Rank focus.
+- TP-owned operators retain their original label and append the concrete `TP index/count`; their solid node tone is mixed with the corresponding TP shard color.
+- EP-owned Expert Pool, Dispatch, and Combine nodes append the concrete EP shard. Expert Pool also exposes the exact owned expert range, such as `E96–E127`, and uses the corresponding EP shard tone.
+- EDP replicas intentionally keep identical Layer structure. The fixed Layer payload header exposes `EDP index/count` so replica identity is visible without inventing a false structural difference.
 - Inspector lists every Layer assigned to the Rank.
 
 Selected Layer:
@@ -113,6 +116,7 @@ Selected Layer:
 - Left-button drag: continuously orbit through 360° on both axes. The model follows the drag direction, and the camera-up tangent crosses both poles without clamping or snapping.
 - Wheel/trackpad: zoom.
 - Click Rank: select it and inspect its parallel relationship.
+- Click empty canvas space in the global view: clear Rank/group selection and restore the full topology emphasis.
 - Double-click Rank: enter Rank focus.
 - Click a Layer in Inspector: select Layer.
 - Click a visible operator in Rank focus or its Inspector entry: select Node.
