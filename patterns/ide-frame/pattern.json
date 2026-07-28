@@ -53,6 +53,7 @@
   ],
   "allowedOverrides": [
     "host mode through data-host=\"standalone\" or data-host=\"vscode-webview\"",
+    "solid pane and control compositing through data-surface=\"solid\", which preserves the frame layout while replacing translucent fills, blur, and glass shadows with semantic solid surfaces",
     "hiding the standalone activity rail through hidden, data-activity-rail=\"hidden\", or data-hide-activity-rail=\"true\"",
     "host window width while preserving the default 4:3 frame ratio",
     "initial pane pixel sizing through data-pixel-sizes, with the standalone explorer defaulting to 300px",

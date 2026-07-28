@@ -16,6 +16,8 @@
   <link rel="stylesheet" href="../../../tokens/semantic.css">
   <link rel="stylesheet" href="../../../tokens/components.css">
   <link rel="stylesheet" href="../pattern.css?v=model-gallery-light-border-1">
+  <link rel="stylesheet" href="../../pass-ir-graph-node/pattern.css?v=pass-ir-capsule-2">
+  <link rel="stylesheet" href="../capsule.css?v=model-capsule-12">
   <style>
     :root {
       color-scheme: dark;
@@ -197,7 +199,7 @@
     }
   </style>
 </head>
-<body class="pto-model-graphviz-pattern-page">
+<body class="pto-model-graphviz-pattern-page pto-model-graphviz-capsule-page">
   <main class="deepseek-gallery-app">
     <header class="deepseek-gallery-topbar">
       <h1 class="deepseek-gallery-title">DeepSeek V3.2 Architecture</h1>
@@ -213,9 +215,11 @@
     <div id="statusText" class="deepseek-gallery-status">Loading source graph baseline...</div>
   </main>
 
+  <script src="../../pass-ir-graph-node/pattern.js?v=pass-ir-capsule-2"></script>
+  <script src="../capsule.js?v=model-capsule-12"></script>
   <script>
     (() => {
-      const SOURCE_GRAPH_URL = "../graphviz/deepseek_v32_source_graph.html";
+      const SOURCE_GRAPH_URL = "../graphviz/deepseek_v32_source_graph.html?v=model-capsule-12";
       const GRAPH_ID = "graph_8738e552-e764-4a57-839a-6321bc3ae7d3";
       const NODE_CLASS = "node_8738e552-e764-4a57-839a-6321bc3ae7d3";
       const LABEL_CLASS = "node-label_8738e552-e764-4a57-839a-6321bc3ae7d3";

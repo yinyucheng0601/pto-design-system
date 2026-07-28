@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>openPangu-2.0-Flash Training Cross · Inline Decoder L2</title>
+  <title>openPangu-2.0-Flash Training Cross</title>
   <script>
     (() => {
       const params = new URLSearchParams(window.location.search);
@@ -124,6 +124,58 @@
       color: var(--opv-shell-bg);
       background: var(--opv-text);
     }
+    .opv-training-hud {
+      position: absolute;
+      z-index: 11;
+      top: 16px;
+      left: 16px;
+      width: 248px;
+      padding: 14px;
+      border: 1px solid var(--opv-border-strong);
+      border-radius: var(--radius-md);
+      background: color-mix(in srgb, var(--opv-panel-bg) 94%, transparent);
+      color: var(--opv-text);
+      backdrop-filter: blur(16px);
+      user-select: none;
+    }
+    .opv-training-hud[hidden] { display: none; }
+    .opv-training-kicker {
+      margin-bottom: 10px;
+      color: var(--opv-dim);
+      font: var(--text-label);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .opv-training-hud h2 {
+      margin: 0 0 12px;
+      color: var(--opv-text);
+      font: var(--text-title-2);
+    }
+    .opv-infra-list { display: flex; flex-direction: column; gap: 6px; }
+    .opv-infra-row {
+      display: grid;
+      grid-template-columns: 72px minmax(0, 1fr);
+      gap: 8px;
+      width: 100%;
+      padding: 8px;
+      text-align: left;
+      border: 0;
+      border-radius: var(--radius-sm);
+      color: var(--opv-muted);
+      background: var(--opv-panel-soft);
+      cursor: pointer;
+    }
+    .opv-infra-row:hover { color: var(--opv-text); }
+    .opv-infra-row strong { color: var(--opv-text); font: var(--text-label); }
+    .opv-infra-row span { font: var(--text-label); line-height: 1.45; }
+    .opv-training-foot {
+      margin: 11px 0 0;
+      padding-top: 10px;
+      border-top: 1px solid var(--opv-border);
+      color: var(--opv-dim);
+      font: var(--text-label);
+      line-height: 1.5;
+    }
     .opv-training-axis-label {
       fill: var(--opv-dim);
       font-family: var(--font-mono);
@@ -136,11 +188,6 @@
     .is-training-cross .pto-model-graphviz-node[data-node-id='residual_bridge'] .pto-model-graphviz-node-label {
       font-size: 24px;
       font-weight: var(--font-weight-semibold);
-    }
-    .opv-actions .is-active {
-      color: var(--opv-text);
-      border-color: var(--opv-border-strong);
-      background: color-mix(in srgb, var(--opv-panel-soft) 74%, var(--primary));
     }
     .opv-file input { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; pointer-events: none; }
     .opv-floating-theme {
@@ -157,23 +204,6 @@
       backdrop-filter: blur(16px);
     }
     :root[data-embed='1'] .opv-floating-theme {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .opv-floating-back {
-      position: absolute;
-      z-index: 16;
-      top: 12px;
-      left: 12px;
-      display: none;
-      min-height: 30px;
-      border: 1px solid var(--opv-border-strong);
-      background: color-mix(in srgb, var(--opv-panel-bg) 94%, transparent);
-      color: var(--opv-text);
-      backdrop-filter: blur(16px);
-    }
-    :root[data-embed='1'] .opv-floating-back:not([hidden]) {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -250,104 +280,6 @@
       stroke-linecap: round;
       stroke-linejoin: round;
     }
-    .opv-stage .pto-model-graphviz-node.is-training-parameter rect {
-      stroke: color-mix(in srgb, var(--primary) 76%, var(--opv-text));
-      stroke-width: 2.4px;
-    }
-    .opv-stage .pto-model-graphviz-node.is-training-residual rect {
-      stroke: color-mix(in srgb, var(--opv-accent) 66%, var(--opv-text));
-      stroke-width: 2.4px;
-    }
-    .opv-stage .pto-model-graphviz-node.is-training-metric rect {
-      stroke: color-mix(in srgb, var(--primary) 58%, var(--opv-text));
-      stroke-width: 2px;
-    }
-    .opv-stage .pto-model-graphviz-edge.is-training-activation {
-      stroke: color-mix(in srgb, var(--primary) 68%, var(--opv-text));
-      stroke-width: 2.4px;
-    }
-    .opv-training-gradient-loop {
-      fill: none;
-      stroke: color-mix(in srgb, var(--opv-accent) 72%, var(--opv-text));
-      stroke-width: 2.2px;
-      stroke-dasharray: 8 7;
-      vector-effect: non-scaling-stroke;
-      pointer-events: none;
-    }
-    .opv-training-gradient-label {
-      fill: var(--opv-text);
-      font: var(--text-label);
-      text-anchor: middle;
-      dominant-baseline: central;
-      pointer-events: none;
-    }
-    .opv-training-metric-badge { pointer-events: none; }
-    .opv-training-metric-badge rect {
-      fill: color-mix(in srgb, var(--opv-panel-bg) 88%, var(--primary));
-      stroke: var(--opv-border-strong);
-      stroke-width: 1px;
-      vector-effect: non-scaling-stroke;
-    }
-    .opv-training-metric-badge text {
-      fill: var(--opv-text);
-      font-family: var(--font-sans);
-      font-size: 14px;
-      font-weight: var(--font-weight-semibold);
-      text-anchor: middle;
-      dominant-baseline: central;
-    }
-    .opv-node-telemetry,
-    .opv-sync-telemetry { pointer-events: none; }
-    .opv-node-telemetry-separator {
-      stroke: color-mix(in srgb, var(--opv-text) 18%, transparent);
-      stroke-width: 1px;
-      vector-effect: non-scaling-stroke;
-    }
-    .opv-node-telemetry-row {
-      fill: var(--opv-text);
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: var(--font-weight-semibold);
-      text-anchor: middle;
-      dominant-baseline: central;
-    }
-    .opv-node-telemetry-scope {
-      fill: var(--opv-muted);
-      font-family: var(--font-mono);
-      font-size: 7.5px;
-      text-anchor: middle;
-      dominant-baseline: central;
-    }
-    .opv-sync-telemetry rect {
-      fill: color-mix(in srgb, var(--opv-panel-bg) 90%, var(--primary));
-      stroke: var(--opv-border-strong);
-      stroke-width: 1px;
-      vector-effect: non-scaling-stroke;
-    }
-    .opv-sync-telemetry-title {
-      fill: var(--opv-muted);
-      font-family: var(--font-sans);
-      font-size: 9px;
-      font-weight: var(--font-weight-semibold);
-      letter-spacing: .08em;
-      text-anchor: middle;
-      dominant-baseline: central;
-    }
-    .opv-sync-telemetry-row {
-      fill: var(--opv-text);
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: var(--font-weight-semibold);
-      text-anchor: middle;
-      dominant-baseline: central;
-    }
-    .opv-sync-telemetry-scope {
-      fill: var(--opv-muted);
-      font-family: var(--font-mono);
-      font-size: 7.5px;
-      text-anchor: middle;
-      dominant-baseline: central;
-    }
     :root[data-theme='light'] .opv-stage .pto-model-graphviz-edge {
       stroke: var(--model-graphviz-line);
       stroke-width: 1.05px;
@@ -412,188 +344,6 @@
       user-select: text;
     }
     .opv-node-popover[hidden] { display: none; }
-    .opv-training-overlay {
-      position: absolute;
-      z-index: 18;
-      top: 52px;
-      right: 12px;
-      bottom: 12px;
-      width: min(460px, calc(100% - 24px));
-      padding: 14px;
-      overflow: auto;
-      border: 1px solid var(--opv-border-strong);
-      border-radius: var(--radius-md);
-      background: color-mix(in srgb, var(--opv-panel-bg) 98%, transparent);
-      color: var(--opv-text);
-      backdrop-filter: blur(18px);
-      pointer-events: auto;
-      user-select: text;
-    }
-    .opv-training-overlay[hidden] { display: none; }
-    .opv-training-overlay-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-3);
-      margin-bottom: 8px;
-    }
-    .opv-training-overlay-title {
-      min-width: 0;
-      font: var(--text-label);
-      color: var(--opv-text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .opv-training-overlay-demo {
-      flex: none;
-      color: var(--opv-muted);
-      font: var(--text-mono);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-    .opv-training-overlay-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 6px;
-    }
-    .opv-training-chip {
-      min-width: 0;
-      padding: 7px 8px;
-      border-radius: var(--radius-sm);
-      background: color-mix(in srgb, var(--surface-2) 78%, transparent);
-    }
-    .opv-training-chip-label {
-      display: block;
-      color: var(--opv-dim);
-      font: var(--text-label);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-    .opv-training-chip-value {
-      display: block;
-      margin-top: 2px;
-      color: var(--opv-text);
-      font: var(--text-body-sm);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .opv-training-inspector-section {
-      margin-top: 14px;
-      padding-top: 12px;
-      border-top: 1px solid var(--opv-border);
-    }
-    .opv-training-inspector-section h4 {
-      margin: 0 0 8px;
-      color: var(--opv-dim);
-      font: var(--text-label);
-      text-transform: uppercase;
-      letter-spacing: .08em;
-    }
-    .opv-training-scope-grid,
-    .opv-training-detail-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 6px 10px;
-      margin: 0;
-    }
-    .opv-training-scope-grid dt,
-    .opv-training-detail-key {
-      color: var(--opv-dim);
-      font: var(--text-label);
-    }
-    .opv-training-scope-grid dd {
-      margin: 0;
-      color: var(--opv-text);
-      font: var(--text-mono);
-      overflow-wrap: anywhere;
-    }
-    .opv-training-detail-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 12px;
-      align-items: baseline;
-      padding: 6px 0;
-      border-bottom: 1px solid color-mix(in srgb, var(--opv-border) 64%, transparent);
-    }
-    .opv-training-detail-value {
-      color: var(--opv-text);
-      font: var(--text-mono);
-      text-align: right;
-    }
-    .opv-training-detail-scope {
-      grid-column: 1 / -1;
-      color: var(--opv-muted);
-      font: var(--text-mono);
-      overflow-wrap: anywhere;
-    }
-    .opv-training-histogram {
-      height: 74px;
-      display: flex;
-      align-items: end;
-      gap: 5px;
-      padding: 8px 4px 0;
-      border-bottom: 1px solid var(--opv-border-strong);
-    }
-    .opv-training-histogram span {
-      flex: 1;
-      min-width: 0;
-      height: var(--bar-height);
-      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-      background: color-mix(in srgb, var(--primary) 72%, var(--opv-panel-soft));
-    }
-    .opv-training-heatmap {
-      display: grid;
-      grid-template-columns: repeat(12, minmax(0, 1fr));
-      gap: 4px;
-    }
-    .opv-training-heatmap span {
-      aspect-ratio: 1;
-      border-radius: 3px;
-      background: color-mix(in srgb, var(--primary) var(--heat), var(--opv-panel-soft));
-    }
-    .opv-slice-banner {
-      position: absolute;
-      z-index: 15;
-      top: 52px;
-      left: 12px;
-      width: min(420px, calc(100% - 24px));
-      padding: 8px 10px;
-      border: 1px solid var(--opv-border);
-      border-radius: var(--radius-md);
-      background: color-mix(in srgb, var(--opv-panel-bg) 94%, transparent);
-      color: var(--opv-muted);
-      backdrop-filter: blur(16px);
-      pointer-events: none;
-    }
-    .opv-slice-banner strong {
-      color: var(--opv-text);
-      font: var(--text-label);
-      letter-spacing: .08em;
-      text-transform: uppercase;
-    }
-    .opv-slice-banner code {
-      color: var(--opv-muted);
-      font: var(--text-mono);
-      white-space: normal;
-    }
-    .opv-training-guide {
-      position: absolute;
-      z-index: 11;
-      right: var(--space-4);
-      bottom: var(--space-4);
-      width: min(380px, calc(100% - 32px));
-      padding: 10px 12px;
-      border: 1px solid var(--opv-border);
-      border-radius: var(--radius-md);
-      background: color-mix(in srgb, var(--opv-panel-bg) 92%, transparent);
-      color: var(--opv-muted);
-      backdrop-filter: blur(16px);
-      font: var(--text-body-sm);
-      pointer-events: none;
-    }
-    .opv-training-guide strong { color: var(--opv-text); font-weight: 600; }
     .opv-node-popover-head {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -685,8 +435,6 @@
     @media (max-width: 980px) {
       body { overflow: auto; }
       .opv-app { height: auto; min-height: 100vh; grid-template-columns: 1fr; grid-template-rows: auto minmax(900px, calc(100vh - 48px)); }
-      .opv-training-overlay { width: min(420px, calc(100% - 24px)); }
-      .opv-slice-banner { width: min(420px, calc(100% - 24px)); }
     }
   </style>
 </head>
@@ -695,11 +443,13 @@
     <header class="opv-topbar">
       <div class="opv-title">
         <h1>openPangu-2.0-Flash Training Cross</h1>
-        <span>inline Decoder Layer L1 → L2 expansion</span>
+        <span>source checked architecture + training structure</span>
       </div>
       <div class="opv-actions">
-        <button class="btn btn-ghost" type="button" id="layerDepthToggle" aria-pressed="false">Expand Decoder L2</button>
-        <button class="btn btn-ghost is-active" type="button" id="trainingOverlayToggle" aria-pressed="true">Module Data</button>
+        <div class="opv-view-switch" aria-label="Diagram view">
+          <button class="btn btn-ghost is-active" type="button" id="trainingView" aria-pressed="true">Training Cross</button>
+          <button class="btn btn-ghost" type="button" id="modelView" aria-pressed="false">Model Detail</button>
+        </div>
         <button class="btn btn-ghost" type="button" id="themeToggle" aria-label="Switch to light mode">Light</button>
         <button class="btn btn-ghost" type="button" id="colorPanelToggle" aria-expanded="false" aria-controls="colorPanel">Color</button>
         <button class="btn btn-ghost" type="button" id="zoomOut">-</button>
@@ -714,7 +464,6 @@
       </div>
     </header>
     <button class="btn btn-ghost opv-floating-theme" type="button" id="floatingThemeToggle" aria-label="Switch to light mode">Light</button>
-    <button class="btn btn-ghost opv-floating-back" type="button" id="floatingBack" hidden>− Collapse Decoder L2</button>
     <section class="opv-color-panel" id="colorPanel" aria-label="Light mode HSL controls" hidden>
       <div class="opv-color-head">
         <div class="opv-color-title">Light HSL</div>
@@ -738,12 +487,7 @@
       <div class="opv-color-swatches" id="colorPreview" aria-hidden="true"></div>
     </section>
     <section class="opv-stage pto-model-architecture-stage" id="graphStage" aria-label="openPangu model architecture graph">
-      <aside class="opv-slice-banner" id="sliceBanner" aria-label="Synthetic telemetry slice"></aside>
       <div class="opv-node-popover" id="nodePopover" hidden></div>
-      <div class="opv-training-overlay" id="trainingOverlay" hidden></div>
-      <aside class="opv-training-guide" id="trainingGuide">
-        <strong>Decoder Layer · L2</strong> — 29 high-value metrics stay on the graph. Attention and FFN remain folded; select a parameterized Module for Q/K/V, moments, quantiles, histogram, and layer heatmap.
-      </aside>
     </section>
     <div class="opv-status" id="statusText">Loading schema.</div>
   </main>
@@ -765,7 +509,7 @@
     COLLAPSIBLE.ffn_choice.push('dense_mlp_weights', 'router_weight', 'expert_bank_weights', 'shared_expert_weights', 'ffn_all_gather', 'ffn_reduce_scatter', 'moe_all_to_all_dispatch', 'moe_all_to_all_combine');
     COLLAPSIBLE.moe_ffn.push('router_weight', 'expert_bank_weights', 'shared_expert_weights', 'moe_all_to_all_dispatch', 'moe_all_to_all_combine');
     COLLAPSIBLE.mtp_module.push('mtp_head_weight');
-    const DEFAULT_COLLAPSED = new Set(["mtp_module"]);
+    const DEFAULT_COLLAPSED = new Set(["sparse_mla_attention", "ffn_choice", "mtp_module"]);
     const DEFAULT_DETAIL_MODULES = new Set();
     const ALWAYS_VISIBLE_MODULES = new Set(['decoder_layer', 'sparse_mla_attention']);
     const ATTENTION_FINE_DETAIL_NODES = new Set([
@@ -804,196 +548,6 @@
       lm_head_weight: 'LM Head Weight',
       mtp_head_weight: 'MTP Head Weight',
     };
-    const TRAINING_MODULE_SCOPE = Object.freeze({
-      decoder_layer: ['decoder_layer', ...COLLAPSIBLE.decoder_layer],
-      sparse_mla_attention: ['sparse_mla_attention', ...COLLAPSIBLE.sparse_mla_attention, 'attention_all_gather', 'attention_reduce_scatter', 'attention_residual_add'],
-      ffn_choice: ['ffn_choice', ...COLLAPSIBLE.ffn_choice, 'ffn_residual_add'],
-      dense_mlp: ['dense_mlp', 'dense_gate_up', 'dense_silu', 'dense_down', 'ffn_all_gather', 'ffn_reduce_scatter', 'ffn_residual_add'],
-      moe_ffn: ['moe_ffn', ...COLLAPSIBLE.moe_ffn, 'ffn_all_gather', 'ffn_reduce_scatter', 'ffn_residual_add'],
-      shared_expert_mlp: ['shared_expert_mlp'],
-      mtp_module: ['mtp_module', ...COLLAPSIBLE.mtp_module],
-      mtp_shared_head: ['mtp_shared_head'],
-    });
-    const TRAINING_PARALLEL_LABELS = Object.freeze({
-      decoder_layer: 'TP · PP · DP · EP',
-      sparse_mla_attention: 'TP · DP',
-      ffn_choice: 'TP · DP · EP',
-      dense_mlp: 'TP · DP',
-      moe_ffn: 'TP · DP · EP',
-      shared_expert_mlp: 'TP · DP · EP',
-      mtp_module: 'TP · PP',
-      mtp_shared_head: 'TP · PP',
-    });
-    const TRAINING_RESIDUAL_LABELS = Object.freeze({
-      decoder_layer: 'Attention + FFN bypass',
-      sparse_mla_attention: 'Attention residual path',
-      ffn_choice: 'FFN residual path',
-      dense_mlp: 'FFN residual path',
-      moe_ffn: 'FFN residual path',
-      shared_expert_mlp: 'MoE combine → FFN residual',
-      mtp_module: 'Draft branch merge',
-      mtp_shared_head: 'MTP output branch',
-    });
-    const MOE_DEMO_METRICS = Object.freeze({
-      router_gate: 'entropy 4.71 · top-8',
-      moe_all_to_all_dispatch: 'A2A 2.8 ms · 81% overlap',
-      routed_expert_bank: 'p95 load 1.16× · drop 0.0%',
-      moe_all_to_all_combine: 'A2A 2.2 ms · 84% overlap',
-    });
-    const TRAINING_CROSS_NODES = Object.freeze({
-      model_state: {
-        id: 'model_state', kind: 'state', label: 'Model State', state_type: 'training_state',
-        role: 'persistent state entering a training step',
-        attrs: { includes: ['weights', 'optimizer state', 'step metadata'] },
-      },
-      weight_summary: {
-        id: 'weight_summary', kind: 'state', label: 'Weight', state_type: 'parameter',
-        role: 'folded parameter envelope for the model',
-        attrs: { architecture_mapping: 'all explicit OpenPangu parameter nodes', infra: ['GPU Memory', 'Tensor Parallel'] },
-      },
-      training_loss: {
-        id: 'training_loss', kind: 'output', label: 'Loss',
-        role: 'training objective and backward-pass origin', attrs: { consumes: 'logits and labels' },
-      },
-      gradient: {
-        id: 'gradient', kind: 'tensor', label: 'Gradient',
-        role: 'parameter gradients produced by backpropagation', attrs: { infra: ['NCCL Communication', 'Distributed Sync'] },
-      },
-      optimizer: {
-        id: 'optimizer', kind: 'op', label: 'Optimizer', op_type: 'ParameterUpdate',
-        role: 'turns synchronized gradients into parameter updates', attrs: { consumes: ['gradient', 'optimizer state'] },
-      },
-      updated_weight: {
-        id: 'updated_weight', kind: 'state', label: 'Updated Weight', state_type: 'parameter',
-        role: 'parameter state committed for the next step', attrs: { next: 'becomes Weight in the next training step' },
-      },
-      residual_bridge: {
-        id: 'residual_bridge', kind: 'op', label: 'Residual Add', op_type: 'Add',
-        role: 'element-wise merge point for transformed and identity activation paths',
-        attrs: { equation: 'y = F(x) + x', skip_connection: true, architecture_mapping: ['Attention Residual Add', 'FFN Residual Add'] },
-      },
-    });
-    const TELEMETRY_REQUIRED_CONTEXT = Object.freeze([
-      'step', 'microbatch', 'layer', 'ownerRank', 'tensorScope', 'phase', 'source',
-    ]);
-    const TELEMETRY_SLICE = Object.freeze({
-      synthetic: true,
-      run: 'train_20260716_01',
-      configSha: '8f21c7',
-      updateId: 120000,
-      weightBefore: 'v119999',
-      weightAfter: 'v120000',
-      microbatch: '3/8',
-      dpReplica: 2,
-      compute: 'BF16',
-      masterWeight: 'FP32',
-    });
-    const TELEMETRY_CONTEXT = Object.freeze({
-      token: Object.freeze({ step: 120000, microbatch: '3/8', layer: 'input', ownerRank: 'PP0,DP2', tensorScope: 'input_ids [1,4096] full', phase: 'INPUT', source: 'CB', scopeCode: 'PP0·DP2 ids/full INPUT CB' }),
-      embedding: Object.freeze({ step: 120000, microbatch: '3/8', layer: 'embedding', ownerRank: 'PP0,TP-group5,DP2', tensorScope: 'hidden_states [1,4096,H] TP-reduced full', phase: 'FWD', source: 'RED-full', scopeCode: 'PP0·TPg5·DP2 H/TP FWD RED' }),
-      decoder: Object.freeze({ step: 120000, microbatch: '3/8', layer: '17/46 (PP4 local 1)', ownerRank: 'PP4,TP-group5,DP2', tensorScope: 'hidden_states [B,T,H] TP-reduced', phase: 'FWD', source: 'CB', scopeCode: 'L17 PP4·TPg5·DP2 H/TP FWD CB' }),
-      attentionSample: Object.freeze({ step: 120000, microbatch: '3/8', layer: '17/46 (PP4 local 1)', ownerRank: 'PP4,TP-group5,DP2', tensorScope: '4 heads × 128 query positions', phase: 'FWD', source: 'SAMP', scopeCode: 'L17 PP4·TPg5·DP2 4h×128q FWD SAMP' }),
-      finalNorm: Object.freeze({ step: 120000, microbatch: '3/8', layer: 'final_norm', ownerRank: 'PP-last,TP-group5,DP2', tensorScope: 'hidden_states [B,T,H] TP-reduced full', phase: 'FWD', source: 'RED-full', scopeCode: 'PP-last·TPg5·DP2 H/TP FWD RED' }),
-      lmHead: Object.freeze({ step: 120000, microbatch: '3/8', layer: 'lm_head', ownerRank: 'PP-last,TP-group5,DP2', tensorScope: 'logits [B,T,V/TP] local vocab shard', phase: 'FWD', source: 'HOOK+TP-RED', scopeCode: 'PP-last·TPg5·DP2 V/TP FWD HOOK+RED' }),
-      loss: Object.freeze({ step: 120000, microbatch: 'step aggregate (8/8)', layer: 'LM output', ownerRank: 'PP-last,TP-group5,DP2', tensorScope: '31,872 valid tokens, TP logical global', phase: 'STEP-END', source: 'RED-token', scopeCode: 'PP-last·TPg5·DP2 31,872tok STEP RED' }),
-      weight: Object.freeze({ step: 120000, microbatch: '3/8', layer: '17/46', ownerRank: 'PP4,TP5,DP-shard', tensorScope: 'decoder.layers.17.attention.qkv.weight/tp5', phase: 'PRE-UPDATE', source: 'CB', scopeCode: 'L17 PP4·TP5·DPshard qkv/tp5 PRE-UPD CB' }),
-      gradient: Object.freeze({ step: 120000, microbatch: '8/8 accumulated', layer: 'logical model parameter set', ownerRank: 'PP*,TP*,DP2 (replica-dedup)', tensorScope: 'logical parameters, TP/DP replicas counted once', phase: 'POST-SYNC→POST-CLIP', source: 'HOOK+RED-dedup', scopeCode: 'L* PP*·TP*·DP2 logical/dedup SYNC→CLIP HOOK' }),
-      sync: Object.freeze({ step: 120000, microbatch: '8/8 accumulated', layer: 'all local layers', ownerRank: 'dp_group_02', tensorScope: 'grad_bucket_137', phase: 'SYNC', source: 'PROF', scopeCode: 'L* dp_group_02 bucket_137 SYNC PROF' }),
-      optimizer: Object.freeze({ step: 120000, microbatch: 'step aggregate (8/8)', layer: '17/46', ownerRank: 'PP4,TP5,DP-shard', tensorScope: 'decoder.layers.17.attention.qkv.weight/tp5', phase: 'OPTIMIZER', source: 'OPT-HOOK', scopeCode: 'L17 PP4·TP5·DPshard qkv/tp5 OPT HOOK' }),
-      updatedWeight: Object.freeze({ step: 120000, microbatch: 'step aggregate (8/8)', layer: '17/46', ownerRank: 'PP4,TP5,DP-shard', tensorScope: 'decoder.layers.17.attention.qkv.weight/tp5', phase: 'POST-UPDATE', source: 'HASH', scopeCode: 'L17 PP4·TP5·DPshard qkv/tp5 POST-UPD HASH' }),
-    });
-    const telemetryMetric = (id, label, value, context, extra = {}) => Object.freeze({
-      id, label, value, ...context, ...extra,
-    });
-    const TELEMETRY_METRICS = Object.freeze({
-      valid_tokens: telemetryMetric('valid_tokens', 'valid', '3,986', TELEMETRY_CONTEXT.token),
-      pad_ratio: telemetryMetric('pad_ratio', 'pad', '2.69%', TELEMETRY_CONTEXT.token),
-      embedding_rms: telemetryMetric('embedding_rms', 'rms', '8.70e-2', TELEMETRY_CONTEXT.embedding),
-      embedding_maxabs: telemetryMetric('embedding_maxabs', 'maxabs', '6.10e-1', TELEMETRY_CONTEXT.embedding),
-      embedding_nonfinite: telemetryMetric('embedding_nonfinite', 'nonfinite', '0', TELEMETRY_CONTEXT.embedding),
-      decoder_input_rms: telemetryMetric('decoder_input_rms', 'in rms', '0.963', TELEMETRY_CONTEXT.decoder),
-      decoder_output_rms: telemetryMetric('decoder_output_rms', 'out rms', '0.987', TELEMETRY_CONTEXT.decoder),
-      attention_residual_ratio: telemetryMetric('attention_residual_ratio', 'attn Δ/x', '0.071', TELEMETRY_CONTEXT.decoder),
-      ffn_residual_ratio: telemetryMetric('ffn_residual_ratio', 'ffn Δ/x', '0.089', TELEMETRY_CONTEXT.decoder),
-      attention_entropy_norm: telemetryMetric('attention_entropy_norm', 'Hnorm', '0.740', TELEMETRY_CONTEXT.attentionSample),
-      decoder_nonfinite: telemetryMetric('decoder_nonfinite', 'nonfinite', '0', TELEMETRY_CONTEXT.decoder),
-      final_pre_rms: telemetryMetric('final_pre_rms', 'pre rms', '1.284', TELEMETRY_CONTEXT.finalNorm),
-      final_post_rms: telemetryMetric('final_post_rms', 'post rms', '1.012', TELEMETRY_CONTEXT.finalNorm),
-      step_ce: telemetryMetric('step_ce', 'step CE', '2.58 nat/tok', TELEMETRY_CONTEXT.loss),
-      step_ppl: telemetryMetric('step_ppl', 'PPL', '13.20', TELEMETRY_CONTEXT.loss),
-      probe_weight_rms: telemetryMetric('probe_weight_rms', 'weight rms', '1.84e-2', TELEMETRY_CONTEXT.weight),
-      probe_weight_version: telemetryMetric('probe_weight_version', 'version', 'v119999', TELEMETRY_CONTEXT.weight),
-      grad_post_sync_norm: telemetryMetric('grad_post_sync_norm', 'post-sync L2', '1.37', TELEMETRY_CONTEXT.gradient),
-      grad_preclip_norm: telemetryMetric('grad_preclip_norm', 'preclip L2', '1.37', TELEMETRY_CONTEXT.gradient),
-      grad_postclip_norm: telemetryMetric('grad_postclip_norm', 'postclip L2', '1.00', TELEMETRY_CONTEXT.gradient),
-      grad_nonfinite: telemetryMetric('grad_nonfinite', 'nonfinite', '0', TELEMETRY_CONTEXT.gradient),
-      sync_collective: telemetryMetric('sync_collective', 'collective', 'DP ReduceScatter', TELEMETRY_CONTEXT.sync),
-      sync_payload: telemetryMetric('sync_payload', 'bytes', '64 MiB', TELEMETRY_CONTEXT.sync),
-      sync_duration: telemetryMetric('sync_duration', 'duration', '5.8 ms', TELEMETRY_CONTEXT.sync),
-      optimizer_lr: telemetryMetric('optimizer_lr', 'lr', '1.20e-4', TELEMETRY_CONTEXT.optimizer),
-      update_to_weight: telemetryMetric('update_to_weight', 'update/weight', '1.41e-4', TELEMETRY_CONTEXT.optimizer),
-      skipped_update: telemetryMetric('skipped_update', 'skipped', 'false', TELEMETRY_CONTEXT.optimizer),
-      new_weight_version: telemetryMetric('new_weight_version', 'version', 'v120000', TELEMETRY_CONTEXT.updatedWeight),
-      new_weight_checksum: telemetryMetric('new_weight_checksum', 'checksum', 'c891…', TELEMETRY_CONTEXT.updatedWeight),
-    });
-    const MAIN_TELEMETRY_GROUPS = Object.freeze({
-      token: Object.freeze({ anchorId: 'input_tokens', typeText: 'Synthetic · input probe', rows: [['valid_tokens', 'pad_ratio']] }),
-      embedding: Object.freeze({ anchorId: 'token_embedding', typeText: 'Synthetic · activation probe', rows: [['embedding_rms', 'embedding_maxabs'], ['embedding_nonfinite']] }),
-      decoder: Object.freeze({ anchorId: 'decoder_layer', typeText: 'Layer 17 / 46 · PP4 local 1', rows: [['decoder_input_rms', 'decoder_output_rms'], ['attention_residual_ratio', 'ffn_residual_ratio'], ['attention_entropy_norm', 'decoder_nonfinite']] }),
-      decoderInput: Object.freeze({ anchorId: 'mhc_attention', typeText: 'Layer 17 · entry probe', rows: [['decoder_input_rms']] }),
-      attention: Object.freeze({ anchorId: 'sparse_mla_attention', typeText: 'Layer 17 · sampled attention', rows: [['attention_residual_ratio', 'attention_entropy_norm']] }),
-      ffn: Object.freeze({ anchorId: 'ffn_choice', typeText: 'Layer 17 · FFN probe', rows: [['ffn_residual_ratio']] }),
-      decoderOutput: Object.freeze({ anchorId: 'block_post_norm', typeText: 'Layer 17 · exit probe', rows: [['decoder_output_rms', 'decoder_nonfinite']] }),
-      finalNorm: Object.freeze({ anchorId: 'final_norm', typeText: 'Synthetic · full reduction', rows: [['final_pre_rms', 'final_post_rms']] }),
-      loss: Object.freeze({ anchorId: 'training_loss', typeText: 'Synthetic · valid-token weighted', rows: [['step_ce', 'step_ppl']] }),
-      weight: Object.freeze({ anchorId: 'weight_summary', typeText: 'Synthetic · exact parameter shard', rows: [['probe_weight_rms', 'probe_weight_version']] }),
-      gradient: Object.freeze({ anchorId: 'gradient', typeText: 'Synthetic · replica deduplicated', rows: [['grad_post_sync_norm'], ['grad_preclip_norm', 'grad_postclip_norm', 'grad_nonfinite']] }),
-      optimizer: Object.freeze({ anchorId: 'optimizer', typeText: 'AdamW · synthetic update', rows: [['optimizer_lr', 'update_to_weight'], ['skipped_update']] }),
-      updatedWeight: Object.freeze({ anchorId: 'updated_weight', typeText: 'Synthetic · committed shard', rows: [['new_weight_version', 'new_weight_checksum']] }),
-    });
-    const TELEMETRY_DETAIL = Object.freeze({
-      q_rms: telemetryMetric('q_rms', 'Q rms', '0.621', TELEMETRY_CONTEXT.decoder, { tensorScope: 'Q local head shard [L]', source: 'CB' }),
-      k_rms: telemetryMetric('k_rms', 'K rms', '0.594', TELEMETRY_CONTEXT.decoder, { tensorScope: 'K local head shard [L]', source: 'CB' }),
-      v_rms: telemetryMetric('v_rms', 'V rms', '0.566', TELEMETRY_CONTEXT.decoder, { tensorScope: 'V local head shard [L]', source: 'CB' }),
-      selected_param_grad_rms: telemetryMetric('selected_param_grad_rms', 'selected grad rms', '3.10e-4', TELEMETRY_CONTEXT.weight, { phase: 'POST-SYNC · PRE-CLIP', source: 'HOOK' }),
-      m_hat_rms: telemetryMetric('m_hat_rms', 'm_hat rms', '3.70e-5', TELEMETRY_CONTEXT.optimizer),
-      sqrt_v_hat_rms: telemetryMetric('sqrt_v_hat_rms', 'sqrt(v_hat) rms', '1.70e-3', TELEMETRY_CONTEXT.optimizer),
-      update_rms: telemetryMetric('update_rms', 'update rms', '2.60e-6', TELEMETRY_CONTEXT.optimizer),
-      weight_p50: telemetryMetric('weight_p50', 'p50 |w|', '1.21e-2', TELEMETRY_CONTEXT.weight),
-      weight_p90: telemetryMetric('weight_p90', 'p90 |w|', '2.93e-2', TELEMETRY_CONTEXT.weight),
-      weight_p99: telemetryMetric('weight_p99', 'p99 |w|', '5.88e-2', TELEMETRY_CONTEXT.weight),
-      weight_max: telemetryMetric('weight_max', 'max |w|', '1.41e-1', TELEMETRY_CONTEXT.weight),
-      token_shape: telemetryMetric('token_shape', 'shape', '[1,4096]', TELEMETRY_CONTEXT.token),
-      invalid_ids: telemetryMetric('invalid_ids', 'invalid ids', '0', TELEMETRY_CONTEXT.token),
-      batch_hash: telemetryMetric('batch_hash', 'batch hash', '7f3a92…', TELEMETRY_CONTEXT.token),
-      embedding_nan_inf: telemetryMetric('embedding_nan_inf', 'NaN / Inf', '0 / 0', TELEMETRY_CONTEXT.embedding),
-      final_gamma_rms: telemetryMetric('final_gamma_rms', 'gamma rms', '1.030', TELEMETRY_CONTEXT.finalNorm, { tensorScope: 'final_norm.weight replicated parameter' }),
-      final_nan_inf: telemetryMetric('final_nan_inf', 'NaN / Inf', '0 / 0', TELEMETRY_CONTEXT.finalNorm),
-      logit_rms: telemetryMetric('logit_rms', 'logit rms', '2.41', TELEMETRY_CONTEXT.lmHead, { tensorScope: 'local vocab shard [L-vocab-shard]', source: 'HOOK' }),
-      logit_maxabs: telemetryMetric('logit_maxabs', 'logit maxabs', '16.8', TELEMETRY_CONTEXT.lmHead, { tensorScope: 'TP group global max', source: 'TP-max' }),
-      target_nll: telemetryMetric('target_nll', 'mean target NLL', '2.61', TELEMETRY_CONTEXT.lmHead, { tensorScope: 'valid target tokens, TP logical global', source: 'TP-reduced' }),
-      logit_nan_inf: telemetryMetric('logit_nan_inf', 'NaN / Inf', '0 / 0', TELEMETRY_CONTEXT.lmHead),
-      microbatch_ce: telemetryMetric('microbatch_ce', 'microbatch CE', '2.61 nat/tok', TELEMETRY_CONTEXT.loss, { microbatch: '3/8', phase: 'FWD-LOSS' }),
-      valid_step_tokens: telemetryMetric('valid_step_tokens', 'valid step tokens', '31,872', TELEMETRY_CONTEXT.loss),
-      aux_loss: telemetryMetric('aux_loss', 'aux loss', '0', TELEMETRY_CONTEXT.loss),
-      weight_maxabs: telemetryMetric('weight_maxabs', 'weight maxabs', '1.41e-1', TELEMETRY_CONTEXT.weight),
-      weight_nan_inf: telemetryMetric('weight_nan_inf', 'NaN / Inf', '0 / 0', TELEMETRY_CONTEXT.weight),
-      weight_checksum: telemetryMetric('weight_checksum', 'checksum', 'a29f…', TELEMETRY_CONTEXT.weight),
-      clip_threshold: telemetryMetric('clip_threshold', 'clip threshold', '1.00', TELEMETRY_CONTEXT.gradient),
-      clip_coefficient: telemetryMetric('clip_coefficient', 'clip coefficient', '0.730', TELEMETRY_CONTEXT.gradient),
-      sync_payload_rate: telemetryMetric('sync_payload_rate', 'payload rate', '10.8 GiB/s', TELEMETRY_CONTEXT.sync),
-      sync_pre_norm: telemetryMetric('sync_pre_norm', 'pre-sync norm', '1.42', TELEMETRY_CONTEXT.sync, { source: 'HOOK' }),
-      sync_post_norm: telemetryMetric('sync_post_norm', 'post-sync norm', '1.37', TELEMETRY_CONTEXT.sync, { source: 'HOOK' }),
-      sync_checksum: telemetryMetric('sync_checksum', 'bucket hash', 'e6b2…', TELEMETRY_CONTEXT.sync, { source: 'HASH' }),
-      beta_pair: telemetryMetric('beta_pair', 'beta1 / beta2', '0.90 / 0.95', TELEMETRY_CONTEXT.optimizer),
-      optimizer_epsilon: telemetryMetric('optimizer_epsilon', 'epsilon', '1.00e-8', TELEMETRY_CONTEXT.optimizer),
-      weight_decay: telemetryMetric('weight_decay', 'weight decay', '0.10', TELEMETRY_CONTEXT.optimizer),
-      new_weight_rms: telemetryMetric('new_weight_rms', 'new weight rms', '1.8401e-2', TELEMETRY_CONTEXT.updatedWeight),
-      delta_rms: telemetryMetric('delta_rms', 'delta rms', '2.60e-6', TELEMETRY_CONTEXT.updatedWeight),
-      updated_nan_inf: telemetryMetric('updated_nan_inf', 'NaN / Inf', '0 / 0', TELEMETRY_CONTEXT.updatedWeight),
-      histogram: Object.freeze({ id: 'weight_histogram', values: [12, 35, 72, 100, 86, 48, 21, 8], ...TELEMETRY_CONTEXT.weight }),
-      layerHeatmap: Object.freeze({ id: 'layer_rms_heatmap', values: [52,54,55,57,58,56,59,61,63,60,62,64,65,67,66,68,70,71,69,72,74,73,75,77,79,76,78,80,82,81,84,83,85,87,86,88,89,91,90,92,94,93,95,96,98,97], ...TELEMETRY_CONTEXT.decoder, tensorScope: 'decoder layer output RMS, layers 0-45', source: 'RED-layer' }),
-    });
     const OPENPANGU_VIRTUAL_NODES = {
       query_tensor: {
         id: 'query_tensor',
@@ -1075,6 +629,95 @@
         attrs: { collective: 'all_to_all', scope: 'expert_parallel', stage: 'expert_combine' },
       },
     });
+    const TRAINING_CROSS_NODES = Object.freeze({
+      model_state: {
+        id: 'model_state',
+        kind: 'state',
+        label: 'Model State',
+        state_type: 'training_state',
+        role: 'persistent state entering a training step',
+        attrs: { includes: ['weights', 'optimizer state', 'step metadata'] },
+      },
+      weight_summary: {
+        id: 'weight_summary',
+        kind: 'state',
+        label: 'Weight',
+        state_type: 'parameter',
+        role: 'folded parameter envelope for the model',
+        attrs: { architecture_mapping: 'all explicit OpenPangu parameter nodes', infra: ['GPU Memory', 'Tensor Parallel'] },
+      },
+      activation_core: {
+        id: 'activation_core',
+        kind: 'module',
+        label: 'Activation Core',
+        module_type: 'folded_openpangu_forward',
+        role: 'folded OpenPangu decoder stack at the cross intersection',
+        attrs: {
+          contains: ['mHC Attention', 'Sparse MLA Attention', 'Dense and MoE FFN'],
+          repeated_decoder_layers: 46,
+          infra: ['GPU Memory', 'Checkpointing'],
+        },
+      },
+      training_loss: {
+        id: 'training_loss',
+        kind: 'output',
+        label: 'Loss',
+        role: 'training objective and backward-pass origin',
+        attrs: { consumes: 'logits and labels' },
+      },
+      gradient: {
+        id: 'gradient',
+        kind: 'tensor',
+        label: 'Gradient',
+        role: 'parameter gradients produced by backpropagation',
+        attrs: { infra: ['NCCL Communication', 'Distributed Sync'] },
+      },
+      optimizer: {
+        id: 'optimizer',
+        kind: 'op',
+        label: 'Optimizer',
+        op_type: 'ParameterUpdate',
+        role: 'turns synchronized gradients into parameter updates',
+        attrs: { consumes: ['gradient', 'optimizer state'] },
+      },
+      updated_weight: {
+        id: 'updated_weight',
+        kind: 'state',
+        label: 'Updated Weight',
+        state_type: 'parameter',
+        role: 'parameter state committed for the next step',
+        attrs: { next: 'becomes Weight in the next training step' },
+      },
+      residual_bridge: {
+        id: 'residual_bridge',
+        kind: 'op',
+        label: 'Residual Add',
+        op_type: 'Add',
+        role: 'element-wise merge point for the transformed and identity activation paths',
+        attrs: {
+          equation: 'y = F(x) + x',
+          skip_connection: true,
+          backward_effect: 'identity gradient path',
+          infra: ['Training Stability'],
+          architecture_mapping: ['Attention Residual Add', 'FFN Residual Add'],
+        },
+      },
+    });
+    const TRAINING_CROSS_EDGES = Object.freeze([
+      { source: 'model_state', target: 'weight_summary', tag: 'STATE', edgeType: 'state', tensor: { name: 'model_state', role: 'state' } },
+      { source: 'weight_summary', target: 'activation_core', tag: 'WEIGHT', edgeType: 'parameter', tensor: { name: 'parameters', role: 'parameter' } },
+      { source: 'input_tokens', target: 'token_embedding', tag: 'INPUT', edgeType: 'activation', tensor: { name: 'input_ids' } },
+      { source: 'token_embedding', target: 'activation_core', tag: 'ACTIVATION', edgeType: 'activation', tensor: { name: 'hidden_states' } },
+      { source: 'activation_core', target: 'residual_bridge', tag: 'MAIN PATH', edgeType: 'activation', tensor: { name: 'transformed_hidden_states' } },
+      { source: 'token_embedding', target: 'residual_bridge', tag: 'RESIDUAL', tagPosition: 0.26, edgeType: 'activation', tensor: { name: 'identity_hidden_states' } },
+      { source: 'residual_bridge', target: 'final_norm', tag: 'FORWARD', edgeType: 'activation', tensor: { name: 'merged_hidden_states' } },
+      { source: 'final_norm', target: 'lm_head', edgeType: 'activation', tensor: { name: 'normalized_hidden_states' } },
+      { source: 'lm_head', target: 'training_loss', tag: 'LOSS', edgeType: 'output', tensor: { name: 'logits' } },
+      { source: 'training_loss', target: 'gradient', tag: 'GRADIENT', edgeType: 'gradient', tensor: { name: 'loss_gradient' } },
+      { source: 'gradient', target: 'activation_core', tag: 'BACKPROP', tagPosition: 0.2, tagOffset: -28, edgeType: 'gradient', tensor: { name: 'activation_gradient' } },
+      { source: 'gradient', target: 'optimizer', tag: 'SYNC', edgeType: 'gradient', tensor: { name: 'parameter_gradients' } },
+      { source: 'optimizer', target: 'updated_weight', tag: 'UPDATE', edgeType: 'parameter', tensor: { name: 'parameter_update' } },
+    ]);
     const OPENPANGU_WIDTHS = Object.freeze({
       mainSpine: 480,
       attentionLane: 470,
@@ -1290,10 +933,8 @@
     const state = {
       schema: null,
       graph: null,
-      decoderLayerExpanded: new URLSearchParams(window.location.search).get('layer') === 'L2',
+      viewMode: 'training',
       selectedNodeId: null,
-      trainingOverlayEnabled: true,
-      trainingOverlayPositionFrame: 0,
       collapsedModules: new Set(DEFAULT_COLLAPSED),
       detailModules: new Set(DEFAULT_DETAIL_MODULES),
       zoom: 1,
@@ -1330,28 +971,25 @@
       renderAll(`${next} theme.`, { preserveZoom: true });
     }
 
-    function syncLayerDepthToggle() {
-      const expanded = state.decoderLayerExpanded;
-      const button = document.getElementById('layerDepthToggle');
-      if (button) button.textContent = expanded ? 'Collapse Decoder L2' : 'Expand Decoder L2';
-      button?.classList.toggle('is-active', expanded);
-      button?.setAttribute('aria-pressed', String(expanded));
-      const floatingBack = document.getElementById('floatingBack');
-      if (floatingBack) floatingBack.hidden = !expanded;
-      syncTrainingOverlayToggle();
+    function syncViewToggle() {
+      const training = state.viewMode === 'training';
+      const trainingButton = document.getElementById('trainingView');
+      const modelButton = document.getElementById('modelView');
+      trainingButton?.classList.toggle('is-active', training);
+      modelButton?.classList.toggle('is-active', !training);
+      trainingButton?.setAttribute('aria-pressed', String(training));
+      modelButton?.setAttribute('aria-pressed', String(!training));
     }
 
-    function setDecoderLayerExpanded(expanded) {
-      if (expanded === state.decoderLayerExpanded) return;
-      state.decoderLayerExpanded = expanded;
+    function setViewMode(next) {
+      if (next !== 'training' && next !== 'model') return;
+      if (next === state.viewMode) return;
+      state.viewMode = next;
       state.selectedNodeId = null;
-      const url = new URL(window.location.href);
-      url.searchParams.delete('view');
-      if (expanded) url.searchParams.set('layer', 'L2');
-      else url.searchParams.delete('layer');
-      window.history.replaceState({}, '', url);
-      renderAll(expanded ? 'Decoder Layer expanded inline to L2.' : 'Decoder Layer folded to L1.', { preserveZoom: true });
-      syncLayerDepthToggle();
+      state.collapsedModules = new Set(DEFAULT_COLLAPSED);
+      state.detailModules = new Set(DEFAULT_DETAIL_MODULES);
+      renderAll(next === 'training' ? 'Training cross view.' : 'Folded model detail view.');
+      syncViewToggle();
     }
 
     function isOpenPanguSchema(schema) {
@@ -1485,8 +1123,7 @@
       const keyX = 1040;
       const valueX = 1300;
       const stateX = 1530;
-      const mtpX = 2520;
-      const mtpWeightX = 2180;
+      const mtpX = NODE_SPEC.mtp_module.lane;
       const place = (id, x, y) => {
         if (!visibleNode(id)) return;
         positions[id] = { x: x ?? NODE_SPEC[id].lane ?? cx, y };
@@ -1496,7 +1133,7 @@
       place('token_embedding', cx, 168);
       place('embedding_weight', 330, 168);
       place('decoder_layer', cx, 262);
-      place('positions', 120, 170);
+      place('positions', 180, 170);
 
       if (c.has('decoder_layer')) {
         place('rope_cache', 1260, 346);
@@ -1611,7 +1248,7 @@
         place('mtp_input_norms', mtpX, mtpY - 132);
         place('mtp_eh_proj', mtpX, mtpY - 42);
         place('mtp_decoder_layer', mtpX, mtpY + 48);
-        place('mtp_head_weight', mtpWeightX, mtpY + 138);
+        place('mtp_head_weight', 860, mtpY + 138);
         place('mtp_shared_head', mtpX, mtpY + 138);
         place('mtp_logits', mtpX, mtpY + 228);
       }
@@ -1929,133 +1566,55 @@
       return { width: Math.round(Math.max(1280, maxRight + 90)), height: Math.round(maxBottom + 80), clusters, nodes: graphNodes, edges };
     }
 
-    function activeMainTelemetryGroups() {
-      const shared = [
-        MAIN_TELEMETRY_GROUPS.token,
-        MAIN_TELEMETRY_GROUPS.embedding,
-        MAIN_TELEMETRY_GROUPS.finalNorm,
-        MAIN_TELEMETRY_GROUPS.loss,
-        MAIN_TELEMETRY_GROUPS.weight,
-        MAIN_TELEMETRY_GROUPS.gradient,
-        MAIN_TELEMETRY_GROUPS.optimizer,
-        MAIN_TELEMETRY_GROUPS.updatedWeight,
-      ];
-      const decoder = state.decoderLayerExpanded
-        ? [MAIN_TELEMETRY_GROUPS.decoderInput, MAIN_TELEMETRY_GROUPS.attention, MAIN_TELEMETRY_GROUPS.ffn, MAIN_TELEMETRY_GROUPS.decoderOutput]
-        : [MAIN_TELEMETRY_GROUPS.decoder];
-      return [...shared, ...decoder];
-    }
-
-    function telemetryGroupForNode(nodeId) {
-      return activeMainTelemetryGroups().find((group) => group.anchorId === nodeId) || null;
-    }
-
-    function telemetryNodeHeight(nodeId, fallbackHeight) {
-      const group = telemetryGroupForNode(nodeId);
-      return group ? Math.max(fallbackHeight, 70 + group.rows.length * 15) : fallbackHeight;
-    }
-
     function buildTrainingCrossGraph(schema) {
       const sourceNodes = new Map((schema.nodes || []).map((node) => [node.id, node]));
-      const expanded = state.decoderLayerExpanded;
-      const columnX = 830;
-      const skipX = 1070;
-      const stateX = 150;
-      const weightX = 430;
-      const gradientX = 1260;
-      const optimizerX = 1590;
-      const updatedWeightX = 1930;
-      const crossY = 430;
-      const residualY = expanded ? 1530 : 620;
-      const finalNormY = residualY + 110;
-      const lmHeadY = finalNormY + 110;
-      const lossY = lmHeadY + 110;
       const placements = [
-        ['input_tokens', columnX, 90, 220, 54, 'io:input'],
-        ['token_embedding', columnX, 220, 300, 60, 'sem:embedding'],
-        ['model_state', stateX, crossY, 190, 56, 'io:state'],
-        ['weight_summary', weightX, crossY, 240, 58, 'io:parameter'],
-        ['gradient', gradientX, crossY, 280, 60, 'sem:activation'],
-        ['optimizer', optimizerX, crossY, 250, 60, 'sem:linear'],
-        ['updated_weight', updatedWeightX, crossY, 250, 58, 'io:parameter'],
-        ['residual_bridge', columnX, residualY, 54, 54, 'sem:activation'],
-        ['final_norm', columnX, finalNormY, 270, 58, 'sem:norm'],
-        ['lm_head', columnX, lmHeadY, 176, 58, 'sem:head'],
-        ['training_loss', columnX, lossY, 280, 54, 'io:output'],
+        ['input_tokens', 760, 78, 176, 54, 'io:input'],
+        ['token_embedding', 760, 188, 248, 60, 'sem:embedding'],
+        ['model_state', 100, 420, 220, 56, 'io:state'],
+        ['weight_summary', 355, 420, 240, 58, 'io:parameter'],
+        ['activation_core', 760, 420, 320, 66, 'module:decoder'],
+        ['gradient', 1220, 420, 220, 60, 'sem:activation'],
+        ['optimizer', 1460, 420, 200, 60, 'sem:linear'],
+        ['updated_weight', 1710, 420, 220, 58, 'io:parameter'],
+        ['residual_bridge', 760, 586, 54, 54, 'sem:activation'],
+        ['final_norm', 760, 696, 194, 58, 'sem:norm'],
+        ['lm_head', 760, 806, 176, 58, 'sem:head'],
+        ['training_loss', 760, 916, 166, 54, 'io:output'],
       ];
-      if (!expanded) placements.push(['decoder_layer', columnX, crossY, 360, 66, 'module:decoder']);
-      if (expanded) placements.push(
-        ['mhc_attention', columnX, 430, 360, 62, 'module:mhc'],
-        ['input_layernorm', columnX, 530, 340, 62, 'sem:norm'],
-        ['sparse_mla_attention', columnX, 630, 360, 64, 'sem:attention'],
-        ['attention_residual_add', columnX, 730, 54, 54, 'sem:act'],
-        ['post_attention_norm', columnX, 830, 340, 62, 'sem:norm'],
-        ['mhc_attention_post', columnX, 930, 340, 62, 'module:mhc'],
-        ['pre_mlp_norm', columnX, 1030, 340, 62, 'sem:norm'],
-        ['ffn_choice', columnX, 1130, 360, 64, 'module:ffn'],
-        ['ffn_residual_add', columnX, 1230, 54, 54, 'sem:act'],
-        ['post_mlp_norm', columnX, 1330, 340, 62, 'sem:norm'],
-        ['block_post_norm', columnX, 1430, 360, 62, 'sem:norm'],
-      );
-      const l2NodeIds = new Set([
-        'mhc_attention', 'input_layernorm', 'sparse_mla_attention', 'attention_residual_add',
-        'post_attention_norm', 'mhc_attention_post', 'pre_mlp_norm', 'ffn_choice',
-        'ffn_residual_add', 'post_mlp_norm', 'block_post_norm',
-      ]);
       const nodes = placements.map(([id, x, y, width, height, colorKey]) => {
-        const source = TRAINING_CROSS_NODES[id] || sourceNodes.get(id) || OPENPANGU_VIRTUAL_NODES[id];
-        const isResidual = id === 'residual_bridge' || id === 'attention_residual_add' || id === 'ffn_residual_add';
-        const isFoldedL2Module = expanded && (id === 'sparse_mla_attention' || id === 'ffn_choice');
+        const source = TRAINING_CROSS_NODES[id] || sourceNodes.get(id);
         return {
           id,
-          label: isResidual ? '+' : (OPENPANGU_DISPLAY_LABELS[id] || source?.label || id),
+          label: id === 'residual_bridge' ? '+' : (source?.label || id),
           kind: graphKind(source?.kind),
-          typeLabel: id === 'decoder_layer'
-            ? 'Activation · Module · L1'
-            : (isFoldedL2Module ? 'Module · L2 · folded' : typeLabel(source?.kind, source)),
-          x, y, width, height: telemetryNodeHeight(id, height), colorKey,
-          parent: id === 'decoder_layer' || l2NodeIds.has(id) ? 'training-activation-envelope' : undefined,
-          glyph: isResidual,
-          hideTypeLabel: isResidual,
+          typeLabel: id === 'activation_core' ? 'Module · folded architecture' : typeLabel(source?.kind, source),
+          x,
+          y,
+          width,
+          height,
+          colorKey,
+          parent: id === 'activation_core' ? 'training-activation-envelope' : undefined,
+          glyph: id === 'residual_bridge',
+          hideTypeLabel: id === 'residual_bridge',
         };
       });
-      const layerInputId = expanded ? 'mhc_attention' : 'decoder_layer';
-      const layerOutputId = expanded ? 'block_post_norm' : 'decoder_layer';
-      const crossEdges = [
-        { source: 'model_state', target: 'weight_summary', tag: 'STATE', edgeType: 'state', tensor: { name: 'model_state', role: 'state' } },
-        { source: 'weight_summary', target: layerInputId, tag: 'WEIGHT', edgeType: 'parameter', tensor: { name: 'parameters', role: 'parameter' } },
-        { source: 'input_tokens', target: 'token_embedding', tag: 'INPUT', edgeType: 'activation', tensor: { name: 'input_ids' } },
-        { source: 'token_embedding', target: layerInputId, tag: 'ACTIVATION', edgeType: 'activation', tensor: { name: 'hidden_states' } },
-        { source: layerOutputId, target: 'residual_bridge', tag: 'MAIN PATH', edgeType: 'activation', tensor: { name: 'transformed_hidden_states' } },
-        { source: 'token_embedding', target: 'residual_bridge', tag: 'RESIDUAL', tagPosition: 0.18, edgeType: 'activation', tensor: { name: 'identity_hidden_states' } },
-        { source: 'residual_bridge', target: 'final_norm', tag: 'FORWARD', edgeType: 'activation', tensor: { name: 'merged_hidden_states' } },
-        { source: 'final_norm', target: 'lm_head', edgeType: 'activation', tensor: { name: 'normalized_hidden_states' } },
-        { source: 'lm_head', target: 'training_loss', tag: 'LOSS', edgeType: 'output', tensor: { name: 'logits' } },
-        { source: 'training_loss', target: 'gradient', tag: 'GRADIENT', edgeType: 'gradient', tensor: { name: 'loss_gradient' } },
-        { source: 'gradient', target: layerInputId, tag: 'BACKPROP', tagPosition: 0.2, tagOffset: -28, edgeType: 'gradient', tensor: { name: 'activation_gradient' } },
-        { source: 'gradient', target: 'optimizer', tag: 'SYNC', edgeType: 'gradient', tensor: { name: 'parameter_gradients' } },
-        { source: 'optimizer', target: 'updated_weight', tag: 'UPDATE', edgeType: 'parameter', tensor: { name: 'parameter_update' } },
-      ];
-      if (expanded) crossEdges.push(
-        { source: 'mhc_attention', target: 'input_layernorm', edgeType: 'activation' },
-        { source: 'input_layernorm', target: 'sparse_mla_attention', tag: 'L2', edgeType: 'activation' },
-        { source: 'sparse_mla_attention', target: 'attention_residual_add', edgeType: 'activation' },
-        { source: 'mhc_attention', target: 'attention_residual_add', tag: 'RESIDUAL', tagPosition: 0.44, edgeType: 'activation', dashed: true },
-        { source: 'attention_residual_add', target: 'post_attention_norm', edgeType: 'activation' },
-        { source: 'post_attention_norm', target: 'mhc_attention_post', edgeType: 'activation' },
-        { source: 'mhc_attention_post', target: 'pre_mlp_norm', edgeType: 'activation' },
-        { source: 'pre_mlp_norm', target: 'ffn_choice', tag: 'L2', edgeType: 'activation' },
-        { source: 'ffn_choice', target: 'ffn_residual_add', edgeType: 'activation' },
-        { source: 'attention_residual_add', target: 'ffn_residual_add', tag: 'RESIDUAL', tagPosition: 0.46, edgeType: 'activation', dashed: true },
-        { source: 'ffn_residual_add', target: 'post_mlp_norm', edgeType: 'activation' },
-        { source: 'post_mlp_norm', target: 'block_post_norm', edgeType: 'activation' },
-      );
       const anchors = (edge) => {
         if (edge.source === 'training_loss' && edge.target === 'gradient') {
-          return { sourceAnchor: { side: 'right', dx: 8 }, targetAnchor: { side: 'bottom', dy: 8 }, cornerRadius: 18, waypoints: [{ x: gradientX, y: lossY }] };
+          return {
+            sourceAnchor: { side: 'right', dx: 8 },
+            targetAnchor: { side: 'bottom', dy: 8 },
+            cornerRadius: 18,
+            waypoints: [{ x: 1220, y: 916 }],
+          };
         }
         if (edge.source === 'token_embedding' && edge.target === 'residual_bridge') {
-          return { sourceAnchor: { side: 'right', dx: 8 }, targetAnchor: { side: 'right', dx: 8 }, cornerRadius: 18, waypoints: [{ x: skipX, y: 220 }, { x: skipX, y: residualY }] };
+          return {
+            sourceAnchor: { side: 'right', dx: 8 },
+            targetAnchor: { side: 'right', dx: 8 },
+            cornerRadius: 18,
+            waypoints: [{ x: 1000, y: 188 }, { x: 1000, y: 586 }],
+          };
         }
         const source = nodes.find((node) => node.id === edge.source);
         const target = nodes.find((node) => node.id === edge.target);
@@ -2069,27 +1628,25 @@
           ? { sourceAnchor: { side: 'right', dx: 8 }, targetAnchor: { side: 'left', dx: -8 }, curve: 'horizontal' }
           : { sourceAnchor: { side: 'left', dx: -8 }, targetAnchor: { side: 'right', dx: 8 }, curve: 'horizontal' };
       };
-      const edges = crossEdges.map((edge) => ({ ...edge, ...anchors(edge), tagFontSize: 10, tagHeight: 20, tagPaddingX: 10 }));
-      const layerNodes = nodes.filter((node) => node.parent === 'training-activation-envelope');
-      const clusterLeft = Math.min(...layerNodes.map((node) => node.x - node.width / 2)) - 36;
-      const clusterRight = Math.max(...layerNodes.map((node) => node.x + node.width / 2)) + 36;
-      const clusterTop = Math.min(...layerNodes.map((node) => node.y - node.height / 2)) - 72;
-      const clusterBottom = Math.max(...layerNodes.map((node) => node.y + node.height / 2)) + 36;
+      const edges = TRAINING_CROSS_EDGES.map((edge) => ({
+        ...edge,
+        ...anchors(edge),
+        tagFontSize: 10,
+        tagHeight: 20,
+        tagPaddingX: 10,
+      }));
       return {
-        width: 2160,
-        height: lossY + 144,
-        crossY,
-        columnX,
-        skipX,
+        width: 1880,
+        height: 1060,
         clusters: [{
           id: 'training-activation-envelope',
-          label: expanded ? 'Decoder Layer · L2' : 'Decoder Layer',
+          label: 'OpenPangu Decoder Stack',
           colorKey: 'module:decoder',
           repeat: true,
-          x: clusterLeft,
-          y: clusterTop,
-          width: clusterRight - clusterLeft,
-          height: clusterBottom - clusterTop,
+          x: 570,
+          y: 318,
+          width: 380,
+          height: 204,
         }],
         nodes,
         edges,
@@ -2113,7 +1670,8 @@
     }
 
     function buildGraphFromSchema(schema) {
-      return isOpenPanguSchema(schema) ? buildTrainingCrossGraph(schema) : fallbackGraph(schema);
+      if (isOpenPanguSchema(schema) && state.viewMode === 'training') return buildTrainingCrossGraph(schema);
+      return isOpenPanguSchema(schema) ? buildOpenPanguGraph(schema) : fallbackGraph(schema);
     }
 
     function createSvg(tag, attrs = {}) {
@@ -2153,9 +1711,9 @@
         tabindex: '0',
         'data-module-id': moduleId,
       });
-      const actionLabel = mode === 'layer'
-        ? (collapseAction ? 'collapse to L1' : 'expand inline to L2')
-        : (mode === 'detail' ? (collapseAction ? 'close detail' : 'open detail') : (collapseAction ? 'collapse' : 'expand'));
+      const actionLabel = mode === 'detail'
+        ? (collapseAction ? 'close detail' : 'open detail')
+        : (collapseAction ? 'collapse' : 'expand');
       group.setAttribute('aria-label', `${node?.label || moduleId} ${actionLabel}`);
       group.appendChild(createSvg('circle', { class: 'opv-toggle-hit', cx: 0, cy: 0, r: radius + 10 }));
       group.appendChild(createSvg('circle', { cx: 0, cy: 0, r: radius }));
@@ -2171,16 +1729,14 @@
       group.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
-        if (mode === 'layer') setDecoderLayerExpanded(!collapseAction);
-        else if (mode === 'detail') setModuleDetail(moduleId, !collapseAction);
+        if (mode === 'detail') setModuleDetail(moduleId, !collapseAction);
         else setModuleCollapsed(moduleId, collapseAction);
       });
       group.addEventListener('keydown', (event) => {
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
         event.stopPropagation();
-        if (mode === 'layer') setDecoderLayerExpanded(!collapseAction);
-        else if (mode === 'detail') setModuleDetail(moduleId, !collapseAction);
+        if (mode === 'detail') setModuleDetail(moduleId, !collapseAction);
         else setModuleCollapsed(moduleId, collapseAction);
       });
       svg.appendChild(group);
@@ -2197,146 +1753,52 @@
     }
 
     function appendTrainingCrossOverlay(svg) {
-      const crossY = state.graph?.crossY || 420;
-      const columnX = state.graph?.columnX || 800;
-      const skipX = state.graph?.skipX || 1040;
       const group = createSvg('g', { class: 'opv-training-axis' });
-      const horizontal = createSvg('text', { class: 'opv-training-axis-label', x: 58, y: crossY - 78 });
+      const horizontal = createSvg('text', { class: 'opv-training-axis-label', x: 58, y: 342 });
       horizontal.textContent = 'TRAINING STATE / UPDATE SPAN';
-      const vertical = createSvg('text', { class: 'opv-training-axis-label', x: columnX, y: 28, 'text-anchor': 'middle' });
+      const vertical = createSvg('text', {
+        class: 'opv-training-axis-label',
+        x: 760,
+        y: 28,
+        'text-anchor': 'middle',
+      });
       vertical.textContent = 'MODEL FORWARD / INPUT TO OUTPUT';
       group.appendChild(horizontal);
       group.appendChild(vertical);
       svg.appendChild(group);
-      const wireBridge = createSvg('g', { class: 'opv-training-wire-bridge', 'pointer-events': 'none', 'aria-hidden': 'true' });
-      wireBridge.appendChild(createSvg('rect', { x: skipX - 9, y: crossY - 10, width: 18, height: 20, rx: 4, ry: 4, fill: 'var(--opv-shell-bg)' }));
-      wireBridge.appendChild(createSvg('path', { d: `M ${skipX} ${crossY - 12} L ${skipX} ${crossY + 12}`, fill: 'none', stroke: 'var(--model-graphviz-line)', 'stroke-width': 2, 'stroke-linecap': 'round' }));
-      svg.appendChild(wireBridge);
-      const layerBox = state.graph?.clusters?.find((cluster) => cluster.id === 'training-activation-envelope');
-      if (layerBox) {
-        appendRepeatTag(svg, layerBox.x + 16, layerBox.y + 52, state.decoderLayerExpanded ? 'one representative layer · L2 only' : '46 repeated layers · folded L1');
-        if (state.decoderLayerExpanded) appendOverlayToggle(svg, layerBox.x + layerBox.width - 13, layerBox.y + 13, 'decoder_layer', true, 7.5, 'layer');
-      }
-      const layerNode = state.graph?.nodes?.find((node) => node.id === 'decoder_layer');
-      if (layerNode) appendOverlayToggle(svg, layerNode.x + layerNode.width / 2 - 24, layerNode.y, 'decoder_layer', false, 14, 'layer');
-    }
-
-    function metricScopeText(metric) {
-      const rawMicrobatch = String(metric.microbatch || '');
-      const microbatch = rawMicrobatch === '3/8' ? 'μ3/8' : (rawMicrobatch.includes('8/8') ? 'μΣ8' : `μ${rawMicrobatch}`);
-      return `s${metric.step} ${microbatch} ${metric.scopeCode || `${metric.layer} ${metric.ownerRank} ${metric.tensorScope} ${metric.phase} ${metric.source}`}`;
-    }
-
-    function telemetryRowsForGroup(group) {
-      return group.rows.map((row) => row.map((metricId) => TELEMETRY_METRICS[metricId]).filter(Boolean));
-    }
-
-    function appendNodeTelemetry(group) {
-      const node = state.graph?.nodes?.find((item) => item.id === group.anchorId);
-      const nodeElement = graphNodeElement(group.anchorId);
-      if (!node || !nodeElement) return;
-      const top = -node.height / 2;
-      const label = nodeElement.querySelector('.pto-model-graphviz-node-label');
-      let type = nodeElement.querySelector('.pto-model-graphviz-node-type');
-      if (label) label.setAttribute('y', String(top + 18));
-      if (!type) {
-        type = createSvg('text', { class: 'pto-model-graphviz-node-type', x: 0, fill: 'var(--model-graphviz-node-type)' });
-        nodeElement.appendChild(type);
-      }
-      type.setAttribute('y', String(top + 34));
-      type.textContent = group.typeText;
-      const overlay = createSvg('g', { class: 'opv-node-telemetry', 'aria-hidden': 'true' });
-      overlay.appendChild(createSvg('line', {
-        class: 'opv-node-telemetry-separator',
-        x1: -node.width * 0.34,
-        x2: node.width * 0.34,
-        y1: top + 44,
-        y2: top + 44,
+      const wireBridge = createSvg('g', {
+        class: 'opv-training-wire-bridge',
+        'pointer-events': 'none',
+        'aria-hidden': 'true',
+      });
+      wireBridge.appendChild(createSvg('rect', {
+        x: 991,
+        y: 410,
+        width: 18,
+        height: 20,
+        rx: 4,
+        ry: 4,
+        fill: 'var(--opv-shell-bg)',
       }));
-      const rows = telemetryRowsForGroup(group);
-      rows.forEach((metrics, rowIndex) => {
-        const row = createSvg('text', { class: 'opv-node-telemetry-row', x: 0, y: top + 58 + rowIndex * 15 });
-        row.textContent = metrics.map((metric) => `${metric.label} ${metric.value}`).join(' · ');
-        overlay.appendChild(row);
-      });
-      const firstMetric = rows.flat()[0];
-      if (firstMetric) {
-        const scope = createSvg('text', { class: 'opv-node-telemetry-scope', x: 0, y: node.height / 2 - 9 });
-        const mixedAttentionScope = group === MAIN_TELEMETRY_GROUPS.decoder || group === MAIN_TELEMETRY_GROUPS.attention;
-        scope.textContent = mixedAttentionScope
-          ? `s120000 μ3/8 L17 PP4·TPg5·DP2 FWD · H/TP:CB · H:4h×128q:SAMP`
-          : metricScopeText(firstMetric);
-        overlay.appendChild(scope);
-      }
-      nodeElement.appendChild(overlay);
-    }
-
-    function appendSyncTelemetry(svg) {
-      const metrics = ['sync_collective', 'sync_payload', 'sync_duration'].map((id) => TELEMETRY_METRICS[id]);
-      const first = metrics[0];
-      const centerX = 1425;
-      const centerY = (state.graph?.crossY || 430) - 132;
-      const width = 292;
-      const height = 82;
-      const group = createSvg('g', { class: 'opv-sync-telemetry', transform: `translate(${centerX}, ${centerY})`, 'aria-hidden': 'true' });
-      group.appendChild(createSvg('rect', { x: -width / 2, y: -height / 2, width, height, rx: 14, ry: 14 }));
-      const title = createSvg('text', { class: 'opv-sync-telemetry-title', x: 0, y: -25 });
-      title.textContent = 'SYNC · SYNTHETIC PROFILER SLICE';
-      group.appendChild(title);
-      const collective = createSvg('text', { class: 'opv-sync-telemetry-row', x: 0, y: -7 });
-      collective.textContent = `${metrics[0].label} ${metrics[0].value}`;
-      group.appendChild(collective);
-      const payload = createSvg('text', { class: 'opv-sync-telemetry-row', x: 0, y: 9 });
-      payload.textContent = `${metrics[1].label} ${metrics[1].value} · ${metrics[2].label} ${metrics[2].value}`;
-      group.appendChild(payload);
-      const scope = createSvg('text', { class: 'opv-sync-telemetry-scope', x: 0, y: 28 });
-      scope.textContent = metricScopeText(first);
-      group.appendChild(scope);
-      svg.appendChild(group);
-    }
-
-    function appendMainTelemetry(svg) {
-      activeMainTelemetryGroups().forEach(appendNodeTelemetry);
-      appendSyncTelemetry(svg);
-    }
-
-    function ensureSliceBanner() {
-      let banner = document.getElementById('sliceBanner');
-      if (banner) return banner;
-      banner = document.createElement('aside');
-      banner.id = 'sliceBanner';
-      banner.className = 'opv-slice-banner';
-      banner.setAttribute('aria-label', 'Synthetic telemetry slice');
-      document.getElementById('graphStage')?.appendChild(banner);
-      return banner;
-    }
-
-    function renderSliceBanner() {
-      const banner = ensureSliceBanner();
-      banner.innerHTML = `
-        <strong>Synthetic slice · 29 graph values</strong><br>
-        <code>run=${escapeHtml(TELEMETRY_SLICE.run)} · config=${escapeHtml(TELEMETRY_SLICE.configSha)} · update=${TELEMETRY_SLICE.updateId} · W ${TELEMETRY_SLICE.weightBefore}→${TELEMETRY_SLICE.weightAfter} · μ${TELEMETRY_SLICE.microbatch} · DP${TELEMETRY_SLICE.dpReplica} · ${TELEMETRY_SLICE.compute}/${TELEMETRY_SLICE.masterWeight}</code>`;
-    }
-
-    function validateTelemetryContract() {
-      const values = [
-        ...Object.values(TELEMETRY_METRICS),
-        ...Object.values(TELEMETRY_DETAIL),
-      ];
-      const failures = values.flatMap((metric) => {
-        const missing = TELEMETRY_REQUIRED_CONTEXT.filter((field) => metric[field] === undefined || metric[field] === null || metric[field] === '');
-        return missing.length ? [`${metric.id}: ${missing.join(', ')}`] : [];
-      });
-      if (failures.length) throw new Error(`Telemetry context contract failed: ${failures.join('; ')}`);
-      if (Object.keys(TELEMETRY_METRICS).length !== 29) throw new Error('Main graph telemetry must contain exactly 29 values.');
+      wireBridge.appendChild(createSvg('path', {
+        d: 'M 1000 408 L 1000 432',
+        fill: 'none',
+        stroke: 'var(--model-graphviz-line)',
+        'stroke-width': 2,
+        'stroke-linecap': 'round',
+      }));
+      svg.appendChild(wireBridge);
+      const activationBox = state.graph?.clusters?.find((cluster) => cluster.id === 'training-activation-envelope');
+      if (activationBox) appendRepeatTag(svg, activationBox.x + 16, activationBox.y + 52, '46 folded decoder layers');
     }
 
     function appendToggleOverlay() {
       const svg = state.svg;
       if (!svg || !state.graph || !isOpenPanguSchema(state.schema)) return;
-      appendTrainingCrossOverlay(svg);
-      appendMainTelemetry(svg);
-      return;
+      if (state.viewMode === 'training') {
+        appendTrainingCrossOverlay(svg);
+        return;
+      }
       state.graph.clusters.forEach((cluster) => {
         const moduleId = MODULE_BY_CLUSTER[cluster.id];
         if (!moduleId) return;
@@ -2443,404 +1905,14 @@
       };
     }
 
-    function trainingScopeForModule(moduleId) {
-      return new Set(TRAINING_MODULE_SCOPE[moduleId] || [moduleId]);
-    }
-
-    function parameterNodesForModule(moduleId) {
-      const scope = trainingScopeForModule(moduleId);
-      return (state.schema?.nodes || []).filter((node) => {
-        const parameterOf = node?.attrs?.parameter_of;
-        const targets = Array.isArray(parameterOf) ? parameterOf : (parameterOf ? [parameterOf] : []);
-        const isParameter = node.kind === 'state' && node.state_type === 'parameter';
-        return isParameter && targets.some((target) => scope.has(target));
-      });
-    }
-
-    function trainingBoundaryEdges(moduleId, parameterIds = new Set()) {
-      const scope = trainingScopeForModule(moduleId);
-      const edges = state.schema?.edges || [];
-      const isParameterEdge = (edge) => parameterIds.has(edge.source) || edge.tensor?.role === 'parameter';
-      const incoming = edges.find((edge) => !isParameterEdge(edge) && !scope.has(edge.source) && scope.has(edge.target));
-      const outgoing = edges.find((edge) => !isParameterEdge(edge) && scope.has(edge.source) && !scope.has(edge.target));
-      return { incoming, outgoing };
-    }
-
-    function compactTensorLabel(edge, fallback = '[B,T,H] · bf16') {
-      if (!edge) return fallback;
-      const tensor = edge.tensor || {};
-      return [tensor.name, tensor.shape, tensor.dtype].filter(Boolean).join(' · ') || fallback;
-    }
-
-    function residualNodesForModule(moduleId) {
-      if (moduleId === 'decoder_layer') return ['attention_residual_add', 'ffn_residual_add'];
-      if (moduleId === 'sparse_mla_attention') return ['attention_residual_add'];
-      if (['ffn_choice', 'dense_mlp', 'moe_ffn', 'shared_expert_mlp'].includes(moduleId)) return ['ffn_residual_add'];
-      return [];
-    }
-
-    function trainingContextForNode(nodeId) {
-      const node = getNode(nodeId);
-      if (!node || node.kind !== 'module' || !TRAINING_MODULE_SCOPE[nodeId]) return null;
-      const parameters = parameterNodesForModule(nodeId);
-      if (!parameters.length) return null;
-      const parameterIds = new Set(parameters.map((item) => item.id));
-      const boundary = trainingBoundaryEdges(nodeId, parameterIds);
-      const dtypes = [...new Set(parameters.map((item) => item.attrs?.dtype).filter(Boolean))];
-      const outputTensor = boundary.outgoing?.tensor || {};
-      const gradientName = outputTensor.name ? `d${outputTensor.name}` : 'dHidden';
-      return {
-        moduleId: nodeId,
-        node,
-        scope: trainingScopeForModule(nodeId),
-        parameters,
-        parameterIds,
-        boundary,
-        residualNodeIds: residualNodesForModule(nodeId),
-        weight: `${parameters.length} parameter group${parameters.length === 1 ? '' : 's'}${dtypes.length ? ` · ${dtypes.join('/')}` : ''}`,
-        activation: `${compactTensorLabel(boundary.incoming)} → ${compactTensorLabel(boundary.outgoing)}`,
-        gradient: `${gradientName} · ${outputTensor.dtype || 'bf16'} · reverse path`,
-        residual: TRAINING_RESIDUAL_LABELS[nodeId] || 'Module output path',
-        optimizer: 'Update binding · demo step 128',
-        parallel: TRAINING_PARALLEL_LABELS[nodeId] || 'DP',
-        moe: nodeId === 'moe_ffn',
-      };
-    }
-
-    function telemetryMetricsForNode(nodeId) {
-      const metric = (id) => TELEMETRY_METRICS[id];
-      const detail = (id) => TELEMETRY_DETAIL[id];
-      const map = {
-        input_tokens: [metric('valid_tokens'), metric('pad_ratio'), detail('token_shape'), detail('invalid_ids'), detail('batch_hash')],
-        token_embedding: [metric('embedding_rms'), metric('embedding_maxabs'), metric('embedding_nonfinite'), detail('embedding_nan_inf')],
-        mhc_attention: [metric('decoder_input_rms')],
-        block_post_norm: [metric('decoder_output_rms'), metric('decoder_nonfinite')],
-        final_norm: [metric('final_pre_rms'), metric('final_post_rms'), detail('final_gamma_rms'), detail('final_nan_inf')],
-        lm_head: [detail('logit_rms'), detail('logit_maxabs'), detail('target_nll'), detail('logit_nan_inf')],
-        training_loss: [detail('microbatch_ce'), metric('step_ce'), detail('valid_step_tokens'), metric('step_ppl'), detail('aux_loss')],
-        weight_summary: [metric('probe_weight_rms'), detail('weight_maxabs'), detail('weight_nan_inf'), metric('probe_weight_version'), detail('weight_checksum')],
-        gradient: [detail('selected_param_grad_rms'), metric('grad_post_sync_norm'), metric('grad_preclip_norm'), metric('grad_postclip_norm'), detail('clip_threshold'), detail('clip_coefficient'), metric('grad_nonfinite'), metric('sync_collective'), metric('sync_payload'), metric('sync_duration'), detail('sync_payload_rate'), detail('sync_pre_norm'), detail('sync_post_norm'), detail('sync_checksum')],
-        optimizer: [metric('optimizer_lr'), detail('beta_pair'), detail('optimizer_epsilon'), detail('weight_decay'), detail('m_hat_rms'), detail('sqrt_v_hat_rms'), detail('update_rms'), metric('update_to_weight'), metric('skipped_update')],
-        updated_weight: [detail('new_weight_rms'), detail('delta_rms'), metric('update_to_weight'), metric('new_weight_version'), metric('new_weight_checksum'), detail('updated_nan_inf')],
-      };
-      return (map[nodeId] || []).filter(Boolean);
-    }
-
-    function telemetryInspectorContextForNode(nodeId) {
-      const moduleContext = trainingContextForNode(nodeId);
-      if (moduleContext) return moduleContext;
-      const metrics = telemetryMetricsForNode(nodeId);
-      const node = getNode(nodeId);
-      if (!node || !metrics.length) return null;
-      return {
-        moduleId: nodeId,
-        node,
-        generic: true,
-        metrics,
-      };
-    }
-
-    function ensureTrainingOverlay() {
-      let overlay = document.getElementById('trainingOverlay');
-      if (overlay) return overlay;
-      overlay = document.createElement('div');
-      overlay.id = 'trainingOverlay';
-      overlay.className = 'opv-training-overlay';
-      overlay.hidden = true;
-      document.getElementById('graphStage')?.appendChild(overlay);
-      return overlay;
-    }
-
-    function ensureTrainingGuide() {
-      let guide = document.getElementById('trainingGuide');
-      if (guide) return guide;
-      guide = document.createElement('aside');
-      guide.id = 'trainingGuide';
-      guide.className = 'opv-training-guide';
-      guide.innerHTML = '<strong>Decoder Layer · L2</strong> — 29 high-value metrics stay on the graph. Attention and FFN remain folded; select a parameterized Module for Q/K/V, moments, quantiles, histogram, and layer heatmap.';
-      document.getElementById('graphStage')?.appendChild(guide);
-      return guide;
-    }
-
-    function clearTrainingGraphMarks() {
-      const svg = state.svg;
-      if (!svg) return;
-      svg.querySelector('.opv-training-svg-overlay')?.remove();
-      svg.querySelectorAll('.is-training-parameter, .is-training-residual, .is-training-metric, .is-training-activation').forEach((element) => {
-        element.classList.remove('is-training-parameter', 'is-training-residual', 'is-training-metric', 'is-training-activation');
-      });
-    }
-
-    function graphNodeElement(nodeId) {
-      return state.svg?.querySelector(`[data-node-id="${nodeId}"]`) || null;
-    }
-
-    function graphEdgeElement(source, target) {
-      return state.svg?.querySelector(`[data-source="${source}"][data-target="${target}"]`) || null;
-    }
-
-    function appendTrainingMetricBadge(group, nodeId, text) {
-      const node = state.graph?.nodes?.find((item) => item.id === nodeId);
-      if (!node) return;
-      const width = Math.max(118, Math.min(236, text.length * 7.1 + 24));
-      const badge = createSvg('g', {
-        class: 'opv-training-metric-badge',
-        transform: `translate(${node.x}, ${node.y - node.height / 2 - 21})`,
-      });
-      badge.appendChild(createSvg('rect', { x: -width / 2, y: -12, width, height: 24, rx: 12, ry: 12 }));
-      const label = createSvg('text', { x: 0, y: 0.4 });
-      label.textContent = text;
-      badge.appendChild(label);
-      group.appendChild(badge);
-    }
-
-    function appendTrainingGradientLoop(group, bounds) {
-      const useRight = bounds.right + 64 < (state.graph?.width || bounds.right + 128);
-      const edgeX = useRight ? bounds.right + 18 : bounds.left - 18;
-      const controlX = edgeX + (useRight ? 42 : -42);
-      const startY = bounds.bottom - Math.min(34, bounds.height * 0.18);
-      const endY = bounds.top + Math.min(34, bounds.height * 0.18);
-      const markerId = `opv-training-gradient-arrow-${state.selectedNodeId}`;
-      const defs = createSvg('defs');
-      const marker = createSvg('marker', {
-        id: markerId,
-        viewBox: '0 0 10 10',
-        refX: 8.5,
-        refY: 5,
-        markerWidth: 6,
-        markerHeight: 6,
-        orient: 'auto-start-reverse',
-      });
-      marker.appendChild(createSvg('path', { d: 'M 0 0 L 10 5 L 0 10 z', fill: 'var(--opv-accent)' }));
-      defs.appendChild(marker);
-      group.appendChild(defs);
-      group.appendChild(createSvg('path', {
-        class: 'opv-training-gradient-loop',
-        d: `M ${edgeX} ${startY} C ${controlX} ${startY}, ${controlX} ${endY}, ${edgeX} ${endY}`,
-        'marker-end': `url(#${markerId})`,
-      }));
-      const label = createSvg('text', {
-        class: 'opv-training-gradient-label',
-        x: controlX,
-        y: (startY + endY) / 2,
-        transform: `rotate(${useRight ? -90 : 90} ${controlX} ${(startY + endY) / 2})`,
-      });
-      label.textContent = 'GRADIENT';
-      group.appendChild(label);
-    }
-
-    function renderTrainingGraphMarks(context) {
-      clearTrainingGraphMarks();
-      if (!context || !state.svg) return;
-      context.parameters.forEach((parameter) => graphNodeElement(parameter.id)?.classList.add('is-training-parameter'));
-      context.residualNodeIds.forEach((nodeId) => graphNodeElement(nodeId)?.classList.add('is-training-residual'));
-      const renderedBoundary = (state.graph?.edges || []).filter((edge) => {
-        if (context.parameterIds.has(edge.source) || edge.edgeType === 'parameter' || edge.tensor?.role === 'parameter') return false;
-        return context.scope.has(edge.source) !== context.scope.has(edge.target);
-      });
-      renderedBoundary.slice(0, 4).forEach((edge) => {
-        graphEdgeElement(edge.source, edge.target)?.classList.add('is-training-activation');
-      });
-      const group = createSvg('g', { class: 'opv-training-svg-overlay', 'pointer-events': 'none' });
-      const bounds = graphItemBounds(context.moduleId);
-      if (bounds) appendTrainingGradientLoop(group, bounds);
-      if (context.moe) {
-        Object.entries(MOE_DEMO_METRICS).forEach(([nodeId, metric]) => {
-          graphNodeElement(nodeId)?.classList.add('is-training-metric');
-          appendTrainingMetricBadge(group, nodeId, metric);
-        });
-      }
-      state.svg.appendChild(group);
-    }
-
-    function positionTrainingOverlay() {
-      const overlay = document.getElementById('trainingOverlay');
-      if (!overlay) return;
-      overlay.style.removeProperty('left');
-      overlay.style.removeProperty('top');
-    }
-
-    function scheduleTrainingOverlayPosition() {
-      if (state.trainingOverlayPositionFrame) return;
-      state.trainingOverlayPositionFrame = window.requestAnimationFrame(() => {
-        state.trainingOverlayPositionFrame = 0;
-        positionTrainingOverlay();
-      });
-    }
-
-    function longMetricScope(metric) {
-      return `step=${metric.step} · microbatch=${metric.microbatch} · layer=${metric.layer} · owner=${metric.ownerRank} · scope=${metric.tensorScope} · phase=${metric.phase} · source=${metric.source}`;
-    }
-
-    function telemetryDetailRowHtml(metric) {
-      return `
-        <div class="opv-training-detail-row">
-          <span class="opv-training-detail-key">${escapeHtml(metric.label)}</span>
-          <span class="opv-training-detail-value">${escapeHtml(metric.value)}</span>
-          <span class="opv-training-detail-scope">${escapeHtml(longMetricScope(metric))}</span>
-        </div>`;
-    }
-
-    function probeParameterForModule(moduleId) {
-      if (['ffn_choice', 'dense_mlp'].includes(moduleId)) return 'decoder.layers.17.mlp.gate_up_proj.weight/tp5';
-      if (['moe_ffn', 'shared_expert_mlp'].includes(moduleId)) return 'decoder.layers.17.mlp.experts.23.gate_up_proj.weight/tp5/ep3';
-      return 'decoder.layers.17.attention.qkv.weight/tp5';
-    }
-
-    function inspectorPrimaryMetric(moduleId) {
-      if (['decoder_layer', 'sparse_mla_attention'].includes(moduleId)) return TELEMETRY_METRICS.attention_entropy_norm;
-      if (['ffn_choice', 'dense_mlp', 'moe_ffn', 'shared_expert_mlp'].includes(moduleId)) return TELEMETRY_METRICS.probe_weight_rms;
-      return TELEMETRY_METRICS.decoder_input_rms;
-    }
-
-    function diagnosticScopeHtml(metric) {
-      return `
-        <section class="opv-training-inspector-section">
-          <h4>Diagnostic scope</h4>
-          <dl class="opv-training-scope-grid">
-            <dt>Step</dt><dd>${escapeHtml(metric.step)}</dd>
-            <dt>Microbatch</dt><dd>${escapeHtml(metric.microbatch)}</dd>
-            <dt>Layer</dt><dd>${escapeHtml(metric.layer)}</dd>
-            <dt>Owner rank</dt><dd>${escapeHtml(metric.ownerRank)}</dd>
-            <dt>Tensor scope</dt><dd>${escapeHtml(metric.tensorScope)}</dd>
-            <dt>Phase</dt><dd>${escapeHtml(metric.phase)}</dd>
-            <dt>Source</dt><dd>${escapeHtml(metric.source)}</dd>
-          </dl>
-        </section>`;
-    }
-
-    function genericTelemetryInspectorHtml(context) {
-      const primary = context.metrics[0];
-      const notes = {
-        input_tokens: 'Batch identity needs shape, valid-token count, invalid-ID count, and a stable batch hash; pad ratio alone cannot identify the sampled data.',
-        token_embedding: 'Embedding RMS is TP-reduced over the declared hidden-state scope. Local-shard and global reductions must not share the same label.',
-        mhc_attention: 'This is the selected Decoder Layer 17 entry probe, not an aggregate across all 46 repeated layers.',
-        block_post_norm: 'This is the selected Decoder Layer 17 exit probe. Compare it with the entry RMS under the identical microbatch and owner scope.',
-        final_norm: 'RMS is sqrt(mean(x²)); unlike bare L2, it does not grow directly with tensor element count.',
-        lm_head: 'Vocab-parallel semantics differ by metric: logit RMS is local-shard, maxabs is TP max-reduced, logsumexp needs TP max/sum reductions, and loss is TP-logical global.',
-        training_loss: 'PPL = exp(step CE) only when CE uses natural log and is weighted by valid tokens.',
-        weight_summary: 'The probe names one parameter shard. A label such as “model weight norm” is not diagnostic unless parameter, shard, shape, reduction, and norm definition are explicit.',
-        gradient: 'Global gradient L2 counts every logical parameter once; TP/DP replicas must be deduplicated. Profiler timing alone does not prove numerical sync correctness, so pre/post norms and hashes are listed separately.',
-        optimizer: 'update/weight = update_rms / weight_rms for the same parameter shard and phase; moment tensors stay in the side inspector.',
-        updated_weight: 'Version and checksum bind the post-update parameter to the next step; compare them with W_before and the selected probe shard.',
-      };
-      return `
-        ${diagnosticScopeHtml(primary)}
-        <section class="opv-training-inspector-section">
-          <h4>Collected values</h4>
-          ${context.metrics.map(telemetryDetailRowHtml).join('')}
-        </section>
-        <section class="opv-training-inspector-section">
-          <h4>Interpretation</h4>
-          <div class="opv-edge-row">${escapeHtml(notes[context.moduleId] || 'Interpret values only inside the displayed diagnostic scope.')}</div>
-        </section>`;
-    }
-
-    function trainingInspectorHtml(context) {
-      if (context.generic) return genericTelemetryInspectorHtml(context);
-      const primary = inspectorPrimaryMetric(context.moduleId);
-      const showQkv = ['decoder_layer', 'sparse_mla_attention'].includes(context.moduleId);
-      const qkv = [TELEMETRY_DETAIL.q_rms, TELEMETRY_DETAIL.k_rms, TELEMETRY_DETAIL.v_rms];
-      const moments = [TELEMETRY_DETAIL.m_hat_rms, TELEMETRY_DETAIL.sqrt_v_hat_rms, TELEMETRY_DETAIL.update_rms];
-      const quantiles = [TELEMETRY_DETAIL.weight_p50, TELEMETRY_DETAIL.weight_p90, TELEMETRY_DETAIL.weight_p99, TELEMETRY_DETAIL.weight_max];
-      const histogram = TELEMETRY_DETAIL.histogram.values.map((height, index) => `<span style="--bar-height:${height}%" title="synthetic bin ${index + 1}: ${height}"></span>`).join('');
-      const heatmap = TELEMETRY_DETAIL.layerHeatmap.values.map((value, index) => `<span style="--heat:${value}%" title="layer ${index}: synthetic relative RMS ${value}"></span>`).join('');
-      return `
-        ${diagnosticScopeHtml(primary)}
-        ${showQkv ? `
-          <section class="opv-training-inspector-section">
-            <h4>Attention detail · local shards</h4>
-            ${qkv.map(telemetryDetailRowHtml).join('')}
-            ${telemetryDetailRowHtml(TELEMETRY_METRICS.attention_entropy_norm)}
-            <div class="opv-edge-row"><strong>Normalized entropy</strong><br>Hnorm = mean_q H(pq) / log(nq). FlashAttention does not normally materialize full probabilities; this synthetic value represents 4 heads × 128 sampled query positions.</div>
-          </section>` : ''}
-        <section class="opv-training-inspector-section">
-          <h4>Probe parameter</h4>
-          <div class="opv-edge-row"><strong>${escapeHtml(probeParameterForModule(context.moduleId))}</strong><br>Shape and shard identity must come from runtime parameter metadata; TP/DP replicas are not implicitly merged.</div>
-          ${telemetryDetailRowHtml(TELEMETRY_METRICS.probe_weight_rms)}
-          ${telemetryDetailRowHtml(TELEMETRY_METRICS.probe_weight_version)}
-          ${telemetryDetailRowHtml(TELEMETRY_DETAIL.selected_param_grad_rms)}
-        </section>
-        <section class="opv-training-inspector-section">
-          <h4>AdamW moments / update</h4>
-          ${moments.map(telemetryDetailRowHtml).join('')}
-          ${telemetryDetailRowHtml(TELEMETRY_METRICS.update_to_weight)}
-        </section>
-        <section class="opv-training-inspector-section">
-          <h4>Weight quantiles</h4>
-          ${quantiles.map(telemetryDetailRowHtml).join('')}
-        </section>
-        <section class="opv-training-inspector-section">
-          <h4>Weight histogram · synthetic</h4>
-          <div class="opv-training-histogram" aria-label="Synthetic weight histogram">${histogram}</div>
-          <div class="opv-training-detail-scope">${escapeHtml(longMetricScope(TELEMETRY_DETAIL.histogram))}</div>
-        </section>
-        <section class="opv-training-inspector-section">
-          <h4>Layer output RMS · 0–45</h4>
-          <div class="opv-training-heatmap" aria-label="Synthetic layer RMS heatmap">${heatmap}</div>
-          <div class="opv-training-detail-scope">${escapeHtml(longMetricScope(TELEMETRY_DETAIL.layerHeatmap))}</div>
-        </section>
-        <section class="opv-training-inspector-section">
-          <h4>Interpretation guardrails</h4>
-          <div class="opv-edge-list">
-            <div class="opv-edge-row">RMS is sqrt(mean(x²)); unlike bare L2, it does not grow directly with tensor element count.</div>
-            <div class="opv-edge-row">PPL = exp(step CE) only when CE uses natural log and is weighted by valid tokens.</div>
-            <div class="opv-edge-row">64 MiB / 5.8 ms = 10.8 GiB/s payload rate; this is not automatically collective algorithm bandwidth or bus bandwidth.</div>
-          </div>
-        </section>`;
-    }
-
-    function renderTrainingOverlay() {
-      const overlay = ensureTrainingOverlay();
-      const guide = ensureTrainingGuide();
-      const context = state.trainingOverlayEnabled ? telemetryInspectorContextForNode(state.selectedNodeId) : null;
-      guide.hidden = !state.decoderLayerExpanded || !state.trainingOverlayEnabled || Boolean(context);
-      if (!context) {
-        overlay.hidden = true;
-        clearTrainingGraphMarks();
-        return;
-      }
-      const chip = (label, value) => `
-        <div class="opv-training-chip">
-          <span class="opv-training-chip-label">${escapeHtml(label)}</span>
-          <span class="opv-training-chip-value">${escapeHtml(value)}</span>
-        </div>`;
-      const summaryChips = context.generic
-        ? context.metrics.slice(0, 6).map((metric) => chip(metric.label, metric.value)).join('')
-        : [
-          chip('Weight / Bias', context.weight),
-          chip('Activation', context.activation),
-          chip('Gradient', context.gradient),
-          chip('Residual', context.residual),
-          chip('Optimizer', context.optimizer),
-          chip('Parallel', context.parallel),
-        ].join('');
-      overlay.innerHTML = `
-        <div class="opv-training-overlay-head">
-          <div>
-            <div class="opv-training-overlay-title">${escapeHtml(context.node.label || context.moduleId)} · Training Objects</div>
-            <div class="opv-training-overlay-demo">Synthetic telemetry · not a real openPangu measurement</div>
-          </div>
-          <button class="btn btn-ghost opv-node-popover-close" type="button" data-training-close aria-label="Close telemetry inspector">×</button>
-        </div>
-        <div class="opv-training-overlay-grid">
-          ${summaryChips}
-        </div>
-        ${trainingInspectorHtml(context)}`;
-      overlay.hidden = false;
-      if (context.generic) clearTrainingGraphMarks();
-      else renderTrainingGraphMarks(context);
-      scheduleTrainingOverlayPosition();
-    }
-
-    function syncTrainingOverlayToggle() {
-      const button = document.getElementById('trainingOverlayToggle');
-      button?.classList.toggle('is-active', state.trainingOverlayEnabled);
-      button?.setAttribute('aria-pressed', String(state.trainingOverlayEnabled));
-    }
-
     function renderPopoverAction(nodeId) {
-      if (['decoder_layer', 'sparse_mla_attention', 'ffn_choice'].includes(nodeId)) return '';
+      if (nodeId === 'activation_core') {
+        return '<button class="btn btn-ghost" type="button" data-popover-view="model">Open Model Detail</button>';
+      }
+      if (nodeId === 'sparse_mla_attention') {
+        const expanded = attentionDetailOpen();
+        return `<button class="btn btn-ghost" type="button" data-popover-detail="${escapeHtml(nodeId)}">${expanded ? 'Close Detail' : 'Open Detail'}</button>`;
+      }
       if (!COLLAPSIBLE[nodeId]) return '';
       const collapsed = state.collapsedModules.has(nodeId);
       return `<button class="btn btn-ghost" type="button" data-popover-toggle="${escapeHtml(nodeId)}">${collapsed ? 'Expand' : 'Collapse'}</button>`;
@@ -2864,15 +1936,51 @@
       return popover;
     }
 
+    function ensureTrainingHud() {
+      const stage = document.getElementById('graphStage');
+      let hud = document.getElementById('trainingHud');
+      if (state.viewMode !== 'training') {
+        if (hud) hud.hidden = true;
+        return null;
+      }
+      if (!hud) {
+        hud = document.createElement('aside');
+        hud.id = 'trainingHud';
+        hud.className = 'opv-training-hud';
+        hud.setAttribute('aria-label', 'Training infrastructure mapping');
+        hud.innerHTML = `
+          <div class="opv-training-kicker">Training section / infra loads</div>
+          <h2>Cross Structure</h2>
+          <div class="opv-infra-list">
+            <button class="opv-infra-row" type="button" data-training-focus="weight_summary"><strong>Weight</strong><span>GPU Memory<br>Tensor Parallel</span></button>
+            <button class="opv-infra-row" type="button" data-training-focus="activation_core"><strong>Activation</strong><span>GPU Memory<br>Checkpointing</span></button>
+            <button class="opv-infra-row" type="button" data-training-focus="gradient"><strong>Gradient</strong><span>NCCL Communication<br>Distributed Sync</span></button>
+            <button class="opv-infra-row" type="button" data-training-focus="residual_bridge"><strong>Residual ⊕</strong><span>Training Stability</span></button>
+          </div>
+          <div class="opv-training-foot">
+            The OpenPangu forward path keeps its original top-to-bottom orientation. Training state and update semantics form the horizontal cross span through Activation Core.
+            <div class="opv-popover-actions"><button class="btn btn-ghost" type="button" data-training-detail>Open Model Detail</button></div>
+          </div>
+        `;
+        hud.addEventListener('click', (event) => {
+          const focus = event.target.closest('[data-training-focus]');
+          if (focus) {
+            selectNode(focus.getAttribute('data-training-focus'));
+            return;
+          }
+          if (event.target.closest('[data-training-detail]')) setViewMode('model');
+        });
+        stage.appendChild(hud);
+      }
+      hud.hidden = false;
+      return hud;
+    }
+
     function renderNodePopover() {
       const popover = ensureNodePopover();
       const node = getNode(state.selectedNodeId);
       if (!popover || !node || !state.graphController) {
         if (popover) popover.hidden = true;
-        return;
-      }
-      if (state.trainingOverlayEnabled && telemetryInspectorContextForNode(state.selectedNodeId)) {
-        popover.hidden = true;
         return;
       }
       const bounds = graphItemBounds(state.selectedNodeId);
@@ -2883,7 +1991,7 @@
         return;
       }
       const attrs = node.attrs ? JSON.stringify(node.attrs, null, 2) : '{}';
-      const edgeSource = state.graph?.edges || [];
+      const edgeSource = state.viewMode === 'training' ? TRAINING_CROSS_EDGES : (state.schema.edges || []);
       const edges = edgeSource.filter((edge) => edge.source === node.id || edge.target === node.id);
       const provenance = node.provenance || [];
       const actionHtml = renderPopoverAction(node.id);
@@ -2945,7 +2053,6 @@
     }
 
     function syncSelection() {
-      renderTrainingOverlay();
       renderNodePopover();
     }
 
@@ -2953,7 +2060,6 @@
       state.selectedNodeId = null;
       ensureNodePopover().hidden = true;
       state.graphController?.clearSelection?.();
-      renderTrainingOverlay();
       setStatus('Selection cleared.');
     }
 
@@ -2980,10 +2086,7 @@
     function applyTransform() {
       if (!state.graphController?.setTransform) return;
       state.graphController.setTransform({ tx: state.tx, ty: state.ty, zoom: state.zoom });
-      window.requestAnimationFrame(() => {
-        renderNodePopover();
-        positionTrainingOverlay();
-      });
+      window.requestAnimationFrame(renderNodePopover);
     }
 
     function computeFitZoom() {
@@ -3002,7 +2105,6 @@
         state.zoom = transform.zoom;
       }
       renderNodePopover();
-      positionTrainingOverlay();
     }
 
     function zoomAtStagePoint(factor, px, py) {
@@ -3235,13 +2337,13 @@
     function renderAll(message = 'Schema loaded.', options = {}) {
       const previous = state.graphController?.getTransform?.() || { zoom: state.zoom, tx: state.tx, ty: state.ty };
       const stage = document.getElementById('graphStage');
-      stage.classList.add('is-training-cross');
+      stage.classList.toggle('is-training-cross', state.viewMode === 'training');
       state.graphController?.destroy?.();
 
       state.graph = buildGraphFromSchema(state.schema);
       const renderGraph = graphForCurrentTheme(state.graph);
       state.graphController = window.PtoModelGraphvizPattern.renderController(stage, renderGraph, {
-        ariaLabel: state.decoderLayerExpanded ? 'openPangu training cross with inline Decoder Layer L2' : 'openPangu training cross with folded Decoder Layer L1',
+        ariaLabel: state.viewMode === 'training' ? 'openPangu training cross graph' : 'openPangu architecture graph',
         reportOverlays: false,
         className: 'pto-model-architecture-stage',
         viewportPadding: 36,
@@ -3253,7 +2355,6 @@
         activeNodeId: graphSelectionIdForDetails(state.selectedNodeId),
         interaction: {
           panZoom: true,
-          wheelZoomWithoutModifier: true,
           selectable: true,
           selectableClusters: false,
           relatedHighlight: true,
@@ -3269,11 +2370,9 @@
       state.svg = state.graphController?.svg || document.querySelector('#graphStage svg');
       appendToggleOverlay();
       ensureNodePopover();
-      ensureTrainingOverlay();
-      ensureTrainingGuide();
-      renderSliceBanner();
+      ensureTrainingHud();
       wireGraphSelection();
-      syncLayerDepthToggle();
+      syncViewToggle();
       if (options.preserveZoom) {
         state.zoom = previous.zoom;
         state.tx = previous.tx;
@@ -3287,7 +2386,6 @@
           state.tx = transform.tx;
           state.ty = transform.ty;
           renderNodePopover();
-          positionTrainingOverlay();
         });
       }
       setStatus(message);
@@ -3297,7 +2395,7 @@
       const stage = document.getElementById('graphStage');
       stage.addEventListener('pointerdown', (event) => {
         const target = event.target;
-        if (target.closest('.opv-node-popover, .opv-training-overlay')) {
+        if (target.closest('.opv-node-popover, .opv-training-hud')) {
           event.stopPropagation();
           return;
         }
@@ -3305,30 +2403,23 @@
         if (event.button === 0) clearNodeSelection();
       }, true);
       stage.addEventListener('wheel', (event) => {
-        if (event.target.closest('.opv-training-overlay, .opv-node-popover')) {
-          event.stopImmediatePropagation();
-          return;
-        }
-        scheduleTrainingOverlayPosition();
+        if (event.metaKey || event.ctrlKey) clearNodeSelection();
       }, { passive: true });
-      stage.addEventListener('pointermove', scheduleTrainingOverlayPosition, { passive: true });
-      stage.addEventListener('pointerup', scheduleTrainingOverlayPosition, { passive: true });
       stage.addEventListener('click', (event) => {
         const target = event.target;
-        if (target.closest('.opv-node-popover, .opv-training-overlay, .pto-model-graphviz-node, .opv-overlay-toggle')) return;
+        if (target.closest('.opv-node-popover, .opv-training-hud, .pto-model-graphviz-node, .opv-overlay-toggle')) return;
         clearNodeSelection();
       }, true);
-      stage.addEventListener('click', (event) => {
-        if (!event.target.closest('[data-training-close]')) return;
-        event.preventDefault();
-        event.stopPropagation();
-        clearNodeSelection();
-      });
       stage.addEventListener('click', (event) => {
         if (!event.target.closest('.opv-node-popover')) return;
         const close = event.target.closest('[data-popover-close]');
         if (close) {
           clearNodeSelection();
+          return;
+        }
+        const view = event.target.closest('[data-popover-view]');
+        if (view) {
+          setViewMode(view.getAttribute('data-popover-view'));
           return;
         }
         const toggle = event.target.closest('[data-popover-toggle]');
@@ -3403,14 +2494,8 @@
       centerView();
       setStatus(`Fit ${Math.round(state.zoom * 100)}%.`);
     });
-    document.getElementById('layerDepthToggle').addEventListener('click', () => setDecoderLayerExpanded(!state.decoderLayerExpanded));
-    document.getElementById('floatingBack').addEventListener('click', () => setDecoderLayerExpanded(false));
-    document.getElementById('trainingOverlayToggle').addEventListener('click', () => {
-      state.trainingOverlayEnabled = !state.trainingOverlayEnabled;
-      syncTrainingOverlayToggle();
-      syncSelection();
-      setStatus(state.trainingOverlayEnabled ? 'Training overlay enabled.' : 'Training overlay disabled.');
-    });
+    document.getElementById('trainingView').addEventListener('click', () => setViewMode('training'));
+    document.getElementById('modelView').addEventListener('click', () => setViewMode('model'));
     [document.getElementById('themeToggle'), document.getElementById('floatingThemeToggle')].forEach((button) => {
       button?.addEventListener('click', () => {
         const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
@@ -3422,6 +2507,7 @@
       if (!file) return;
       try {
         state.schema = JSON.parse(await file.text());
+        state.viewMode = isOpenPanguSchema(state.schema) ? 'training' : 'model';
         state.selectedNodeId = null;
         state.collapsedModules = new Set(DEFAULT_COLLAPSED);
         state.detailModules = new Set(DEFAULT_DETAIL_MODULES);
@@ -3436,13 +2522,9 @@
     });
     wireStageInteractions();
     wireColorPanel();
-    validateTelemetryContract();
     syncThemeToggle();
-    syncLayerDepthToggle();
-    loadDefaultSchema().then(() => {
-      const requestedNode = new URLSearchParams(window.location.search).get('select');
-      if (requestedNode && state.graph?.nodes?.some((node) => node.id === requestedNode)) selectNode(requestedNode);
-    }).catch((error) => {
+    syncViewToggle();
+    loadDefaultSchema().catch((error) => {
       setStatus(`Could not load default schema: ${error.message}. Use Open JSON.`);
     });
   </script>

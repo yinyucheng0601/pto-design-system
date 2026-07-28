@@ -173,6 +173,31 @@
     inset 0 0 0 1px color-mix(in srgb, var(--foreground) 5%, transparent);
 }
 
+/*
+ * Solid surface mode keeps the IDE frame contract while opting out of glass
+ * compositing. Product pages select it with data-surface="solid" instead of
+ * overriding pane internals one selector at a time.
+ */
+.pto-ide-frame[data-surface="solid"] {
+  --ide-frame-pane-fill: var(--ide-frame-pane-bg);
+  --ide-frame-pane-header-fill: var(--ide-frame-pane-bg);
+  --ide-frame-pane-backdrop-filter: none;
+  --ide-frame-pane-shadow: none;
+  --ide-frame-control-bg: var(--surface-2);
+  --ide-frame-control-border: var(--border-subtle);
+  --ide-frame-control-shadow: none;
+  --ide-frame-selected-bg: var(--surface-3);
+  --ide-frame-selected-border: var(--border-subtle);
+  --ide-frame-selected-shadow: none;
+  --surface-backdrop-filter: none;
+  --surface-backdrop-filter-soft: none;
+  --surface-backdrop-filter-strong: none;
+}
+
+.pto-ide-frame[data-surface="solid"] .pto-ide-frame__terminal {
+  background: var(--ide-frame-pane-bg);
+}
+
 .pto-ide-frame::before,
 .pto-ide-frame::after {
   content: "";

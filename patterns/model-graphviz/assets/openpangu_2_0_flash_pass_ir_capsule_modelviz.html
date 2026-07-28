@@ -16,6 +16,12 @@
       if (params.get('embed') === '1' || params.get('debug') !== '1') {
         document.documentElement.dataset.embed = '1';
       }
+      if (params.get('report') === '1') {
+        document.documentElement.dataset.report = '1';
+      }
+      if (params.get('hostControls') === '1') {
+        document.documentElement.dataset.hostControls = '1';
+      }
     })();
   </script>
   <link rel="stylesheet" href="../../../tokens/foundation.css">
@@ -163,6 +169,18 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
+    }
+    :root[data-report='1'] .opv-floating-theme,
+    :root[data-report='1'] .opv-floating-color,
+    :root[data-report='1'] .opv-floating-layout,
+    :root[data-host-controls='1'] .opv-floating-theme,
+    :root[data-host-controls='1'] .opv-floating-color,
+    :root[data-host-controls='1'] .opv-floating-layout {
+      display: none;
+    }
+    :root[data-report='1'] .opv-color-panel {
+      top: 12px;
+      right: 12px;
     }
     .opv-color-panel {
       position: fixed;
@@ -316,15 +334,17 @@
     .opv-node-popover {
       position: absolute;
       z-index: 12;
-      width: min(520px, calc(100% - 24px));
-      max-height: min(680px, calc(100% - 24px));
-      overflow: auto;
-      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      width: min(360px, calc(100% - 16px));
+      max-height: min(520px, calc(100% - 16px));
+      overflow: hidden;
+      padding: 0;
       border: 1px solid var(--opv-border-strong);
-      border-radius: var(--radius-md);
+      border-radius: var(--radius-lg);
       background: color-mix(in srgb, var(--opv-panel-bg) 97%, transparent);
       color: var(--opv-text);
-      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.26);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
       backdrop-filter: blur(18px);
       user-select: text;
     }
@@ -332,51 +352,73 @@
     .opv-node-popover-head {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
-      gap: 10px;
-      align-items: start;
-      margin-bottom: 10px;
+      gap: 8px;
+      align-items: center;
+      padding: 10px 12px 9px;
+      border-bottom: 1px solid var(--opv-border);
     }
     .opv-node-popover-title {
       margin: 0;
-      font: var(--text-title-2);
+      font-size: 16px;
+      font-weight: 650;
+      line-height: 1.25;
       color: var(--opv-text);
       overflow-wrap: anywhere;
     }
     .opv-node-popover-sub {
-      margin-top: 3px;
+      margin-top: 2px;
       color: var(--opv-muted);
-      font: var(--text-label);
+      font-size: 11px;
+      line-height: 1.3;
     }
     .opv-node-popover-close {
-      width: 28px;
-      height: 28px;
+      width: 24px;
+      height: 24px;
       padding: 0;
       border-radius: var(--radius-sm);
     }
     .opv-node-popover-body {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      font: var(--text-body-sm);
+      gap: 8px;
+      min-height: 0;
+      padding: 10px 12px 12px;
+      overflow-y: auto;
+      font-size: 12px;
+      line-height: 1.35;
       color: var(--opv-muted);
     }
     .opv-popover-kv {
       display: grid;
-      grid-template-columns: 96px minmax(0, 1fr);
-      gap: 4px 8px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
       margin: 0;
     }
-    .opv-popover-kv dt { color: var(--opv-dim); }
+    .opv-popover-kv > div {
+      min-width: 0;
+      padding: 6px 7px;
+      border-radius: var(--radius-sm);
+      background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+    }
+    .opv-popover-kv dt {
+      margin-bottom: 2px;
+      color: var(--opv-dim);
+      font-size: 9px;
+      font-weight: 650;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
     .opv-popover-kv dd {
       margin: 0;
       color: var(--opv-text);
+      font-size: 11px;
+      font-weight: 550;
       overflow-wrap: anywhere;
     }
     .opv-popover-actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 2px;
+      gap: 6px;
     }
     .opv-status {
       position: absolute;
@@ -391,32 +433,104 @@
       font: var(--text-label);
       pointer-events: none;
     }
-    .opv-section { display: flex; flex-direction: column; gap: 8px; }
+    .opv-section { display: flex; flex-direction: column; gap: 5px; }
     .opv-section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       color: var(--opv-dim);
-      font: var(--text-label);
+      font-size: 9px;
+      font-weight: 650;
       text-transform: uppercase;
       letter-spacing: 0.08em;
     }
+    .opv-section-title span:last-child { color: var(--opv-muted); }
     .opv-code {
       margin: 0;
-      padding: 10px;
-      border-radius: var(--radius-md);
+      max-height: 120px;
+      padding: 7px 8px;
+      border-radius: var(--radius-sm);
       background: color-mix(in srgb, var(--surface-1) 86%, black);
       color: var(--opv-muted);
       font: var(--text-mono);
       overflow: auto;
       white-space: pre-wrap;
     }
-    .opv-edge-list { display: flex; flex-direction: column; gap: 6px; }
+    .opv-attribute-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 5px;
+    }
+    .opv-attribute-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+      padding: 6px 7px;
+      border-radius: var(--radius-sm);
+      background: color-mix(in srgb, var(--surface-1) 78%, transparent);
+    }
+    .opv-attribute-key { color: var(--opv-dim); font-size: 9px; }
+    .opv-attribute-value {
+      color: var(--opv-text);
+      font: var(--text-mono);
+      font-size: 10px;
+      overflow-wrap: anywhere;
+    }
+    .opv-popover-empty { color: var(--opv-dim); font-size: 11px; }
+    .opv-edge-list { display: flex; flex-direction: column; gap: 5px; }
     .opv-edge-row {
-      padding: 8px 9px;
-      border-radius: var(--radius-md);
+      padding: 6px 7px;
+      border-radius: var(--radius-sm);
       background: color-mix(in srgb, var(--surface-2) 78%, transparent);
       color: var(--opv-muted);
-      font: var(--text-body-sm);
+      font-size: 11px;
+      line-height: 1.35;
     }
     .opv-edge-row strong { color: var(--opv-text); font-weight: 600; }
+    .opv-popover-details {
+      border-top: 1px solid var(--opv-border);
+      padding-top: 7px;
+    }
+    .opv-popover-details summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--opv-dim);
+      font-size: 9px;
+      font-weight: 650;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      list-style: none;
+    }
+    .opv-popover-details summary::-webkit-details-marker { display: none; }
+    .opv-popover-details summary::after {
+      content: '+';
+      color: var(--opv-muted);
+      font-size: 14px;
+      line-height: 1;
+    }
+    .opv-popover-details[open] summary::after { content: '−'; }
+    .opv-provenance-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-top: 7px;
+    }
+    .opv-provenance-item {
+      padding: 6px 7px;
+      border-radius: var(--radius-sm);
+      background: color-mix(in srgb, var(--surface-1) 78%, transparent);
+    }
+    .opv-provenance-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--opv-text);
+      font-size: 10px;
+    }
+    .opv-provenance-fact { margin-top: 3px; color: var(--opv-muted); font-size: 10px; }
     .opv-pass-ir-capsule-variant .opv-stage .pto-model-graphviz-node.opv-pass-ir-capsule-node > rect.opv-pass-ir-capsule-hit {
       fill: transparent !important;
       stroke: transparent !important;
@@ -2279,10 +2393,24 @@
         popover.hidden = true;
         return;
       }
-      const attrs = node.attrs ? JSON.stringify(node.attrs, null, 2) : '{}';
+      const attributes = Object.entries(node.attrs || {});
       const edges = (state.schema.edges || []).filter((edge) => edge.source === node.id || edge.target === node.id);
       const provenance = node.provenance || [];
       const actionHtml = renderPopoverAction(node.id);
+      const attributesHtml = attributes.length
+        ? attributes.map(([key, value]) => {
+          const rendered = typeof value === 'string' ? value : JSON.stringify(value);
+          return `<div class="opv-attribute-item"><span class="opv-attribute-key">${escapeHtml(key)}</span><span class="opv-attribute-value">${escapeHtml(rendered ?? '—')}</span></div>`;
+        }).join('')
+        : '<span class="opv-popover-empty">No attributes.</span>';
+      const provenanceHtml = provenance.length
+        ? provenance.map((item) => `
+          <div class="opv-provenance-item">
+            <div class="opv-provenance-head"><strong>${escapeHtml(item.source || 'source')}</strong><span>${item.line != null ? `L${escapeHtml(item.line)}` : escapeHtml(item.confidence || '')}</span></div>
+            <div class="opv-provenance-fact">${escapeHtml(item.fact || '')}</div>
+          </div>
+        `).join('')
+        : '<span class="opv-popover-empty">No provenance.</span>';
       popover.innerHTML = `
         <div class="opv-node-popover-head">
           <div>
@@ -2296,24 +2424,24 @@
           <section class="opv-section">
             <div class="opv-section-title">Node</div>
             <dl class="opv-popover-kv">
-              <dt>ID</dt><dd>${escapeHtml(node.id)}</dd>
-              <dt>Kind</dt><dd>${escapeHtml(node.kind)}</dd>
-              <dt>Type</dt><dd>${escapeHtml(displayType(node))}</dd>
+              <div><dt>ID</dt><dd>${escapeHtml(node.id)}</dd></div>
+              <div><dt>Kind</dt><dd>${escapeHtml(node.kind)}</dd></div>
+              <div><dt>Type</dt><dd>${escapeHtml(displayType(node))}</dd></div>
             </dl>
           </section>
           ${topologySectionHtml(node.id)}
           <section class="opv-section">
             <div class="opv-section-title">Attributes</div>
-            <pre class="opv-code">${escapeHtml(attrs)}</pre>
+            <div class="opv-attribute-grid">${attributesHtml}</div>
           </section>
           <section class="opv-section">
-            <div class="opv-section-title">Edges</div>
+            <div class="opv-section-title"><span>Edges</span><span>${edges.length}</span></div>
             <div class="opv-edge-list">${edgeRowsHtml(edges)}</div>
           </section>
-          <section class="opv-section">
-            <div class="opv-section-title">Provenance</div>
-            <pre class="opv-code">${escapeHtml(JSON.stringify(provenance, null, 2))}</pre>
-          </section>
+          <details class="opv-popover-details">
+            <summary><span>Provenance</span><span>${provenance.length}</span></summary>
+            <div class="opv-provenance-list">${provenanceHtml}</div>
+          </details>
         </div>
       `;
       popover.hidden = false;
@@ -2344,11 +2472,17 @@
       renderNodePopover();
     }
 
-    function clearNodeSelection() {
+    function notifyParent(type, nodeId = null) {
+      if (window.parent === window) return;
+      window.parent.postMessage({ type, nodeId, source: 'openpangu-modelviz' }, '*');
+    }
+
+    function clearNodeSelection(options = {}) {
       state.selectedNodeId = null;
       ensureNodePopover().hidden = true;
       state.graphController?.clearSelection?.();
       setStatus('Selection cleared.');
+      if (options.notifyParent !== false) notifyParent('pto-model-node-clear');
     }
 
     function selectNode(id, options = {}) {
@@ -2361,6 +2495,7 @@
       }
       syncSelection();
       setStatus(`Selected ${getNode(state.selectedNodeId)?.label || state.selectedNodeId}.`);
+      if (options.notifyParent !== false) notifyParent('pto-model-node-select', state.selectedNodeId);
     }
 
     function wireGraphSelection() {
@@ -2799,6 +2934,64 @@
       }
       syncColorPanel();
     }
+
+    function centerNodeForReport(nodeId) {
+      if (!nodeId || !state.graphController?.getTransform || !state.graphController?.setTransform) return;
+      const graphId = graphSelectionIdForDetails(nodeId);
+      const escaped = CSS.escape(graphId);
+      const element = document.querySelector(
+        `.pto-model-graphviz-node[data-node-id="${escaped}"], .pto-model-graphviz-cluster[data-cluster-id="${escaped}"]`
+      );
+      const stage = document.getElementById('graphStage');
+      if (!element || !stage) return;
+      const elementRect = element.getBoundingClientRect();
+      const stageRect = stage.getBoundingClientRect();
+      const current = state.graphController.getTransform();
+      const next = {
+        ...current,
+        tx: current.tx + stageRect.left + stageRect.width / 2 - (elementRect.left + elementRect.width / 2),
+        ty: current.ty + stageRect.top + stageRect.height / 2 - (elementRect.top + elementRect.height / 2),
+      };
+      state.graphController.setTransform(next);
+      state.tx = next.tx;
+      state.ty = next.ty;
+      state.zoom = next.zoom;
+      window.requestAnimationFrame(renderNodePopover);
+    }
+
+    function reportViewState() {
+      return {
+        layout: state.layout,
+        colorPanelOpen: !document.getElementById('colorPanel')?.hidden,
+        theme: document.documentElement.dataset.theme || 'dark',
+      };
+    }
+
+    window.PtoOpenPanguReportBridge = Object.freeze({
+      selectNode(nodeId, options = {}) {
+        selectNode(nodeId, { source: 'report-overlay', notifyParent: false });
+        if (options.center !== false) window.requestAnimationFrame(() => centerNodeForReport(nodeId));
+      },
+      clearSelection() {
+        clearNodeSelection({ notifyParent: false });
+      },
+      getNodeIds() {
+        return Array.from(document.querySelectorAll('.pto-model-graphviz-node[data-node-id]'))
+          .map((node) => node.dataset.nodeId);
+      },
+      getViewState() {
+        return reportViewState();
+      },
+      toggleLayout() {
+        setLayout(state.layout === 'horizontal' ? 'vertical' : 'horizontal');
+        return reportViewState();
+      },
+      toggleColorPanel() {
+        document.getElementById('floatingColorPanelToggle')?.click();
+        return reportViewState();
+      },
+    });
+    window.PtoOpenPanguEmbedBridge = window.PtoOpenPanguReportBridge;
 
     async function loadDefaultSchema() {
       try {
