@@ -33,8 +33,10 @@
   const EDP_COLORS=['#8b5cf6','#ec4899'];
   const GHOST_COLOR='#8ecbff';
   const TOPOLOGY_COLORS={tp:'#38bdf8',pp:'#38bdf8',ep:'#f97316',edp:'#8b5cf6'};
-  const RANK_SIZE={x:8.6,y:13.8,z:6.2};
-  const RANK_STEP={x:10.5,y:15.8,z:7.6};
+  // A Layer is a YZ plane whose deck depth runs on X. PP stages use that same
+  // X axis, so their four Layer ranges read as one continuous model in side view.
+  const RANK_SIZE={x:6.2,y:13.8,z:8.6};
+  const RANK_STEP={x:7.6,y:15.8,z:10.5};
   const LAYER_GAP=.43;
   const SOURCE_SCALE=.0108;
   const NODE_DEPTH=.12;
@@ -129,15 +131,11 @@
 
   function layoutPosition(coordinate,topologyInput=DEFAULT_TOPOLOGY,mode='exploded',topologyMode='standard'){
     const topology=normalizeTopology(topologyInput),d=topology.dimensions,multiplier=mode==='exploded'?1.18:1,rep=coordinate.edp*d.ep+coordinate.ep,cTp=(d.tp-1)/2,cPp=(d.pp-1)/2,cEp=(d.ep-1)/2,cEdp=(d.edp-1)/2,cRep=(d.ep*d.edp-1)/2;
-    if(topologyMode==='pp')return{x:(coordinate.pp-cPp)*RANK_STEP.x*2.35*multiplier,y:(cTp-coordinate.tp)*RANK_STEP.y*.78,z:(cRep-rep)*RANK_STEP.z*multiplier};
-    if(topologyMode==='tp')return{x:(coordinate.tp-cTp)*RANK_STEP.x*3.1*multiplier,y:(cPp-coordinate.pp)*RANK_STEP.y,z:(cRep-rep)*RANK_STEP.z*multiplier};
-    if(topologyMode==='ep')return{x:(coordinate.ep-cEp)*RANK_STEP.x*2.2*multiplier+(coordinate.tp-cTp)*RANK_STEP.x,y:(cPp-coordinate.pp)*RANK_STEP.y,z:(cEdp-coordinate.edp)*RANK_STEP.z*2.2};
-    if(topologyMode==='replica')return{x:(coordinate.edp-cEdp)*RANK_STEP.x*3.2*multiplier+(coordinate.tp-cTp)*RANK_STEP.x,y:(cPp-coordinate.pp)*RANK_STEP.y,z:(cEp-coordinate.ep)*RANK_STEP.z*multiplier};
-    return{
-      x:(coordinate.tp-(d.tp-1)/2)*RANK_STEP.x*multiplier,
-      y:((d.pp-1)/2-coordinate.pp)*RANK_STEP.y*multiplier,
-      z:(cRep-rep)*RANK_STEP.z*multiplier
-    };
+    if(topologyMode==='pp')return{x:(coordinate.pp-cPp)*RANK_STEP.x*multiplier,y:(cTp-coordinate.tp)*RANK_STEP.y*.78,z:(cRep-rep)*RANK_STEP.z*multiplier};
+    if(topologyMode==='tp')return{x:(coordinate.pp-cPp)*RANK_STEP.x*multiplier,y:(cTp-coordinate.tp)*RANK_STEP.y*1.42,z:(cRep-rep)*RANK_STEP.z*multiplier};
+    if(topologyMode==='ep')return{x:(coordinate.pp-cPp)*RANK_STEP.x*multiplier,y:(coordinate.ep-cEp)*RANK_STEP.y*1.34+(coordinate.tp-cTp)*RANK_STEP.y*.66,z:(cEdp-coordinate.edp)*RANK_STEP.z*2.2};
+    if(topologyMode==='replica')return{x:(coordinate.pp-cPp)*RANK_STEP.x*multiplier,y:(coordinate.edp-cEdp)*RANK_STEP.y*1.7+(coordinate.tp-cTp)*RANK_STEP.y*.66,z:(cEp-coordinate.ep)*RANK_STEP.z*multiplier};
+    return{x:(coordinate.rank-(topology.worldSize-1)/2)*RANK_STEP.x*multiplier,y:0,z:0};
   }
 
   function buildHierarchicalRankLayout(manifestsInput=[],axesInput=[],mode='exploded',topologyInput=DEFAULT_TOPOLOGY){
@@ -146,13 +144,13 @@
     const first=axes[0],secondaryAxes=new Set(axes.slice(1)),cTp=(d.tp-1)/2,cPp=(d.pp-1)/2,cEp=(d.ep-1)/2,cEdp=(d.edp-1)/2,cRep=(d.ep*d.edp-1)/2,epFirst=axes.includes('ep');
     manifests.forEach(manifest=>{
       const coordinate=manifest.coordinate,depthIndex=epFirst?coordinate.ep*d.edp+coordinate.edp:coordinate.edp*d.ep+coordinate.ep;let position;
-      if(first==='pp')position={x:(coordinate.pp-cPp)*RANK_STEP.x*2.35*multiplier,y:(cTp-coordinate.tp)*RANK_STEP.y*.78,z:(cRep-depthIndex)*RANK_STEP.z*multiplier};
-      else if(first==='tp')position={x:(coordinate.tp-cTp)*RANK_STEP.x*3.1*multiplier,y:(cPp-coordinate.pp)*RANK_STEP.y,z:(cRep-depthIndex)*RANK_STEP.z*multiplier};
-      else if(first==='ep')position={x:(coordinate.ep-cEp)*RANK_STEP.x*2.2*multiplier+(coordinate.tp-cTp)*RANK_STEP.x,y:(cPp-coordinate.pp)*RANK_STEP.y,z:(cEdp-coordinate.edp)*RANK_STEP.z*2.2};
-      else position={x:(coordinate.edp-cEdp)*RANK_STEP.x*3.2*multiplier+(coordinate.tp-cTp)*RANK_STEP.x,y:(cPp-coordinate.pp)*RANK_STEP.y,z:(cEp-coordinate.ep)*RANK_STEP.z*multiplier};
+      if(first==='pp')position={x:(coordinate.pp-cPp)*RANK_STEP.x*multiplier,y:(cTp-coordinate.tp)*RANK_STEP.y*.78,z:(cRep-depthIndex)*RANK_STEP.z*multiplier};
+      else if(first==='tp')position={x:(coordinate.pp-cPp)*RANK_STEP.x*multiplier,y:(cTp-coordinate.tp)*RANK_STEP.y*1.42,z:(cRep-depthIndex)*RANK_STEP.z*multiplier};
+      else if(first==='ep')position={x:(coordinate.pp-cPp)*RANK_STEP.x*multiplier,y:(coordinate.ep-cEp)*RANK_STEP.y*1.34+(coordinate.tp-cTp)*RANK_STEP.y*.66,z:(cEdp-coordinate.edp)*RANK_STEP.z*2.2};
+      else position={x:(coordinate.pp-cPp)*RANK_STEP.x*multiplier,y:(coordinate.edp-cEdp)*RANK_STEP.y*1.7+(coordinate.tp-cTp)*RANK_STEP.y*.66,z:(cEp-coordinate.ep)*RANK_STEP.z*multiplier};
       if(secondaryAxes.has('tp')){
         if(first==='pp')position.y+=(cTp-coordinate.tp)*RANK_STEP.y*.62*multiplier;
-        else position.x+=(coordinate.tp-cTp)*RANK_STEP.x*.82*multiplier;
+        else position.y+=(cTp-coordinate.tp)*RANK_STEP.y*.62*multiplier;
       }
       if(secondaryAxes.has('edp'))position.z+=(cEdp-coordinate.edp)*RANK_STEP.z*(epFirst?.72:1.5)*multiplier;
       positions.set(manifest.rank,position);
@@ -171,6 +169,8 @@
   }
 
   function numericStyle(element,key){const value=Number.parseFloat(element.style[key]);return Number.isFinite(value)?value:0;}
+
+  function payloadPoint(template,x,y,depth){return{x:depth,y:(template.centerY-y)*SOURCE_SCALE,z:(x-template.centerX)*SOURCE_SCALE};}
 
   function sampleSvgPath(pathData,curveSteps=5){
     const tokens=String(pathData||'').match(/[A-Za-z]|-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/gi)||[],points=[];
@@ -248,7 +248,7 @@
     const d=topology.dimensions;
     root.innerHTML=`
       <header class="pto-model-rank-deck__header" data-stage-ui>
-        <div class="pto-model-rank-deck__identity"><b>${esc(model.label)}</b><span>Three.js / ${plan.topology.worldSize} ranks / complete Layer payload</span></div>
+        <div class="pto-model-rank-deck__identity"><b>${esc(model.label)}</b><span>Three.js / ${plan.topology.worldSize} ranks / 选择切分查看 Layers</span></div>
         <div class="pto-model-rank-deck__grouping-panel" role="group" aria-label="当前范围下继续分组">
           <button type="button" class="pto-model-rank-deck__scope" data-grouping-reset aria-label="恢复全部 ${plan.topology.worldSize} 个 Rank">
             <span>当前范围</span><b data-grouping-scope>全部 · ${plan.topology.worldSize} Ranks</b>
@@ -293,23 +293,22 @@
     let colors=palette();
     const backgroundColor=()=>getComputedStyle(root).getPropertyValue('--background').trim()||(state.theme==='light'?'#f8fafc':'#070b14');
 
-    function localPoint(template,x,y,z){return{x:(x-template.centerX)*SOURCE_SCALE,y:(template.centerY-y)*SOURCE_SCALE,z};}
-    function templatePlacement(manifest,template,localZ,role='layer'){
+    function templatePlacement(manifest,template,localDepth,role='layer'){
       const placementId=role==='layer'?`rank:${manifest.rank}/layer:${template.layer}`:`rank:${manifest.rank}/static:${role}`,solid=role==='layer'&&template.layer===manifest.layerSegments[0].start;
-      const card={id:placementId,rank:manifest.rank,layer:template.layer,role,solid,local:{x:0,y:0,z:localZ-.08},scale:{x:Math.min(RANK_SIZE.x-.7,template.width*SOURCE_SCALE+.38),y:Math.min(RANK_SIZE.y-.7,template.height*SOURCE_SCALE+.38),z:.035}};
+      const card={id:placementId,rank:manifest.rank,layer:template.layer,role,solid,local:{x:localDepth-.08,y:0,z:0},scale:{x:.035,y:Math.min(RANK_SIZE.y-.7,template.height*SOURCE_SCALE+.38),z:Math.min(RANK_SIZE.z-.7,template.width*SOURCE_SCALE+.38)}};
       layerMetas.push(card);sceneIndex.layers.set(placementId,card);
       template.clusters.forEach(cluster=>{
-        const p=localPoint(template,cluster.x+cluster.w/2,cluster.y+cluster.h/2,localZ-.035);
-        clusterMetas.push({id:`${placementId}/cluster:${cluster.id}`,rank:manifest.rank,layer:template.layer,role,solid,label:cluster.label,local:p,scale:{x:cluster.w*SOURCE_SCALE,y:cluster.h*SOURCE_SCALE,z:.045}});
+        const p=payloadPoint(template,cluster.x+cluster.w/2,cluster.y+cluster.h/2,localDepth-.035);
+        clusterMetas.push({id:`${placementId}/cluster:${cluster.id}`,rank:manifest.rank,layer:template.layer,role,solid,label:cluster.label,local:p,scale:{x:.045,y:cluster.h*SOURCE_SCALE,z:cluster.w*SOURCE_SCALE}});
       });
       template.nodes.forEach(node=>{
-        const p=localPoint(template,node.x+node.w/2,node.y+node.h/2,localZ+NODE_DEPTH/2),semanticId=`${placementId}/node:${node.id}`;
-        const meta={semanticId,rank:manifest.rank,layer:template.layer,role,solid,nodeId:node.id,label:node.label,op:node.op,description:node.description,sourceIndex:node.sourceIndex,ownership:ownershipForNode(node.id,manifest),local:p,scale:{x:Math.max(.12,node.w*SOURCE_SCALE),y:Math.max(.1,node.h*SOURCE_SCALE),z:NODE_DEPTH}},batchKey=`${node.op}:${solid?'solid':'ghost'}`;
+        const p=payloadPoint(template,node.x+node.w/2,node.y+node.h/2,localDepth+NODE_DEPTH/2),semanticId=`${placementId}/node:${node.id}`;
+        const meta={semanticId,rank:manifest.rank,layer:template.layer,role,solid,nodeId:node.id,label:node.label,op:node.op,description:node.description,sourceIndex:node.sourceIndex,ownership:ownershipForNode(node.id,manifest),local:p,scale:{x:NODE_DEPTH,y:Math.max(.1,node.h*SOURCE_SCALE),z:Math.max(.12,node.w*SOURCE_SCALE)}},batchKey=`${node.op}:${solid?'solid':'ghost'}`;
         if(!nodeBatches.has(batchKey))nodeBatches.set(batchKey,{key:batchKey,op:node.op,tone:solid?'solid':'ghost',metas:[],mesh:null});nodeBatches.get(batchKey).metas.push(meta);sceneIndex.nodes.set(semanticId,meta);
         if(!nodeMetasByRank.has(manifest.rank))nodeMetasByRank.set(manifest.rank,[]);nodeMetasByRank.get(manifest.rank).push(meta);
       });
       template.edges.forEach(edge=>{
-        const semanticId=`${placementId}/edge:${edge.source}->${edge.target}:${edge.sourceIndex}`,points=edge.points.map(point=>localPoint(template,point.x,point.y,localZ+NODE_DEPTH+.012));
+        const semanticId=`${placementId}/edge:${edge.source}->${edge.target}:${edge.sourceIndex}`,points=edge.points.map(point=>payloadPoint(template,point.x,point.y,localDepth+NODE_DEPTH+.012));
         const meta={semanticId,rank:manifest.rank,layer:template.layer,role,solid,kind:edge.kind,source:edge.source,target:edge.target,points},batchKey=`${edge.kind}:${solid?'solid':'ghost'}`;
         if(!edgeBatches.has(batchKey))edgeBatches.set(batchKey,{key:batchKey,kind:edge.kind,tone:solid?'solid':'ghost',metas:[],segments:[],line:null});edgeBatches.get(batchKey).metas.push(meta);sceneIndex.edges.set(semanticId,meta);edgeSemanticCounts[edge.kind]=(edgeSemanticCounts[edge.kind]||0)+1;
       });
@@ -317,9 +316,9 @@
 
     plan.manifests.forEach(manifest=>{
       sceneIndex.ranks.set(manifest.rank,manifest);const [segment]=manifest.layerSegments,count=segment.end-segment.start+1;
-      for(let layer=segment.start;layer<=segment.end;layer+=1){const localIndex=layer-segment.start,localZ=((count-1)/2-localIndex)*LAYER_GAP;templatePlacement(manifest,spec.layers[layer],localZ,'layer');}
-      if(manifest.staticRoles.includes('input'))templatePlacement(manifest,spec.static.input,(count/2+.58)*LAYER_GAP,'input');
-      if(manifest.staticRoles.includes('output'))templatePlacement(manifest,spec.static.output,-(count/2+.58)*LAYER_GAP,'output');
+      for(let layer=segment.start;layer<=segment.end;layer+=1){const localIndex=layer-segment.start,localDepth=(localIndex-(count-1)/2)*LAYER_GAP;templatePlacement(manifest,spec.layers[layer],localDepth,'layer');}
+      if(manifest.staticRoles.includes('input'))templatePlacement(manifest,spec.static.input,-(count/2+.58)*LAYER_GAP,'input');
+      if(manifest.staticRoles.includes('output'))templatePlacement(manifest,spec.static.output,(count/2+.58)*LAYER_GAP,'output');
     });
     const expected=plan.manifests.reduce((totals,manifest)=>{
       const [segment]=manifest.layerSegments;
@@ -373,15 +372,15 @@
       if(ownership?.axis==='ep'){if(meta.nodeId==='expert_pool')return`${meta.label} · E${manifest.expertOwnership.start}–E${manifest.expertOwnership.end}`;return`${meta.label} · EP${ownership.index}/${ownership.count}`;}
       return meta.label;
     }
-    function addOperatorLabel(label,x,y,z,width,semanticId){const asset=operatorLabelTexture(label,width),material=new THREE.MeshBasicMaterial({map:asset.texture,transparent:true,depthTest:false,depthWrite:false,side:THREE.FrontSide,toneMapped:false}),labelMesh=new THREE.Mesh(operatorLabelGeometry,material);labelMesh.position.set(x,y,z);labelMesh.scale.set(asset.width,asset.height,1);labelMesh.renderOrder=20;labelMesh.userData.semanticId=semanticId;operatorLabelGroup.add(labelMesh);}
+    function addOperatorLabel(label,x,y,z,width,semanticId){const asset=operatorLabelTexture(label,width),material=new THREE.MeshBasicMaterial({map:asset.texture,transparent:true,depthTest:false,depthWrite:false,side:THREE.FrontSide,toneMapped:false}),labelMesh=new THREE.Mesh(operatorLabelGeometry,material);labelMesh.position.set(x,y,z);labelMesh.rotation.y=Math.PI/2;labelMesh.scale.set(asset.width,asset.height,1);labelMesh.renderOrder=20;labelMesh.userData.semanticId=semanticId;operatorLabelGroup.add(labelMesh);}
     function updateOperatorLabels(){
       clearOperatorLabels();if(state.sceneMode!=='rank'||state.selectedRank===null)return;
       const rank=rankPositions.get(state.selectedRank),manifest=plan.manifestByRank.get(state.selectedRank),frontLayer=manifest?.layerSegments[0]?.start;if(!rank||frontLayer===undefined)return;
-      const [segment]=manifest.layerSegments,e=manifest.expertOwnership,c=manifest.coordinate,frontNodes=(nodeMetasByRank.get(state.selectedRank)||[]).filter(meta=>meta.layer===frontLayer),frontZ=Math.max(...frontNodes.map(meta=>meta.local.z+meta.scale.z*.52));
-      frontNodes.forEach(meta=>addOperatorLabel(payloadNodeLabel(meta,manifest),rank.x+meta.local.x,rank.y+meta.local.y,rank.z+meta.local.z+meta.scale.z*.52,meta.scale.x*.9,meta.semanticId));
-      addOperatorLabel(`R${manifest.rank} · PP${c.pp} L${segment.start}–L${segment.end} · TP${c.tp}/${topology.dimensions.tp} · EP${c.ep}/${topology.dimensions.ep} E${e.start}–E${e.end} · EDP${c.edp}/${topology.dimensions.edp}`,rank.x,rank.y+RANK_SIZE.y/2-.34,rank.z+frontZ+.012,RANK_SIZE.x-1,`rank:${manifest.rank}/payload`);
+      const [segment]=manifest.layerSegments,e=manifest.expertOwnership,c=manifest.coordinate,frontNodes=(nodeMetasByRank.get(state.selectedRank)||[]).filter(meta=>meta.layer===frontLayer),frontX=Math.max(...frontNodes.map(meta=>meta.local.x+meta.scale.x*.52));
+      frontNodes.forEach(meta=>addOperatorLabel(payloadNodeLabel(meta,manifest),rank.x+meta.local.x+meta.scale.x*.52,rank.y+meta.local.y,rank.z+meta.local.z,meta.scale.z*.9,meta.semanticId));
+      addOperatorLabel(`R${manifest.rank} · PP${c.pp} L${segment.start}–L${segment.end} · TP${c.tp}/${topology.dimensions.tp} · EP${c.ep}/${topology.dimensions.ep} E${e.start}–E${e.end} · EDP${c.edp}/${topology.dimensions.edp}`,rank.x+frontX+.012,rank.y+RANK_SIZE.y/2-.34,rank.z,RANK_SIZE.z-1,`rank:${manifest.rank}/payload`);
     }
-    function compose(meta,index,mesh){const rank=rankPositions.get(meta.rank),hidden=(state.sceneMode==='rank'&&state.selectedRank!==null&&meta.rank!==state.selectedRank)||(payloadVisibleRanks&&!payloadVisibleRanks.has(meta.rank));dummy.position.set(rank.x+meta.local.x,rank.y+meta.local.y,rank.z+meta.local.z);dummy.rotation.set(0,0,0);dummy.scale.set(hidden?.0001*meta.scale.x:meta.scale.x,hidden?.0001*meta.scale.y:meta.scale.y,hidden?.0001*meta.scale.z:meta.scale.z);dummy.updateMatrix();mesh.setMatrixAt(index,dummy.matrix);}
+    function compose(meta,index,mesh){const rank=rankPositions.get(meta.rank),hidden=(state.sceneMode==='rank'&&state.selectedRank!==null&&meta.rank!==state.selectedRank)||(payloadVisibleRanks&&!payloadVisibleRanks.has(meta.rank));dummy.position.set(rank.x+meta.local.x,rank.y+meta.local.y,rank.z+meta.local.z);dummy.rotation.set(0,0,0);dummy.scale.set(hidden?0:meta.scale.x,hidden?0:meta.scale.y,hidden?0:meta.scale.z);dummy.updateMatrix();mesh.setMatrixAt(index,dummy.matrix);}
     function boxEdges(center,size,target,offset){
       const hx=size.x/2,hy=size.y/2,hz=size.z/2,corners=[[-hx,-hy,-hz],[hx,-hy,-hz],[hx,hy,-hz],[-hx,hy,-hz],[-hx,-hy,hz],[hx,-hy,hz],[hx,hy,hz],[-hx,hy,hz]],pairs=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
       let cursor=offset;pairs.forEach(pair=>pair.forEach(id=>{target[cursor++]=center.x+corners[id][0];target[cursor++]=center.y+corners[id][1];target[cursor++]=center.z+corners[id][2];}));return cursor;
@@ -400,7 +399,7 @@
     function fadedColor(value,factor){const color=new THREE.Color(value),background=new THREE.Color(backgroundColor());return color.lerp(background,1-factor);}
 
     function updateLayout(){
-      const mode=state.sceneMode==='packed'?'packed':'exploded',group=selectedGroup();currentGroupingLayout=state.groupingAxes.length?buildHierarchicalRankLayout(plan.manifests,state.groupingAxes,mode,topology):null;payloadVisibleRanks=group?new Set(group.ranks):null;plan.manifests.forEach((manifest,index)=>{const p=currentGroupingLayout?.positions.get(manifest.rank)||layoutPosition(manifest.coordinate,topology,mode,'standard'),hidden=state.sceneMode==='rank'&&state.selectedRank!==null&&manifest.rank!==state.selectedRank;rankPositions.set(manifest.rank,p);shellDisplayPositions.set(manifest.rank,{...p});dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(0,0,0);dummy.scale.setScalar(hidden?.0001:1);dummy.updateMatrix();rankMesh.setMatrixAt(index,dummy.matrix);rankMesh.setColorAt(index,rankColor(manifest));});rankMesh.instanceMatrix.needsUpdate=true;if(rankMesh.instanceColor)rankMesh.instanceColor.needsUpdate=true;
+      const mode=state.sceneMode==='packed'?'packed':'exploded',group=selectedGroup(),payloadEnabled=state.groupingAxes.length>0||state.sceneMode==='rank';currentGroupingLayout=state.groupingAxes.length?buildHierarchicalRankLayout(plan.manifests,state.groupingAxes,mode,topology):null;payloadVisibleRanks=payloadEnabled?(group?new Set(group.ranks):null):new Set();root.dataset.payloadVisible=String(payloadEnabled);plan.manifests.forEach((manifest,index)=>{const p=currentGroupingLayout?.positions.get(manifest.rank)||layoutPosition(manifest.coordinate,topology,mode,'standard'),hidden=state.sceneMode==='rank'&&state.selectedRank!==null&&manifest.rank!==state.selectedRank;rankPositions.set(manifest.rank,p);shellDisplayPositions.set(manifest.rank,{...p});dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(0,0,0);dummy.scale.setScalar(hidden?.0001:1);dummy.updateMatrix();rankMesh.setMatrixAt(index,dummy.matrix);rankMesh.setColorAt(index,rankColor(manifest));});rankMesh.instanceMatrix.needsUpdate=true;if(rankMesh.instanceColor)rankMesh.instanceColor.needsUpdate=true;
       layerMetas.forEach((meta,index)=>compose(meta,index,cardMesh));cardMesh.instanceMatrix.needsUpdate=true;
       clusterMetas.forEach((meta,index)=>compose(meta,index,clusterMesh));clusterMesh.instanceMatrix.needsUpdate=true;
       nodeBatches.forEach(batch=>{batch.metas.forEach((meta,index)=>compose(meta,index,batch.mesh));batch.mesh.instanceMatrix.needsUpdate=true;});
@@ -492,7 +491,7 @@
         <section><h3>Pipeline Parallel · PP${d.pp}</h3><p>${stages.map(segment=>`PP${segment.stage}：L${segment.start}–L${segment.end}`).join('；')}。输入载荷只进入 PP0，最终 Norm、LM Head、Logits 与 MTP 位于 PP${d.pp-1}。</p></section>
         <section><h3>Tensor / Expert 切分</h3><p>TP${d.tp} 将 Attention、Linear、Dense FFN 等张量算子切成 ${d.tp} 份；EP${d.ep} 将 ${model.routedExperts} 个 Routed Experts 分成 ${d.ep} 组，每个 EP shard 持有 ${expertsPerShard} 个专家，并通过 Dispatch / Combine 完成跨 Rank 路由。</p></section>
         <section><h3>Replica / Context</h3><p>EDP${d.edp} 为相同的 PP × TP × EP 分片保留 ${d.edp} 份数据并行副本；CP${d.cp} 表示当前演示不再切分上下文序列。该 128 Rank 配置是产品演示映射，不宣称为官方训练部署参数。</p></section>
-        <section><h3>场景完整性 <small>${integrity.passed?'verified':'error'}</small></h3><p>${stats.layerInstances} 个 Layer placement、${stats.nodeInstances.toLocaleString()} 个算子实例和 ${stats.edgeInstances.toLocaleString()} 条边均保留在 GPU SceneIndex 中；概览仅隐藏文字，不简化模型结构。</p></section>
+        <section><h3>场景完整性 <small>${integrity.passed?'verified':'error'}</small></h3><p>${stats.layerInstances} 个 Layer placement、${stats.nodeInstances.toLocaleString()} 个算子实例和 ${stats.edgeInstances.toLocaleString()} 条边均保留在 GPU SceneIndex 中；默认 Rank 单行仅显示空容器，选择任一切分后显示完整模型结构。</p></section>
         <div class="pto-model-rank-deck__source"><i data-source="official"></i>模型源信息 <i data-source="derived"></i>并行推导 <i data-source="demo"></i>128 Rank 演示映射</div>`;return;
       }
       const manifest=plan.manifestByRank.get(state.selectedRank),c=manifest.coordinate,[segment]=manifest.layerSegments,e=manifest.expertOwnership,layers=Array.from({length:segment.end-segment.start+1},(_,index)=>segment.start+index),group=selectedGroup(),template=state.selectedLayer!==null?spec.layers[state.selectedLayer]:null;
@@ -560,6 +559,6 @@
 
   global.PtoModelParallelRankDeck={
     DEFAULT_TOPOLOGY,ISOMETRIC_POSE,normalizeTopology,enumerateRanks,partitionModel,layoutPosition,
-    normalizeGroupingAxes,toggleGroupingAxis,buildHierarchicalRankLayout,sampleSvgPath,parseTemplate,buildModelSceneSpec,render:mount,mount
+    normalizeGroupingAxes,toggleGroupingAxis,buildHierarchicalRankLayout,payloadPoint,sampleSvgPath,parseTemplate,buildModelSceneSpec,render:mount,mount
   };
 })(window);

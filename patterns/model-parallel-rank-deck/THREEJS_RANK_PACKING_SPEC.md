@@ -7,7 +7,7 @@ Canonical parallel planner: `./pattern.js`
 
 ## 1. Product outcome
 
-Render the complete openPangu model payload inside its assigned 128 Rank compute containers while keeping the combined view interactive at an isometric overview. The combined view uses one Three.js WebGL scene. DOM is limited to controls, Inspector, tooltip, accessibility text, and other product chrome.
+Render 128 Rank compute containers as one ordered row before a parallel dimension is selected. Once PP, TP, EP, or EDP is selected, reveal the complete openPangu payload inside its assigned Rank containers and keep the combined view interactive in one Three.js WebGL scene. DOM is limited to controls, Inspector, tooltip, accessibility text, and other product chrome.
 
 The model is partitioned by PP, TP, EP, CP, and EDP. A Rank is a transparent compute container, not a replacement for the model. Every physical Layer assigned by the planner remains a complete Layer payload.
 
@@ -62,7 +62,7 @@ Default demo topology:
 
 The mapping is demo/derived unless an externally validated topology is supplied. UI copy must not describe it as the official openPangu deployment topology.
 
-REP0 (`EDP0 · EP0`) is the first display row nearest the default camera. The default camera starts from an isometric pose and uses a 16° long-lens perspective projection, preserving the diagram-like composition while retaining subtle depth foreshortening.
+The ungrouped state orders Rank 0–127 on one X-axis row. Grouped layouts reserve X for PP stage order. Layer planes occupy YZ and overlap along X, so PP0–PP3 and their assigned Layer ranges share one depth axis and combine into a whole-model deck in side view. The default camera starts from an isometric pose and uses a 16° long-lens perspective projection, preserving the diagram-like composition while retaining subtle depth foreshortening.
 
 ## 6. GPU batch contract
 
@@ -83,7 +83,13 @@ Static objects use `rank:{rank}/static:{role}/node:{nodeId}`.
 
 ## 7. LOD and visibility
 
-Overview:
+Ungrouped overview:
+
+- Render all 128 Rank shells in one row with no visible model payload.
+- Keep every Layer, Cluster, Node, and Edge record compiled in the GPU scene and `SceneIndex`; visibility changes must not delete semantic records.
+- Selecting any PP, TP, EP, or EDP dimension reveals the complete payload in the resulting grouped layout.
+
+Grouped overview:
 
 - All Rank, Layer, Cluster, Node, and Edge records exist in the GPU scene.
 - The first assigned Layer in every Rank keeps its semantic solid colors. Remaining Layers stay structurally complete but use a light-blue, low-opacity ghost treatment so repeated transparency does not accumulate into a dirty gray volume.
@@ -91,7 +97,7 @@ Overview:
 - Operator text is suppressed in the 128-Rank overview. Rank focus creates labels only for the first assigned, solid Layer, preserving every original node label without paying the global texture cost. Labels use one fixed black type size with no outline, sit directly on the front node faces, and never billboard toward the camera. Inspector selection must not move these labels onto a translucent rear Layer.
 - Rank hover uses a single tooltip.
 
-Parallel dimensions are cumulative rather than mutually exclusive. Active dimensions form one canonical hierarchy in PP → TP → EP → EDP order. The first active dimension must retain its original single-mode transform exactly. In particular, PP alone preserves the original four-column Pipeline Stage layout. Every newly added dimension must then produce a visible rigid-body Rank transform inside each parent group, not merely add or recolor borders: adding TP pulls the TP0 and TP1 sub-cubes apart inside every PP parent; removing TP returns them to their exact PP-only coordinates. Adding EP keeps the centers and dimensions of all four PP frames unchanged while regrouping their members and creating eight EP child frames inside every PP frame, with four Ranks in each PP × EP leaf. Clicking an active dimension again removes only that hierarchy level and recomputes the remaining layout. Selecting a Rank focuses its concrete communication group on the deepest active axis; non-members retain only a near-background container outline and their payload rendering is suppressed without deleting SceneIndex records.
+Parallel dimensions are cumulative rather than mutually exclusive. Active dimensions form one canonical hierarchy in PP → TP → EP → EDP order. Every grouped transform reserves X for PP stage order, matching the Layer deck depth axis. The first active dimension must retain its original single-mode transform exactly. In particular, PP alone produces four adjacent Pipeline Stage groups whose Layer decks align along X. Every newly added dimension must then produce a visible rigid-body Rank transform inside each parent group, not merely add or recolor borders: adding TP pulls the TP0 and TP1 sub-cubes apart inside every PP parent; removing TP returns them to their exact PP-only coordinates. Adding EP keeps the centers and dimensions of all four PP frames unchanged while regrouping their members and creating eight EP child frames inside every PP frame, with four Ranks in each PP × EP leaf. Clicking an active dimension again removes only that hierarchy level and recomputes the remaining layout. Selecting a Rank focuses its concrete communication group on the deepest active axis; non-members retain only a near-background container outline and their payload rendering is suppressed without deleting SceneIndex records.
 
 The default scene uses the exploded spacing and does not expose packed/exploded/enter-Rank toolbar buttons. The former ALL/PP/TP/EP/EDP tab strip is replaced by one centered header panel: it states the current Rank scope and offers multi-select PP, TP, EP, EDP, and disabled CP1 actions under “继续按”. Active actions remain pressed; clicking one a second time removes it. Clicking the current-scope value clears every grouping dimension and restores the complete 128-Rank view. Adding or removing a dimension changes the physical Rank layout, not only color: the 128 Rank shells animate as whole containers while payload batches briefly fade, then the complete payload reappears at the target layout. Every active level receives its own nested full-domain frames.
 
@@ -153,7 +159,7 @@ Current CSS3D-derived regression baseline:
 - AC-06: Selecting any Rank exposes the exact planned layer and expert ranges.
 - AC-07: Selecting a Layer exposes every original Node label and Node ID.
 - AC-08: Overview operator labels do not create DOM or texture-per-instance cost.
-- AC-09: Default view is a 16° long-lens perspective isometric pose with REP0 as the front row.
+- AC-09: Default view is a 16° long-lens perspective isometric pose with Rank 0–127 ordered in one row and no visible payload until a split is selected.
 - AC-10: Source-integrity, planner, scene-integrity, and browser smoke tests pass.
 
 ## 11. Migration rule

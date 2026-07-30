@@ -2,7 +2,7 @@
   "id": "model-parallel-rank-deck",
   "name": "Model Parallel Rank Three.js Deck",
   "type": "hybrid",
-  "description": "Partitions the canonical openPangu architecture by PP, TP, EP, and EDP and compiles every original Layer Node, Cluster, and Edge into GPU batches inside 128 transparent Three.js Rank volumes.",
+  "description": "Shows 128 transparent Three.js Rank volumes in one empty default row, then reveals the canonical openPangu Layer payload after PP, TP, EP, or EDP is selected, with Layer depth aligned to the PP axis.",
   "typography": {
     "bodyMinimumPx": 14,
     "uiMinimumPx": 12,
@@ -49,6 +49,7 @@
     "sourceLevel": "demo"
   },
   "useWhen": [
+    "presenting an ordered 128-Rank inventory before choosing a parallel split",
     "placing the complete shared model architecture into Three.js Rank volumes",
     "inspecting TP, PP, CP, EP, and EDP ownership across Layers, nodes, experts, and communication groups",
     "switching between model, topology, grouping, Rank focus, and Layer focus without creating a second Layer renderer"

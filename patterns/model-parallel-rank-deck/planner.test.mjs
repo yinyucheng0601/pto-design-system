@@ -26,8 +26,12 @@ assert.ok(plan.groups.filter(group=>group.axis==='ep').every(group=>group.ranks.
 assert.equal(plan.groups.filter(group=>group.axis==='edp').length,64);
 assert.ok(plan.groups.filter(group=>group.axis==='edp').every(group=>group.ranks.length===2));
 assert.equal(plan.manifestByRank.get(0).payloadSignature,plan.manifestByRank.get(64).payloadSignature);
-assert.ok(api.layoutPosition(plan.manifestByRank.get(0).coordinate,plan.topology).z>0,'First REP row must be nearest the camera');
-assert.ok(api.layoutPosition(plan.manifestByRank.get(127).coordinate,plan.topology).z<0,'Last REP row must be farthest from the camera');
+const defaultPositions=plan.manifests.map(manifest=>api.layoutPosition(manifest.coordinate,plan.topology));
+assert.ok(defaultPositions.every(position=>position.y===0&&position.z===0),'Default 128-Rank layout must be one row');
+assert.ok(defaultPositions.every((position,index)=>index===0||position.x>defaultPositions[index-1].x),'Default Rank row must preserve ascending Rank order');
+const payloadTemplate={centerX:100,centerY:200};
+assert.deepEqual(api.payloadPoint(payloadTemplate,100,200,3),{x:3,y:0,z:0},'Layer deck depth must use the PP X axis');
+assert.equal(api.payloadPoint(payloadTemplate,120,200,3).x,3,'Source geometry width must not change Layer depth');
 assert.deepEqual(api.ISOMETRIC_POSE,{rx:-35.264,ry:45});
 assert.deepEqual(api.normalizeGroupingAxes(['ep','pp','replica','ep']),['pp','ep','edp']);
 assert.deepEqual(api.toggleGroupingAxis(['pp'],'ep'),['pp','ep']);
@@ -53,4 +57,4 @@ assert.equal(ppTpLayout.positions.get(0).y-ppLayout.positions.get(0).y,ppTpLayou
 assert.throws(()=>api.partitionModel(model,{...api.DEFAULT_TOPOLOGY,worldSize:127}),/worldSize/);
 assert.throws(()=>api.partitionModel({...model,stageRanges:[[0,11],[12,22],[23,34],[34,45]]},api.DEFAULT_TOPOLOGY),/exactly once/);
 
-console.log('model-parallel-rank-deck planner: 38 assertions passed');
+console.log('model-parallel-rank-deck planner assertions passed');
