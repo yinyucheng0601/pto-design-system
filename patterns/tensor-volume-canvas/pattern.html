@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PTO Tensor Volume Canvas Pattern</title>
+  <link rel="icon" href="data:,">
+  <script>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      const applyPreviewTheme = (theme) => {
+        if (theme !== 'light' && theme !== 'dark' && theme !== 'glass') return;
+        document.documentElement.dataset.theme = theme;
+        window.dispatchEvent(new CustomEvent('pto-preview-theme-applied'));
+      };
+      applyPreviewTheme(params.get('theme'));
+      window.addEventListener('message', (event) => {
+        if (event.data?.type === 'pto-preview-theme') applyPreviewTheme(event.data.theme);
+      });
+    })();
+  </script>
+  <link rel="stylesheet" href="../../tokens/foundation.css">
+  <link rel="stylesheet" href="../../tokens/semantic.css">
+  <link rel="stylesheet" href="../../tokens/components.css">
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="./pattern.css">
+  <style>
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      min-height: 100%;
+      margin: 0;
+      background: var(--background);
+      color: var(--foreground);
+      font-family: var(--font-sans);
+    }
+
+    body {
+      padding: var(--space-6);
+    }
+
+    .preview-page {
+      width: min(1440px, 100%);
+      margin: 0 auto;
+      display: grid;
+      gap: var(--space-6);
+    }
+
+    .preview-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-4);
+    }
+
+    .preview-heading h1,
+    .preview-heading p,
+    .preview-card h2,
+    .preview-card p {
+      margin: 0;
+    }
+
+    .preview-heading h1 {
+      font: var(--text-title-1);
+    }
+
+    .preview-heading p,
+    .preview-card p,
+    .preview-note {
+      color: var(--foreground-secondary);
+      font: var(--text-body-sm);
+    }
+
+    .preview-heading__copy {
+      display: grid;
+      gap: var(--space-2);
+    }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: minmax(360px, 0.9fr) minmax(520px, 1.1fr);
+      gap: var(--space-4);
+      align-items: stretch;
+    }
+
+    .preview-card {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: auto minmax(420px, 1fr);
+      gap: var(--space-3);
+      padding: var(--space-4);
+      border-radius: var(--radius-xl);
+      background: var(--surface-1);
+    }
+
+    .preview-card__head {
+      display: grid;
+      gap: var(--space-1);
+    }
+
+    .preview-card h2 {
+      font: var(--text-title-2);
+    }
+
+    .reference-stage {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 420px;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      overflow: hidden;
+      border: 0;
+      border-radius: var(--radius-lg);
+      background: var(--surface-2);
+    }
+
+    .reference-specimen {
+      min-height: 300px;
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius-lg);
+      background: color-mix(in srgb, var(--surface-1) 76%, transparent);
+    }
+
+    .reference-contract {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      color: var(--foreground-secondary);
+      font: var(--text-body-sm);
+    }
+
+    .reference-contract code {
+      color: var(--foreground);
+      font: var(--text-mono);
+    }
+
+    .live-stack {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: repeat(2, minmax(220px, 1fr));
+      gap: var(--space-3);
+    }
+
+    .canvas-stage {
+      min-width: 0;
+      min-height: 220px;
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius-lg);
+      background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+    }
+
+    .canvas-stage__label {
+      position: absolute;
+      z-index: 1;
+      top: var(--space-3);
+      left: var(--space-3);
+      color: var(--foreground-secondary);
+      font: var(--text-label);
+      pointer-events: none;
+    }
+
+    .state-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      align-items: center;
+    }
+
+    .state-strip span {
+      min-height: var(--tag-height);
+      display: inline-flex;
+      align-items: center;
+      padding: 0 var(--tag-padding-x);
+      border-radius: var(--tag-radius);
+      background: var(--comp-tag-bg);
+      color: var(--foreground-secondary);
+      font: var(--text-label);
+    }
+
+    .responsive-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 320px) minmax(0, 640px);
+      gap: var(--space-4);
+      align-items: stretch;
+    }
+
+    .responsive-grid .canvas-stage {
+      height: 300px;
+    }
+
+    .approval-note {
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+      background: color-mix(in srgb, var(--warning) 9%, var(--surface-2));
+    }
+
+    @media (max-width: 980px) {
+      body { padding: var(--space-4); }
+      .preview-grid,
+      .responsive-grid { grid-template-columns: 1fr; }
+      .preview-card { grid-template-rows: auto minmax(360px, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <main class="preview-page">
+    <header class="preview-heading">
+      <div class="preview-heading__copy">
+        <h1>Tensor Volume Canvas Pattern</h1>
+        <p>已注册的共享 Canvas renderer。左侧保留 API Visualizer 视觉基准，右侧验证正式 Pattern 的固定视角和状态协议。</p>
+      </div>
+      <button class="btn btn-ghost" type="button" id="themeToggle">Light mode</button>
+    </header>
+
+    <section class="preview-grid" aria-label="Reference and registered pattern comparison">
+      <article class="preview-card">
+        <div class="preview-card__head">
+          <h2>Existing source reference</h2>
+          <p>从 Operator Planning · API Visualizer · Load3D 提取的 4×4×3 NCHW 基准场景。</p>
+        </div>
+        <div class="reference-stage">
+          <div class="reference-specimen">
+            <span class="canvas-stage__label">API Visualizer reference fixture</span>
+            <canvas id="referenceCanvas" aria-label="Extracted API Visualizer reference fixture"></canvas>
+          </div>
+          <div class="reference-contract">
+            <code>depthX=.52u · depthY=.38u · fixed view</code>
+            <a
+              class="btn btn-ghost btn-sm"
+              href="../../../pto_compute-graph-viewer/operator-planning/operator%20planning.html?embed=load3d&amp;api=Load3D"
+              target="_blank"
+              rel="noopener"
+            >Open source page</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="preview-card">
+        <div class="preview-card__head">
+          <h2>Registered shared Pattern</h2>
+          <p>固定斜向视角；无拖拽、滚轮缩放或旋转。页面只传 extent、axes 和 voxel 状态。</p>
+        </div>
+        <div class="live-stack">
+          <div class="canvas-stage">
+            <span class="canvas-stage__label">NCHW · neutral volume</span>
+            <canvas id="nchwCanvas" aria-label="NCHW neutral tensor volume"></canvas>
+          </div>
+          <div class="canvas-stage">
+            <span class="canvas-stage__label">A1 · padding + window states</span>
+            <canvas id="a1Canvas" aria-label="A1 tensor volume with Load3D states"></canvas>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="state-strip" aria-label="Previewed voxel states">
+      <span>base</span>
+      <span>ghost</span>
+      <span>padding</span>
+      <span>channel-padding</span>
+      <span>window</span>
+      <span>sampled</span>
+      <span>current</span>
+      <span>skipped</span>
+      <span id="selfTestStatus">self-check pending</span>
+    </section>
+    <canvas id="selfTestCanvas" hidden aria-hidden="true"></canvas>
+
+    <section>
+      <div class="preview-card__head">
+        <h2>Responsive contract</h2>
+        <p>同一 scene 在 320px 和 640px 容器中自动重算 unit 与 backing store，不改变固定视角。</p>
+      </div>
+      <div class="responsive-grid">
+        <div class="canvas-stage">
+          <span class="canvas-stage__label">320px</span>
+          <canvas id="narrowCanvas" aria-label="Narrow tensor volume preview"></canvas>
+        </div>
+        <div class="canvas-stage">
+          <span class="canvas-stage__label">640px</span>
+          <canvas id="wideCanvas" aria-label="Wide tensor volume preview"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <p class="preview-note approval-note">
+      Pattern 已写入共享 registry；消费页面应直接加载 pattern.css / pattern.js，并通过 scene 数据接入，不使用 iframe。
+    </p>
+  </main>
+
+  <script src="./pattern.js"></script>
+  <script>
+    (() => {
+      const voxelsFor = (columns, rows, depth, mapState) => {
+        const voxels = [];
+        for (let d = 0; d < depth; d += 1) {
+          for (let row = 0; row < rows; row += 1) {
+            for (let column = 0; column < columns; column += 1) {
+              const resolved = mapState?.({ column, row, depth: d }) || {};
+              voxels.push({
+                id: `${column}-${row}-${d}`,
+                column,
+                row,
+                depth: d,
+                tone: resolved.tone || 'neutral',
+                state: resolved.state || 'base',
+                label: resolved.label || (d === 0 && columns * rows <= 36 ? `${row}${column}` : ''),
+              });
+            }
+          }
+        }
+        return voxels;
+      };
+
+      const nchwScene = {
+        extent: { columns: 4, rows: 4, depth: 3 },
+        axes: { columns: 'Wi', rows: 'Hi', depth: 'Ci' },
+        voxels: voxelsFor(4, 4, 3),
+      };
+
+      const a1Scene = {
+        extent: { columns: 6, rows: 6, depth: 4 },
+        axes: { columns: 'Wi', rows: 'Hi', depth: 'Ci' },
+        voxels: voxelsFor(6, 6, 4, ({ column, row, depth }) => {
+          const border = row === 0 || column === 0 || row === 5 || column === 5;
+          const inWindow = row >= 1 && row <= 2 && column >= 1 && column <= 2 && depth < 3;
+          if (depth === 3) return { state: 'channel-padding' };
+          if (column === 2 && row === 1 && depth === 0) return { tone: 'input', state: 'current', label: 'x010' };
+          if (column === 1 && row === 1 && depth === 0) return { tone: 'input', state: 'sampled', label: 'x000' };
+          if (column === 1 && row === 2 && depth === 1) return { tone: 'input', state: 'skipped' };
+          if (inWindow) return { tone: 'input', state: 'window', label: depth === 0 ? `x${row - 1}${column - 1}${depth}` : '' };
+          if (border) return { state: 'padding', label: depth === 0 ? 'PAD' : '' };
+          return { state: 'base' };
+        }),
+      };
+
+      const renderer = window.PtoTensorVolumeCanvas;
+      const controllers = [
+        renderer.render(document.getElementById('referenceCanvas'), nchwScene, { ariaLabel: 'Extracted API Visualizer reference fixture' }),
+        renderer.render(document.getElementById('nchwCanvas'), nchwScene, { ariaLabel: 'NCHW neutral tensor volume' }),
+        renderer.render(document.getElementById('a1Canvas'), a1Scene, { ariaLabel: 'A1 tensor volume with Load3D states' }),
+        renderer.render(document.getElementById('narrowCanvas'), a1Scene, { ariaLabel: 'Narrow tensor volume preview' }),
+        renderer.render(document.getElementById('wideCanvas'), a1Scene, { ariaLabel: 'Wide tensor volume preview' }),
+      ];
+
+      try {
+        const testCanvas = document.getElementById('selfTestCanvas');
+        const selfTest = renderer.render(testCanvas, {
+          extent: { columns: 1, rows: 1, depth: 1 },
+          axes: { columns: 'W', rows: 'H', depth: 'C' },
+          voxels: [],
+        });
+        selfTest.update({
+          extent: { columns: 1, rows: 1, depth: 1 },
+          axes: { columns: 'W', rows: 'H', depth: 'C' },
+          voxels: [{ id: 'single', column: 0, row: 0, depth: 0, state: 'current', tone: 'compute', label: '1' }],
+        });
+        selfTest.update({
+          extent: { columns: 16, rows: 16, depth: 16 },
+          axes: { columns: 'W', rows: 'H', depth: 'C' },
+          voxels: voxelsFor(16, 16, 16),
+        });
+        selfTest.resize();
+        selfTest.destroy();
+        document.getElementById('selfTestStatus').textContent = 'self-check passed';
+      } catch (error) {
+        document.getElementById('selfTestStatus').textContent = `self-check failed: ${error.message}`;
+        console.error(error);
+      }
+
+      document.getElementById('themeToggle').addEventListener('click', (event) => {
+        const root = document.documentElement;
+        const next = root.dataset.theme === 'light' ? 'dark' : 'light';
+        root.dataset.theme = next;
+        event.currentTarget.textContent = next === 'light' ? 'Dark mode' : 'Light mode';
+        controllers.forEach((controller) => controller.resize());
+      });
+
+      window.addEventListener('pto-preview-theme-applied', () => {
+        controllers.forEach((controller) => controller.resize());
+      });
+      window.addEventListener('beforeunload', () => controllers.forEach((controller) => controller.destroy()));
+    })();
+  </script>
+</body>
+</html>

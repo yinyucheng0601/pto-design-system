@@ -1,0 +1,122 @@
+{
+  "id": "tensor-volume-canvas",
+  "name": "Tensor Volume Canvas",
+  "type": "canvas",
+  "description": "Fixed-view Canvas 2D renderer for API Visualizer-style three-dimensional tensor volumes. It renders a transparent voxel scene with stable occlusion, axes, labels, padding, window, sampled, current, skipped, and channel-padding states without owning business selection or container chrome.",
+  "source": {
+    "visualContract": [
+      "API Visualizer NCHW/A1 Canvas in pto_compute-graph-viewer/operator-planning/operator planning.html",
+      "patterns/tensor-volume-canvas/pattern.html",
+      "patterns/tensor-volume-canvas/pattern.css",
+      "patterns/tensor-volume-canvas/pattern.js"
+    ],
+    "patternHtml": "patterns/tensor-volume-canvas/pattern.html",
+    "patternCss": "patterns/tensor-volume-canvas/pattern.css",
+    "renderScript": "patterns/tensor-volume-canvas/pattern.js"
+  },
+  "useWhen": [
+    "rendering NCHW, A1, Load3D, Conv, tiling, or code-recovery tensor volumes with a shared fixed projection",
+    "showing padding, channel padding, sampling windows, current voxels, skipped voxels, or per-voxel labels",
+    "embedding the same tensor-volume renderer directly in multiple PTO pages without an iframe"
+  ],
+  "sceneContract": {
+    "extent": {
+      "columns": "positive integer",
+      "rows": "positive integer",
+      "depth": "positive integer"
+    },
+    "axes": {
+      "columns": "string",
+      "rows": "string",
+      "depth": "string"
+    },
+    "voxel": {
+      "required": [
+        "column",
+        "row",
+        "depth"
+      ],
+      "optional": [
+        "id",
+        "label"
+      ],
+      "tone": [
+        "neutral",
+        "input",
+        "output",
+        "compute",
+        "reduction",
+        "fusion"
+      ],
+      "state": [
+        "base",
+        "ghost",
+        "padding",
+        "channel-padding",
+        "window",
+        "sampled",
+        "current",
+        "skipped"
+      ]
+    }
+  },
+  "requiredApis": [
+    "window.PtoTensorVolumeCanvas.render(canvas, scene, options) returning { update, resize, destroy }",
+    "controller.update(nextScene)",
+    "controller.resize()",
+    "controller.destroy()"
+  ],
+  "options": [
+    "ariaLabel",
+    "padding.top",
+    "padding.right",
+    "padding.bottom",
+    "padding.left",
+    "showAxes",
+    "autoLabelDensity"
+  ],
+  "allowedOverrides": [
+    "scene.extent",
+    "scene.axes labels",
+    "scene.voxels and their tone, state, label, and coordinates",
+    "canvas and host-container dimensions",
+    "ariaLabel",
+    "canvas padding",
+    "axis-label visibility",
+    "automatic label density"
+  ],
+  "forbiddenOverrides": [
+    "copying or rewriting the fixed projection, voxel geometry, depth sorting, DPR setup, or ResizeObserver logic in a consuming page",
+    "overriding the shared voxel palette or replacing --primary, --primary-hover, and --warning with page-local blue or orange values",
+    "adding rotation, pan, pointer-drag, wheel zoom, or configurable camera controls",
+    "moving Load3D, Conv, tiling, playback, selection, or tensor-format business rules into the Pattern",
+    "adding product-specific pane, card, toolbar, inspector, or playback chrome inside the renderer",
+    "embedding this Pattern through an iframe in consuming pages"
+  ],
+  "colorContract": {
+    "blue": [
+      "--primary",
+      "--primary-hover"
+    ],
+    "orange": [
+      "--warning"
+    ],
+    "chrome": [
+      "--background",
+      "--surface-*",
+      "--foreground*"
+    ],
+    "note": "Canvas resolves semantic tokens to their final foundation color at paint time; consuming pages must not supply a private palette."
+  },
+  "behavior": [
+    "fixed depth projection uses depthX = 0.52 unit and depthY = 0.38 unit",
+    "voxels render from deep to shallow for stable occlusion",
+    "ResizeObserver and resize() refit the scene without changing the fixed camera",
+    "backing-store dimensions follow devicePixelRatio without changing CSS size",
+    "invalid or out-of-range voxels are skipped with a development warning",
+    "empty voxel arrays clear the canvas while preserving axes",
+    "current labels take priority when automatic label density hides other labels",
+    "the canvas remains transparent and registers no pointer-drag, wheel, pan, zoom, or rotation interactions"
+  ],
+  "agentReuseRule": "Load pattern.css and pattern.js, then call window.PtoTensorVolumeCanvas.render with a canvas plus a business-neutral scene. Convert Load3D, Conv, tiling, code-recovery, playback, and selection state into voxel tone/state data in the consuming page. Update highlights through controller.update(nextScene); do not copy projection or voxel-rendering code, add camera interaction, recolor blue/orange outside PTO semantic tokens, or move product chrome into the Pattern."
+}
