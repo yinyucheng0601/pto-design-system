@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PTO Matrix Canvas Pattern</title>
+  <link rel="icon" href="data:,">
+  <script>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      const applyPreviewTheme = (theme) => {
+        if (theme !== 'light' && theme !== 'dark' && theme !== 'glass') return;
+        document.documentElement.dataset.theme = theme;
+        window.dispatchEvent(new CustomEvent('pto-preview-theme-applied'));
+      };
+      applyPreviewTheme(params.get('theme'));
+      window.addEventListener('message', (event) => {
+        if (event.data?.type === 'pto-preview-theme') applyPreviewTheme(event.data.theme);
+      });
+    })();
+  </script>
+  <link rel="stylesheet" href="../../tokens/foundation.css">
+  <link rel="stylesheet" href="../../tokens/semantic.css">
+  <link rel="stylesheet" href="../../tokens/components.css">
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="./pattern.css">
+  <style>
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      min-height: 100%;
+      margin: 0;
+      background: var(--background);
+      color: var(--foreground);
+      font: var(--type-body);
+    }
+
+    body {
+      padding: var(--space-6);
+    }
+
+    body.is-embed {
+      padding: var(--space-4);
+    }
+
+    .preview-page {
+      width: min(1480px, 100%);
+      margin: 0 auto;
+      display: grid;
+      gap: var(--space-6);
+    }
+
+    .preview-heading,
+    .specimen-head,
+    .canvas-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+    }
+
+    .preview-heading {
+      align-items: flex-start;
+    }
+
+    .preview-heading__copy,
+    .specimen-copy {
+      min-width: 0;
+      display: grid;
+      gap: var(--space-1);
+    }
+
+    .preview-heading h1,
+    .preview-heading p,
+    .specimen-head h2,
+    .specimen-head p {
+      margin: 0;
+    }
+
+    .preview-heading h1 {
+      font: var(--type-title-1);
+    }
+
+    .specimen-head h2 {
+      font: var(--type-title-2);
+    }
+
+    .preview-heading p,
+    .specimen-head p,
+    .contract-note {
+      color: var(--foreground-secondary);
+      font: var(--type-body);
+    }
+
+    .specimen-grid {
+      display: grid;
+      grid-template-columns: minmax(420px, 0.9fr) minmax(560px, 1.1fr);
+      gap: var(--space-4);
+    }
+
+    .specimen {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: auto minmax(460px, 1fr);
+      gap: var(--space-3);
+      padding: var(--space-4);
+      border-radius: var(--radius-xl);
+      background: var(--surface-1);
+    }
+
+    .canvas-stage {
+      position: relative;
+      min-width: 0;
+      min-height: 460px;
+      overflow: hidden;
+      border-radius: var(--radius-lg);
+      background: color-mix(in srgb, var(--surface-2) 76%, transparent);
+    }
+
+    .canvas-toolbar {
+      position: absolute;
+      z-index: var(--z-raised);
+      top: var(--space-3);
+      right: var(--space-3);
+      pointer-events: none;
+    }
+
+    .canvas-toolbar > * {
+      pointer-events: auto;
+    }
+
+    .toolbar-readout {
+      min-width: 54px;
+      justify-content: center;
+    }
+
+    .state-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      align-items: center;
+    }
+
+    .state-chip {
+      min-height: var(--tag-height);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: 0 var(--tag-padding-x);
+      border-radius: var(--tag-radius);
+      background: var(--comp-tag-bg);
+      color: var(--foreground-secondary);
+      font: var(--type-label);
+    }
+
+    .state-chip::before {
+      width: 10px;
+      height: 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: 3px;
+      background: var(--surface-3);
+      content: "";
+    }
+
+    .state-chip.is-row::before { background: color-mix(in srgb, var(--primary) 20%, var(--background)); }
+    .state-chip.is-column::before { background: color-mix(in srgb, var(--warning) 14%, var(--background)); }
+    .state-chip.is-written::before { background: color-mix(in srgb, var(--primary) 34%, var(--background)); }
+    .state-chip.is-padding::before {
+      background: repeating-linear-gradient(45deg, var(--surface-4) 0 3px, var(--surface-2) 3px 6px);
+    }
+    .state-chip.is-current::before { background: var(--warning); }
+    .state-chip.is-selected::before {
+      border-color: var(--primary-hover);
+      background: var(--primary);
+    }
+
+    .contract-note {
+      margin: 0;
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+      background: color-mix(in srgb, var(--primary) 8%, var(--surface-2));
+    }
+
+    .interaction-help {
+      color: var(--foreground-secondary);
+      font: var(--type-body-sm);
+    }
+
+    @media (max-width: 1020px) {
+      body { padding: var(--space-4); }
+      .specimen-grid { grid-template-columns: 1fr; }
+      .specimen { grid-template-rows: auto minmax(420px, 1fr); }
+      .canvas-stage { min-height: 420px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="preview-page">
+    <header class="preview-heading">
+      <div class="preview-heading__copy">
+        <h1>Matrix Canvas Pattern</h1>
+        <p>Tensor Visualization 家族的二维成员。视觉延续 API Visualizer · Load3D A2 矩阵，并加入大数据聚合格。</p>
+      </div>
+      <button class="btn btn-ghost" type="button" id="themeToggle">Light mode</button>
+    </header>
+
+    <section class="state-strip" aria-label="矩阵格状态图例">
+      <span class="state-chip is-row">当前行</span>
+      <span class="state-chip is-column">当前列</span>
+      <span class="state-chip is-written">已写入</span>
+      <span class="state-chip is-padding">PAD 来源</span>
+      <span class="state-chip is-current">当前格</span>
+      <span class="state-chip is-selected">已选择</span>
+    </section>
+
+    <section class="specimen-grid">
+      <article class="specimen">
+        <header class="specimen-head">
+          <div class="specimen-copy">
+            <h2>Detail cells · 8 × 12</h2>
+            <p>矩阵整体保留圆角，内部使用连续直角网格；支持行列焦点、写入与 PAD 状态，文字低于可读尺寸时直接隐藏。</p>
+          </div>
+        </header>
+        <div class="canvas-stage">
+          <div class="canvas-toolbar">
+            <div class="toolbar-control">
+              <button class="btn btn-ghost btn-sm" type="button" data-fit="detail">适配</button>
+              <span class="toolbar-readout" id="detailZoom">100%</span>
+            </div>
+          </div>
+          <canvas id="detailCanvas" aria-label="Detailed matrix tensor specimen"></canvas>
+        </div>
+      </article>
+
+      <article class="specimen">
+        <header class="specimen-head">
+          <div class="specimen-copy">
+            <h2>缩略格 · 240 × 420 source → 12 × 20</h2>
+            <p>业务直接注入缩略格行列数；缩略格沿用连续直角网格，仅用中央标记表达聚合强度，hover 提供实际覆盖范围与统计值。</p>
+          </div>
+        </header>
+        <div class="canvas-stage">
+          <div class="canvas-toolbar">
+            <div class="toolbar-control">
+              <button class="btn btn-ghost btn-sm" type="button" data-fit="aggregate">适配</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-zoom="aggregate">放大 2×</button>
+              <span class="toolbar-readout" id="aggregateZoom">100%</span>
+            </div>
+          </div>
+          <canvas id="aggregateCanvas" aria-label="Aggregated large matrix tensor specimen"></canvas>
+        </div>
+      </article>
+    </section>
+
+    <p class="interaction-help">交互：滚轮/触控板浏览 · Ctrl/Command + 滚轮缩放 · F / 0 适配 · + / − 缩放。无拖拽平移；Pattern 不包含业务 toolbar、Inspector 或播放状态。</p>
+    <p class="contract-note">缩略格数量与每格覆盖范围都由业务注入；源矩阵 shape 始终保持 240×420，不会被改写成 12×20。</p>
+  </main>
+
+  <script src="./pattern.js"></script>
+  <script>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('embed') === '1') document.body.classList.add('is-embed');
+
+      const detailCells = [];
+      const rows = 8;
+      const columns = 12;
+      const currentRow = 2;
+      const currentColumn = 7;
+      for (let row = 0; row < rows; row += 1) {
+        for (let column = 0; column < columns; column += 1) {
+          const states = [];
+          if (row === currentRow) states.push('row-focus');
+          if (column === currentColumn) states.push('column-focus');
+          if (row * columns + column < currentRow * columns + currentColumn) states.push('written');
+          if (row === currentRow && column === currentColumn) states.push('current');
+          detailCells.push({
+            row,
+            column,
+            label: (row === 0 && column < 3) || (row === currentRow && column > 4)
+              ? `x${row}${column}`
+              : `${(Math.sin(row * 0.8 + column * 0.45) * 0.8).toFixed(2)}`,
+            value: Math.sin(row * 0.8 + column * 0.45) * 0.8,
+            style: (row === 0 && column < 3) || (row === 5 && column > 8) ? 'padding' : 'value',
+            tone: column % 4 === 0 ? 'input' : 'neutral',
+            states,
+          });
+        }
+      }
+
+      const detailController = window.PtoMatrixCanvas.render(
+        document.getElementById('detailCanvas'),
+        {
+          extent: { rows, columns },
+          axes: { rows: 'M · row', columns: 'N · column' },
+          cells: detailCells,
+        },
+        { ariaLabel: '8 by 12 detailed matrix tensor' }
+      );
+
+      const sourceRows = 240;
+      const sourceColumns = 420;
+      const values = new Float32Array(sourceRows * sourceColumns);
+      for (let row = 0; row < sourceRows; row += 1) {
+        for (let column = 0; column < sourceColumns; column += 1) {
+          const ridge = Math.exp(-Math.pow((column - sourceColumns * 0.62) / 48, 2));
+          const wave = Math.sin(row * 0.07) * Math.cos(column * 0.035);
+          values[row * sourceColumns + column] = wave * 0.42 + ridge * 1.1 + ((row + column) % 31 === 0 ? 0.34 : 0);
+        }
+      }
+
+      const aggregateCells = window.PtoMatrixCanvas.createAggregatedCells(
+        { values, rows: sourceRows, columns: sourceColumns },
+        { thumbnailRows: 12, thumbnailColumns: 20, tone: 'neutral' }
+      );
+      const selectedAggregate = aggregateCells.find((cell) => cell.row === 80 && cell.column === 210);
+      if (selectedAggregate) selectedAggregate.states = ['selected'];
+
+      const aggregateController = window.PtoMatrixCanvas.render(
+        document.getElementById('aggregateCanvas'),
+        {
+          extent: { rows: sourceRows, columns: sourceColumns },
+          axes: { rows: 'source rows', columns: 'source columns' },
+          cells: aggregateCells,
+        },
+        { ariaLabel: '240 by 420 matrix tensor represented by a 12 by 20 thumbnail grid' }
+      );
+
+      const refreshReadout = () => {
+        document.getElementById('detailZoom').textContent = `${Math.round(detailController.getViewState().scale * 100)}%`;
+        document.getElementById('aggregateZoom').textContent = `${Math.round(aggregateController.getViewState().scale * 100)}%`;
+      };
+      [document.getElementById('detailCanvas'), document.getElementById('aggregateCanvas')].forEach((canvas) => {
+        ['wheel', 'pointermove', 'keydown'].forEach((eventName) => {
+          canvas.addEventListener(eventName, () => window.requestAnimationFrame(refreshReadout));
+        });
+      });
+      refreshReadout();
+
+      document.querySelector('[data-fit="detail"]').addEventListener('click', () => {
+        detailController.fit();
+        refreshReadout();
+      });
+      document.querySelector('[data-fit="aggregate"]').addEventListener('click', () => {
+        aggregateController.fit();
+        refreshReadout();
+      });
+      document.querySelector('[data-zoom="aggregate"]').addEventListener('click', () => {
+        aggregateController.setZoom(aggregateController.getViewState().scale * 2);
+        refreshReadout();
+      });
+
+      const themeToggle = document.getElementById('themeToggle');
+      const syncThemeLabel = () => {
+        themeToggle.textContent = document.documentElement.dataset.theme === 'light' ? 'Dark mode' : 'Light mode';
+        detailController.resize();
+        aggregateController.resize();
+      };
+      themeToggle.addEventListener('click', () => {
+        document.documentElement.dataset.theme =
+          document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+        syncThemeLabel();
+      });
+      window.addEventListener('pto-preview-theme-applied', syncThemeLabel);
+      syncThemeLabel();
+
+      window.parent?.postMessage({
+        type: 'pto-pattern-preview-height',
+        pathname: window.location.pathname,
+        height: document.documentElement.scrollHeight,
+      }, '*');
+    })();
+  </script>
+</body>
+</html>

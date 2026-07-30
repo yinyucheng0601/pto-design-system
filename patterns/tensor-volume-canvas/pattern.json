@@ -1,8 +1,9 @@
 {
   "id": "tensor-volume-canvas",
+  "family": "tensor-visualization",
   "name": "Tensor Volume Canvas",
   "type": "canvas",
-  "description": "Fixed-view Canvas 2D renderer for API Visualizer-style three-dimensional tensor volumes. It renders a transparent voxel scene with stable occlusion, axes, labels, padding, window, sampled, current, skipped, and channel-padding states without owning business selection or container chrome.",
+  "description": "Fixed-view Canvas 2D renderer for API Visualizer-style three-dimensional tensor volumes. It renders a transparent voxel scene with stable occlusion, axes, labels, padding, window, current, and skipped states without owning business selection or container chrome.",
   "source": {
     "visualContract": [
       "Canonical NCHW/A1 fixed-view fixture documented by patterns/tensor-volume-canvas/pattern.html",
@@ -16,7 +17,7 @@
   },
   "useWhen": [
     "rendering NCHW, A1, Load3D, Conv, tiling, or code-recovery tensor volumes with a shared fixed projection",
-    "showing padding, channel padding, sampling windows, current voxels, skipped voxels, or per-voxel labels",
+    "showing padding, sampling windows, current voxels, skipped voxels, or per-voxel labels",
     "embedding the same tensor-volume renderer directly in multiple PTO pages without an iframe"
   ],
   "sceneContract": {
@@ -52,9 +53,7 @@
         "base",
         "ghost",
         "padding",
-        "channel-padding",
         "window",
-        "sampled",
         "current",
         "skipped"
       ]
@@ -87,16 +86,27 @@
   ],
   "forbiddenOverrides": [
     "copying or rewriting the fixed projection, voxel geometry, depth sorting, DPR setup, or ResizeObserver logic in a consuming page",
-    "overriding the shared voxel palette or replacing --primary, --primary-hover, and --warning with page-local blue or orange values",
+    "overriding the shared voxel palette or replacing --primary and --warning with page-local blue or orange values",
     "adding rotation, pan, pointer-drag, wheel zoom, or configurable camera controls",
     "moving Load3D, Conv, tiling, playback, selection, or tensor-format business rules into the Pattern",
     "adding product-specific pane, card, toolbar, inspector, or playback chrome inside the renderer",
     "embedding this Pattern through an iframe in consuming pages"
   ],
   "colorContract": {
+    "neutral": [
+      "top rgb(74, 80, 88)",
+      "east rgb(59, 65, 74)",
+      "south rgb(48, 54, 64)",
+      "edge rgba(10, 12, 16, 0.72)"
+    ],
+    "padding": [
+      "top rgba(90, 96, 104, 0.25)",
+      "east rgba(54, 60, 68, 0.25)",
+      "south rgba(42, 48, 56, 0.25)",
+      "edge rgba(190, 200, 212, 0.18)"
+    ],
     "blue": [
-      "--primary",
-      "--primary-hover"
+      "--primary"
     ],
     "orange": [
       "--warning"
@@ -106,7 +116,7 @@
       "--surface-*",
       "--foreground*"
     ],
-    "note": "Canvas resolves semantic tokens to their final foundation color at paint time; consuming pages must not supply a private palette."
+    "note": "Neutral and padding voxels reproduce the Recommendation Trace API Visualizer Load3D palette. Semantic tones resolve PTO tokens at paint time. Consuming pages must not supply a private palette."
   },
   "behavior": [
     "fixed depth projection uses depthX = 0.52 unit and depthY = 0.38 unit",

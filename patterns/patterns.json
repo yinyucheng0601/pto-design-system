@@ -72,6 +72,11 @@
       "preview": "patterns/tensor-volume-canvas/pattern.html"
     },
     {
+      "id": "matrix-canvas",
+      "path": "patterns/matrix-canvas/pattern.json",
+      "preview": "patterns/matrix-canvas/pattern.html"
+    },
+    {
       "id": "workbench-shell",
       "path": "patterns/workbench-shell/pattern.json",
       "preview": "patterns/workbench-shell/pattern.html"
