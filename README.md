@@ -43,6 +43,7 @@ design-system-share/
     ├── aic-core-object/         ← AIC core object 可配置结构图
     ├── aiv-core-object/         ← AIV core object 可配置结构图
     ├── pass-ir-graph-node/      ← Pass-IR graph node 卡片和 compact/group 状态
+    ├── tensor-volume-canvas/    ← API Visualizer 风格的固定视角三维 Tensor Canvas renderer
     └── swimlane-task/           ← 执行 trace / timeline 泳道任务条 canvas renderer
 ```
 
@@ -59,6 +60,7 @@ design-system-share/
 | `memory-architecture` | 910B / 950 内存层级、MTE route、AIC/AIV 组合图、graph-only iframe、60% 默认缩放、拖拽和 Command-wheel 缩放 | `patterns/memory-architecture/pattern.js` |
 | `aic-core-object` / `aiv-core-object` | 单独渲染 AIC / AIV 内部结构 | `patterns/aic-core-object/pattern.js` / `patterns/aiv-core-object/pattern.js` |
 | `pass-ir-graph-node` | Pass-IR 节点卡、group node、compact node | `patterns/pass-ir-graph-node/pattern.js` |
+| `tensor-volume-canvas` | NCHW / A1 / Load3D / Conv / Tiling / Code Recovery 的固定视角三维 Tensor 体素渲染 | `patterns/tensor-volume-canvas/pattern.js` |
 | `swimlane-task` | 执行 trace / timeline 的泳道任务条 | `patterns/swimlane-task/pattern.js` |
 
 ## 在三种环境里加载
@@ -163,6 +165,7 @@ AI 应该先问清楚：
 | 可拖拽分屏 | `patterns/workbench-shell` |
 | 执行 trace / 时间线任务条 | `patterns/swimlane-task` |
 | Pass-IR graph 节点卡 | `patterns/pass-ir-graph-node` |
+| 固定视角三维 Tensor / Load3D 体素状态 | `patterns/tensor-volume-canvas`；页面将业务状态转换为 voxel 数据并直接调用共享 renderer |
 | TorchVista / 模型 Graphviz / Qwen-7B / openPangu-2.0-Flash 架构页 / 报告 overlay | `patterns/model-graphviz` |
 | AIC / AIV / 950B 内存架构图 | `patterns/memory-architecture`、`patterns/aic-core-object`、`patterns/aiv-core-object`；iframe/inspector 嵌入默认 graph-only，使用 `createZoomController` 的 60% zoom、拖拽和 Command-wheel 缩放 |
 | 底部播放和 step 控制 | `patterns/floating-playback-control` |
