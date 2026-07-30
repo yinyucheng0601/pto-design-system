@@ -48,6 +48,11 @@
     "worldSize": 128,
     "sourceLevel": "demo"
   },
+  "useWhen": [
+    "placing the complete shared model architecture into Three.js Rank volumes",
+    "inspecting TP, PP, CP, EP, and EDP ownership across Layers, nodes, experts, and communication groups",
+    "switching between model, topology, grouping, Rank focus, and Layer focus without creating a second Layer renderer"
+  ],
   "allowedOverrides": [
     "options.model or options.config",
     "options.topology with explicit sourceLevel",

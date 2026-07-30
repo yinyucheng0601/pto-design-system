@@ -137,9 +137,17 @@ architecture、graph、map pane 在 IDE frame 内时还要检查：
 | PTO IDE / workbench shell | `patterns/ide-frame/pattern.json` |
 | 可拖拽 horizontal / vertical / nested panes | `patterns/workbench-shell/pattern.json` |
 | execution trace、swimlane、timeline task bars | `patterns/swimlane-task/pattern.json` |
+| NCHW / A1 / Load3D / Conv / tiling / code-recovery 三维 Tensor 体素 | `patterns/tensor-volume-canvas/pattern.json` |
 | Pass-IR op、tensor、incast、outcast、group node cards | `patterns/pass-ir-graph-node/pattern.json` |
 | TorchVista、model Graphviz、Qwen-7B / openPangu-2.0-Flash 折叠模型架构图、report overlays | `patterns/model-graphviz/pattern.json` |
+| 模型训练 evidence、phase、edge tags、related-node overlay | `patterns/model-training-graphviz/pattern.json` |
+| openPangu 深度堆叠模型架构、iso/front/right、平行标注 | `patterns/model-architecture-3d-deck/pattern.json` |
+| Three.js model-to-rank 放置、TP/PP/EP/EDP ownership | `patterns/model-parallel-rank-deck/pattern.json` |
+| 模型训练流、梯度、loss、metric、Layer telemetry sidecar | `patterns/model-architecture-training-sidecar/pattern.json` |
+| 训练指标曲线、异常、brush、step cursor | `patterns/training-metrics-chart/pattern.json` |
 | 完整 memory architecture diagrams | `patterns/memory-architecture/pattern.json` |
+| 硬件架构 viewport toolbar、zoom readout、iframe readiness、消息协议 | `patterns/hardware-architecture-viewport/pattern.json` |
+| UB / L1 / L0C tensor lifetime、buffer offset、peak usage、reuse links | `patterns/memory-reuse-viewer/pattern.json` |
 | AIC / AIV 内部对象壳 | `patterns/aic-core-object/pattern.json` 或 `patterns/aiv-core-object/pattern.json` |
 | Floating playback、step、pause、scrubber、collapsed playback chrome | 先问是否需要 playback；需要时再读 `patterns/floating-playback-control/pattern.json` |
 
@@ -153,6 +161,14 @@ architecture、graph、map pane 在 IDE frame 内时还要检查：
 4. 确认 `patterns/<pattern-id>/pattern.html` 在 preview 中调用 API，能被视觉验证。
 
 四点不一致时，先修共享 pattern contract 或 preview，再给产品页消费。不要让 preview card 承诺未导出、未执行的行为。
+
+#### Tensor Volume Canvas 复用规则
+
+For fixed-view three-dimensional tensor volumes, reuse pattern id `tensor-volume-canvas`. Load `patterns/tensor-volume-canvas/pattern.css` and `patterns/tensor-volume-canvas/pattern.js`, then call `window.PtoTensorVolumeCanvas.render(canvas, scene, options)`. The consuming page owns Load3D, Conv, tiling, code-recovery, playback, and selection rules and maps them only to the business-neutral `extent`, `axes`, and `voxels` scene contract. Use the returned controller's `update`, `resize`, and `destroy` lifecycle methods, and call `resize()` after theme changes so Canvas paint resolves the new semantic token values. Do not copy the fixed projection, voxel geometry, depth sorting, DPR, or ResizeObserver logic; do not add an iframe, camera, pan, zoom, drag interaction, private palette, or product chrome to the Pattern.
+
+#### Memory Reuse Viewer 复用规则
+
+For UB, L1, and L0C tensor lifetime or reuse analysis, reuse pattern id `memory-reuse-viewer`. Load its `pattern.css` and `pattern.js`, then call `window.PtoMemoryReuseViewer.render(container, data, options)` with Memory.txt-derived data or the preview fixture from `createDemoData`. Keep the returned `resize` and `destroy` lifecycle attached to the host. Mount the viewer directly inside an unscaled panel; do not place it inside the pan/zoom architecture canvas, copy its Canvas lifetime renderer, mutate generated tensor rectangles, or wrap it in an additional bordered preview frame.
 
 #### Memory Architecture 发布规则
 

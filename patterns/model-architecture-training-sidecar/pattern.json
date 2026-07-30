@@ -26,6 +26,11 @@
     ]
   },
   "globalApi": "window.PtoModelArchitectureTrainingSidecar",
+  "useWhen": [
+    "adding forward, backward, parameter-gradient, optimizer, loss, metric, and telemetry semantics to the canonical model-architecture-3d-deck right view",
+    "opening an in-scene Layer slice without mutating or replacing the base deck renderer",
+    "coordinating selectable training annotation bands with tooltips and a fixed Inspector"
+  ],
   "requiredApis": [
     "render(root, options)",
     "controller.selectLayer(layer)",

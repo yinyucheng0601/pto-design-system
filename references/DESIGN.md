@@ -303,6 +303,14 @@ Current pattern sources:
 - `patterns/memory-architecture/pattern.html`
 - `patterns/memory-architecture/pattern.css`
 - `patterns/memory-architecture/pattern.js`
+- `patterns/memory-reuse-viewer/pattern.json`
+- `patterns/memory-reuse-viewer/pattern.html`
+- `patterns/memory-reuse-viewer/pattern.css`
+- `patterns/memory-reuse-viewer/pattern.js`
+- `patterns/hardware-architecture-viewport/pattern.json`
+- `patterns/hardware-architecture-viewport/pattern.html`
+- `patterns/hardware-architecture-viewport/pattern.css`
+- `patterns/hardware-architecture-viewport/pattern.js`
 - `patterns/aic-core-object/pattern.json`
 - `patterns/aic-core-object/pattern.html`
 - `patterns/aic-core-object/pattern.css`
@@ -327,6 +335,22 @@ Current pattern sources:
 - `patterns/model-architecture-3d-deck/pattern.html`
 - `patterns/model-architecture-3d-deck/pattern.css`
 - `patterns/model-architecture-3d-deck/pattern.js`
+- `patterns/model-parallel-rank-deck/pattern.json`
+- `patterns/model-parallel-rank-deck/pattern.html`
+- `patterns/model-parallel-rank-deck/pattern.css`
+- `patterns/model-parallel-rank-deck/pattern.js`
+- `patterns/model-architecture-training-sidecar/pattern.json`
+- `patterns/model-architecture-training-sidecar/pattern.html`
+- `patterns/model-architecture-training-sidecar/pattern.css`
+- `patterns/model-architecture-training-sidecar/pattern.js`
+- `patterns/training-metrics-chart/pattern.json`
+- `patterns/training-metrics-chart/pattern.html`
+- `patterns/training-metrics-chart/pattern.css`
+- `patterns/training-metrics-chart/pattern.js`
+- `patterns/tensor-volume-canvas/pattern.json`
+- `patterns/tensor-volume-canvas/pattern.html`
+- `patterns/tensor-volume-canvas/pattern.css`
+- `patterns/tensor-volume-canvas/pattern.js`
 - `patterns/workbench-shell/pattern.json`
 - `patterns/workbench-shell/pattern.html`
 - `patterns/workbench-shell/pattern.css`
@@ -352,7 +376,13 @@ Rules:
 
 For swimlane task bars, reuse pattern id `swimlane-task-bar`. The canonical source is the canvas renderer, task colormap helper, and hover tooltip helper in `patterns/swimlane-task/pattern.js`, aligned to `pypto-swimlane-perf-tool/js/swimlane.js` and the PMU swimlane `.sl-tooltip` interaction. Call `createTaskColormap` for semantic, stitch, engine, or subgraph colors instead of local hash palettes. Do not rebuild it with DOM/CSS or rewrite segment math, color hashing, colormap selection, color mixing, border alpha, label truncation, or hover tip behavior locally.
 
+For fixed-view three-dimensional tensor volumes, reuse pattern id `tensor-volume-canvas`. The canonical source is `patterns/tensor-volume-canvas/pattern.css` plus `patterns/tensor-volume-canvas/pattern.js`; consume it directly with `window.PtoTensorVolumeCanvas.render(canvas, scene, options)`, not through an iframe. The page owns Load3D, Conv, tiling, code-recovery, playback, and selection rules and maps them to the business-neutral `extent`, `axes`, and `voxels` scene contract. The renderer owns fixed projection, voxel geometry, depth sorting, DPR, ResizeObserver behavior, and semantic-token palette resolution. Use the returned `update`, `resize`, and `destroy` lifecycle, calling `resize()` after theme changes. Do not add camera, pan, zoom, drag interaction, a private palette, or product chrome to the Pattern.
+
+For UB, L1, and L0C tensor lifetime or reuse analysis, reuse pattern id `memory-reuse-viewer`. The canonical source is `patterns/memory-reuse-viewer/pattern.css` plus `patterns/memory-reuse-viewer/pattern.js`; call `window.PtoMemoryReuseViewer.render(container, data, options)` with Memory.txt-derived buffers, tensor rows, source snippets, and CCE snippets. It owns the lifetime Canvas, offset/ruler geometry, peak usage, reuse links, tensor details, and controller lifecycle. Mount it directly in an unscaled panel and keep `resize()` and `destroy()` attached to the host. Do not embed it inside the architecture pan/zoom canvas, copy the renderer, mutate generated rectangles, or add a second bordered frame around the Pattern.
+
 For memory hierarchy diagrams, reuse pattern id `memory-architecture-layout`. The canonical source is the hybrid renderer in `patterns/memory-architecture/pattern.js`, extracted from `mem_viewer` DOM, BPG grid logic, MTE overlay behavior, hardware hover tips, and `ascend-hardware-map-v3` path-focus hover. New hardware pages such as 950B should extend the preset/config surface there and call `attachPathFocusInteractions` or `setPathFocus` / `clearPathFocus` for node and flow-step hover instead of copying `mem_viewer/index.html`, redrawing route geometry, or reimplementing `is-path-focused` / route glow locally. When the diagram is embedded in an iframe or inspector pane, consume the graph-only pattern surface: wrap the rendered stage in the shared memory architecture viewport/sizer/canvas classes, call `createZoomController`, default the viewport to `0.6`, and rely on drag pan plus Command-wheel zoom. Visible zoom buttons are optional product chrome, not part of the required memory-architecture iframe.
+
+For architecture-map host controls and message coordination, reuse pattern id `hardware-architecture-viewport`. Load its `pattern.css` and `pattern.js`, then call `window.PtoHardwareArchitectureViewport.mount(root, options)` for the shared dotted viewport, transparent title toolbar, detail visibility, zoom readout, iframe readiness, size synchronization, and standard hardware message protocol. Product pages provide architecture lists, preset mapping, and callbacks. Do not fork the toolbar grammar, add header metadata chips, replace the dotted stage, or invent alternatives to `hardware-ready`, `hardware-size`, `hardware-details`, `hardware-focus`, and `hardware-arch-change`.
 
 For AIC internal object shells, reuse pattern id `aic-core-object`. The canonical source is `patterns/aic-core-object/pattern.js`, driven by preset data rather than handwritten page DOM. Extend the preset to add or resize intermediate buffers for 950B; do not restyle the object chrome or clone the generated markup in local pages.
 
@@ -370,6 +400,10 @@ For depth-stacked model architecture views, reuse pattern id `model-architecture
 
 For Three.js model-to-rank placement, reuse pattern id `model-parallel-rank-deck`. Load `model-graphviz`, `model-architecture-3d-deck`, then `patterns/model-parallel-rank-deck/pattern.js`, supply its pinned local Three.js module, and call `window.PtoModelParallelRankDeck.render`. Its canonical demo partitions openPangu into TP2 × PP4 × CP1 × EP8 × EDP2 = 128 Ranks, generates explicit RankManifest ownership, and compiles all 1472 PP-owned Layer placements from the base pattern's shared `renderLayerScene()` output into one WebGL scene. It preserves every original Node, Cluster, Edge, label, and semantic ID in ModelSceneSpec/SceneIndex; overview LOD may suppress text but may not replace complete Layers with representative payloads, screenshots, textures, or glyphs. The combination pattern owns parallel topology layouts, single-click relationship selection, double-click Rank focus, Inspector, URL state, and communication overlays. Do not introduce a second Layer renderer or wording that promotes the demo topology to an official training configuration.
 
+For training semantics over the canonical 3D deck right view, reuse pattern id `model-architecture-training-sidecar`. Load it after `model-graphviz` and `model-architecture-3d-deck`, then call `window.PtoModelArchitectureTrainingSidecar.render`. The sidecar owns forward/backward flows, parameter-gradient and optimizer lifecycles, loss composition, selectable metric bands, in-scene Layer slices, tooltips, and the fixed Inspector while leaving the base deck immutable. Extend data and `renderLayerDetail`; do not restyle or replace base deck internals.
+
+For training metric series, anomalies, interest windows, and step cursors, reuse pattern id `training-metrics-chart`. Load its `pattern.css` and `pattern.js`, then call `window.PtoTrainingMetricsChart.render`. The SVG renderer owns axes, dual series, anomaly marks, brushing, cursor geometry, and controller lifecycle. Use visualization highlight ramps, `--danger` for anomalies, and `--primary` for brushes; do not reconstruct chart or interaction geometry locally.
+
 For split-pane resize behavior, reuse pattern id `workbench-shell`. It is a resize kernel, not an application shell. The canonical contract is `patterns/workbench-shell/pattern.css` plus `patterns/workbench-shell/pattern.js`. Use `window.PtoWorkbenchShell.initResizablePanes`, `createSplitGutter`, or `initNestedResizablePanes` for horizontal, vertical, and nested splits with min sizes, default ratio sizes, localStorage persistence, callbacks, keyboard resize, and destroy lifecycle. Pane sizes divide the space left after fixed gutters, so drag bars must not push the last pane outside the frame. Do not put page background, pane background, topbar, brand, title, subtitle, badge, pane header typography, canvas controls, or fixed preview height assumptions into `workbench-shell`. `initWorkbenchShell` and `initCanvasControls` remain compatibility APIs only and are deprecated for new pages.
 
 For PTO IDE framework shells, reuse pattern id `ide-frame`. The canonical contract is `patterns/ide-frame/pattern.css` plus `patterns/ide-frame/pattern.js`; load `patterns/ide-frame/vscode.css` for VS Code webviews. `ide-frame` owns a TRAE-like IDE frame: 4:3 host window ratio, the accepted standalone PTO IDE skin, transparent top chrome without divider borders or macOS traffic-light controls, dense 12-13px pane titles and mono metadata, with dense typography limited to chrome while pane body copy, descriptions, help, empty states, and Inspector prose remain on the 14px body role, utility window controls, optional activity rail, pane headers, pane-local preview tabs, domain toolbars, generic preview surfaces, renderer slots, inspector docks, optional floating playback mounting, and split initialization. The accepted standalone skin is defined in `pattern.css`: `--ide-gradient-bg` and `--ide-aura-bg` provide a 100%-intensity multi-point gradient/aura background; `--ide-frame-pane-fill` is `color-mix(... 80%, transparent)`; `--ide-frame-pane-header-fill` is 72%; `--ide-frame-pane-backdrop-filter` is `blur(18px) saturate(1.18)`; and `--ide-frame-pane-shadow` provides the soft pane lift. Product pages must not recreate those values locally or replace them with opaque panels. Standalone pages may hide the left activity rail with `hidden`, `data-activity-rail="hidden"`, or `data-hide-activity-rail="true"` when the product flow does not need search/git/terminal navigation. Standalone explorer starts at 300px by default through `data-pixel-sizes`, then the remaining panes divide the remaining width by ratio. Tabs belong inside the preview/editor pane, not in a separate top-level chrome band. Playback must use `floating-playback-control`; do not recreate a footer playback bar, scrubber, collapse state, or shell chrome in `ide-frame`. It must not ship business content: no file names, kernel names, graph node data, timeline lanes, trace data, inspector values, placeholder tab names, placeholder code rows, or default textual slot content. Consuming pages provide all domain content and renderers. It must call the `workbench-shell` resize helper and must not override `.pto-workbench-shell__*` internals. Use `data-host="standalone"` when PTO owns topbar, navigation, preview-pane tabs, and status strip; use `data-host="vscode-webview"` when VS Code owns explorer, editor tabs, search, git, terminal, settings, command palette, keybindings, global status, notifications, progress, theme colors, and baseline fonts.
@@ -379,7 +413,10 @@ For floating playback controls, reuse pattern id `floating-playback-control`. Th
 Current extraction progress:
 
 - `swimlane-task-bar`: shared canvas renderer and hover tooltip helper registered and previewed
+- `tensor-volume-canvas`: shared fixed-view Canvas renderer registered and previewed with NCHW/A1 fixtures, padding/window/current/skipped states, responsive DPR resize, and a direct-embedding controller API
+- `memory-reuse-viewer`: shared UB/L1/L0C tensor lifetime and reuse renderer registered and previewed with theme bridge, unscaled direct embedding, and resize/destroy lifecycle
 - `memory-architecture-layout`: shared full-stage 950B renderer registered and previewed with graph-only iframe, default 60% zoom, drag pan, and Command-wheel zoom
+- `hardware-architecture-viewport`: shared architecture host toolbar, dotted viewport, detail/zoom controls, size synchronization, and hardware message protocol registered and previewed
 - `aic-core-object`: shared config-driven object renderer registered and previewed
 - `aiv-core-object`: shared config-driven object renderer registered and previewed
 - `pass-ir-graph-node`: shared hybrid renderer registered and previewed; original Pass-IR business page still uses its local renderer until a separate integration pass is approved
@@ -387,6 +424,8 @@ Current extraction progress:
 - `model-training-graphviz`: shared model-graphviz training overlay renderer registered and previewed; training products should pass graph/evidence/phase data instead of embedding a second Graphviz page shell
 - `model-architecture-3d-deck`: shared hybrid CSS 3D renderer registered and previewed with openPangu-2.0-Flash, projected PP partitions, DP/PP/TP/EP annotations, and iso/front/right views; the original training product remains on its integrated local renderer pending a dedicated state-bridge refactor
 - `model-parallel-rank-deck`: shared 128-rank Three.js composition registered and previewed with complete GPU-compiled Layer records, deterministic PP/TP/EP/EDP manifests, topology transforms, relationship selection, double-click Rank focus, and Inspector-backed semantic details
+- `model-architecture-training-sidecar`: shared non-destructive training overlay registered and previewed with forward/backward flows, gradients, optimizer state, loss composition, metric bands, Layer slices, and fixed Inspector details
+- `training-metrics-chart`: shared SVG training metrics renderer registered and previewed with dual series, anomaly marks, interest-window brushing, and step cursor synchronization
 - `workbench-shell`: shared split / resize kernel registered as a secondary dependency; old visual shell APIs are compatibility-only and it is not shown as a top-level preview card
 - `ide-frame`: shared PTO IDE framework shell registered and previewed with standalone and VS Code webview host modes; content-free slots only; standalone host mode includes the shared gradient/aura + translucent blurred pane skin by default
 - `floating-playback-control`: shared DOM/CSS playback toolbar registered, previewed, and adopted by Memory Viewer v1/v2

@@ -8,6 +8,7 @@
   <script>
     (() => {
       const params = new URLSearchParams(window.location.search);
+      if (params.get('embed') === '1') document.documentElement.dataset.embed = 'true';
       const applyPreviewTheme = (theme) => {
         if (theme !== 'light' && theme !== 'dark' && theme !== 'glass') return;
         document.documentElement.dataset.theme = theme;
@@ -38,6 +39,19 @@
 
     body {
       padding: var(--space-6);
+    }
+
+    html[data-embed='true'] body {
+      padding: 0;
+    }
+
+    html[data-embed='true'] .preview-heading,
+    html[data-embed='true'] .approval-note {
+      display: none;
+    }
+
+    html[data-embed='true'] .preview-page {
+      gap: var(--space-4);
     }
 
     .preview-page {
@@ -214,30 +228,25 @@
     <header class="preview-heading">
       <div class="preview-heading__copy">
         <h1>Tensor Volume Canvas Pattern</h1>
-        <p>已注册的共享 Canvas renderer。左侧保留 API Visualizer 视觉基准，右侧验证正式 Pattern 的固定视角和状态协议。</p>
+        <p>用 canonical NCHW fixture、Load3D 状态覆盖和响应式容器验证共享 renderer 的固定视角、状态协议与 DPR 行为。</p>
       </div>
       <button class="btn btn-ghost" type="button" id="themeToggle">Light mode</button>
     </header>
 
-    <section class="preview-grid" aria-label="Reference and registered pattern comparison">
+    <section class="preview-grid" aria-label="Canonical fixtures and registered renderer coverage">
       <article class="preview-card">
         <div class="preview-card__head">
-          <h2>Existing source reference</h2>
-          <p>从 Operator Planning · API Visualizer · Load3D 提取的 4×4×3 NCHW 基准场景。</p>
+          <h2>Canonical NCHW fixture</h2>
+          <p>4×4×3 fixture 验证固定投影、深度排序、轴标、标签和 semantic-token 重绘。</p>
         </div>
         <div class="reference-stage">
           <div class="reference-specimen">
-            <span class="canvas-stage__label">API Visualizer reference fixture</span>
-            <canvas id="referenceCanvas" aria-label="Extracted API Visualizer reference fixture"></canvas>
+            <span class="canvas-stage__label">Canonical NCHW renderer fixture</span>
+            <canvas id="referenceCanvas" aria-label="Canonical NCHW tensor volume fixture"></canvas>
           </div>
           <div class="reference-contract">
             <code>depthX=.52u · depthY=.38u · fixed view</code>
-            <a
-              class="btn btn-ghost btn-sm"
-              href="../../../pto_compute-graph-viewer/operator-planning/operator%20planning.html?embed=load3d&amp;api=Load3D"
-              target="_blank"
-              rel="noopener"
-            >Open source page</a>
+            <span>shared renderer fixture</span>
           </div>
         </div>
       </article>
@@ -343,7 +352,7 @@
 
       const renderer = window.PtoTensorVolumeCanvas;
       const controllers = [
-        renderer.render(document.getElementById('referenceCanvas'), nchwScene, { ariaLabel: 'Extracted API Visualizer reference fixture' }),
+        renderer.render(document.getElementById('referenceCanvas'), nchwScene, { ariaLabel: 'Canonical NCHW tensor volume fixture' }),
         renderer.render(document.getElementById('nchwCanvas'), nchwScene, { ariaLabel: 'NCHW neutral tensor volume' }),
         renderer.render(document.getElementById('a1Canvas'), a1Scene, { ariaLabel: 'A1 tensor volume with Load3D states' }),
         renderer.render(document.getElementById('narrowCanvas'), a1Scene, { ariaLabel: 'Narrow tensor volume preview' }),

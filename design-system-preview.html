@@ -1745,6 +1745,14 @@
       height: 220px !important;
     }
 
+    #pattern-previews .preview-embed-frame[data-pattern-preview='tensor-volume-canvas'] {
+      height: 980px !important;
+    }
+
+    #pattern-previews .preview-embed-frame[data-pattern-preview='memory-reuse-viewer'] {
+      height: 720px !important;
+    }
+
     #pattern-previews .preview-embed-frame[data-pattern-preview='memory-architecture'] {
       height: 720px !important;
     }
@@ -2163,7 +2171,9 @@
             <table class="agent-table">
               <tr><td>Stable entry</td><td>Every pattern must expose a stable consumer entry. Static visual primitives use documented CSS classes; DOM/SVG/canvas generation, drag behavior, zoom, routing, persistence, or synchronized state must go through a <code>window.Pto*Pattern</code> or <code>window.Pto*</code> helper. Business pages must not copy generated DOM or restyle internal pattern classes.</td></tr>
               <tr><td><code>swimlane-task-bar</code></td><td>Use <code>patterns/swimlane-task/pattern.js</code> and call <code>window.PtoSwimlaneTaskPattern.drawTaskBar</code>, <code>createTaskColormap</code>, and <code>initHoverTooltip</code>. The canonical task bar is canvas-rendered, sourced from <code>pypto-swimlane-perf-tool/js/swimlane.js</code>, and the hover tip mirrors the PMU swimlane <code>.sl-tooltip</code> interaction. Do not rebuild it with DOM/CSS or rewrite segment math, colormap selection, or hover tip behavior locally.</td></tr>
+              <tr><td><code>tensor-volume-canvas</code></td><td>Load <code>patterns/tensor-volume-canvas/pattern.css</code> and <code>pattern.js</code>, then call <code>window.PtoTensorVolumeCanvas.render</code> with a business-neutral <code>extent</code>, <code>axes</code>, and <code>voxels</code> scene. Use the returned <code>update</code>, <code>resize</code>, and <code>destroy</code> lifecycle. Do not rewrite projection, depth sorting, DPR, or ResizeObserver logic; do not add iframe embedding, camera interaction, a private palette, or product chrome.</td></tr>
               <tr><td><code>memory-architecture-layout</code></td><td>Use <code>patterns/memory-architecture/pattern.js</code>. Call <code>window.PtoMemoryArchitecturePattern.renderArchitecture</code> to build the stage, <code>createRouteOverlay</code> for MTE routes, <code>attachHoverInteractions</code> for hardware tips, and <code>attachPathFocusInteractions</code> or <code>setPathFocus</code> / <code>clearPathFocus</code> for <code>ascend-hardware-map-v3</code>-style flow-step hover. Extend preset data for 910B/950; do not copy raw <code>mem_viewer</code> HTML, redraw route geometry locally, reimplement <code>is-path-focused</code> route glow, or change route <code>stroke-width</code> for hover/playback focus.</td></tr>
+              <tr><td><code>memory-reuse-viewer</code></td><td>Load <code>patterns/memory-reuse-viewer/pattern.css</code> and <code>pattern.js</code>, then call <code>window.PtoMemoryReuseViewer.render</code> with Memory.txt-derived buffer, tensor lifetime, source, and CCE data. Keep the returned <code>resize</code> and <code>destroy</code> lifecycle attached to an unscaled panel. Do not mount it inside the architecture pan/zoom canvas, copy the lifetime renderer, mutate generated rectangles, or add a second bordered frame.</td></tr>
               <tr><td><code>hardware-architecture-viewport</code></td><td>Use <code>patterns/hardware-architecture-viewport/pattern.css</code> and <code>pattern.js</code>, then call <code>window.PtoHardwareArchitectureViewport.mount</code> for architecture-map host controls, detail visibility, zoom readout, iframe readiness, size sync, and the standard hardware postMessage protocol. Do not replace the shared dotted viewport, title toolbar, zoom cluster, or standard <code>hardware-ready</code> / <code>hardware-size</code> / <code>hardware-focus</code> messages with page-local variants.</td></tr>
               <tr><td><code>model-architecture-3d-deck</code></td><td>Use <code>patterns/model-architecture-3d-deck/pattern.css</code> and <code>pattern.js</code>, then call <code>window.PtoModelArchitecture3dDeck.render</code>. The shared hybrid renderer preserves the source openPangu 46-layer Dense/MoE/Sparse MLA/mHC/MTP architecture and owns dark/light switching, iso/front/right transforms, drag rotate/direct pan, wheel zoom, projected PP stage wireframes, DP/PP/TP/EP badges, and right-view operator labels. Pass model data and callbacks only; do not simplify the model graph, copy projection math, or hand-position labels in product CSS.</td></tr>
               <tr><td><code>model-parallel-rank-deck</code></td><td>Load it after <code>model-architecture-3d-deck</code>, supply the pinned local Three.js module, and call <code>window.PtoModelParallelRankDeck.render</code>. The canonical demo compiles every original Layer Node, Cluster, and Edge into GPU batches inside 128 transparent Rank volumes for TP2 × PP4 × CP1 × EP8 × EDP2. Do not substitute glyphs, screenshots, representative Layers, or consumer-owned Layer styles.</td></tr>
@@ -2471,6 +2481,48 @@
             <span class="token-badge">source: patterns/swimlane-task/pattern.js</span>
             <span class="token-badge">contract: canvas renderer + hover tip</span>
             <span class="state-badge">Pattern</span>
+          </div>
+        </article>
+
+        <article class="preview-card preview-card-full-row">
+          <div class="preview-card-head">
+            <h3 class="preview-card-title">Tensor Volume Canvas Pattern</h3>
+            <div class="preview-card-class">固定视角 Canvas：NCHW / A1 / Load3D 体素状态；共享投影与 DPR，无相机交互</div>
+          </div>
+          <div class="preview-stage preview-stack">
+            <div class="preview-inline">
+              <a class="btn btn-ghost" href="./patterns/tensor-volume-canvas/pattern.html">查看完整示例</a>
+            </div>
+            <div class="preview-embed">
+              <iframe class="preview-embed-frame" data-pattern-preview="tensor-volume-canvas" data-src="./patterns/tensor-volume-canvas/pattern.html?embed=1" src="about:blank" title="Tensor Volume Canvas Pattern Preview" loading="lazy"></iframe>
+            </div>
+          </div>
+          <div class="preview-meta">
+            <span class="token-badge">pattern id: tensor-volume-canvas</span>
+            <span class="token-badge">source: patterns/tensor-volume-canvas/pattern.js</span>
+            <span class="token-badge">contract: fixed projection + voxel state protocol + responsive DPR</span>
+            <span class="state-badge">Canvas Pattern</span>
+          </div>
+        </article>
+
+        <article class="preview-card preview-card-full-row">
+          <div class="preview-card-head">
+            <h3 class="preview-card-title">Memory Reuse Viewer Pattern</h3>
+            <div class="preview-card-class">UB / L1 / L0C：tensor lifetime、buffer offset、peak usage、reuse links、source 与 CCE 关联检查</div>
+          </div>
+          <div class="preview-stage preview-stack">
+            <div class="preview-inline">
+              <a class="btn btn-ghost" href="./patterns/memory-reuse-viewer/pattern.html">查看完整示例</a>
+            </div>
+            <div class="preview-embed">
+              <iframe class="preview-embed-frame" data-pattern-preview="memory-reuse-viewer" data-src="./patterns/memory-reuse-viewer/pattern.html?embed=1" src="about:blank" title="Memory Reuse Viewer Pattern Preview" loading="lazy"></iframe>
+            </div>
+          </div>
+          <div class="preview-meta">
+            <span class="token-badge">pattern id: memory-reuse-viewer</span>
+            <span class="token-badge">source: patterns/memory-reuse-viewer/pattern.js</span>
+            <span class="token-badge">contract: tensor lifetime canvas + detail inspector + direct embedding</span>
+            <span class="state-badge">Hybrid Pattern</span>
           </div>
         </article>
 
@@ -3463,6 +3515,8 @@
       const modelArchitecturePanels = Array.from(document.querySelectorAll('[data-model-architecture-panel]'));
       const fixedPatternPreviewIds = new Set([
         'swimlane-task',
+        'tensor-volume-canvas',
+        'memory-reuse-viewer',
         'memory-architecture',
         'hardware-architecture-viewport',
         'model-architecture-3d-deck',

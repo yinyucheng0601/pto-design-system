@@ -47,6 +47,11 @@
       "contract": "Must hide standalone chrome and rely on VS Code for explorer, editor tabs, search, git, terminal, settings, command palette, keybindings, global status, notifications, progress, theme colors, and baseline fonts."
     }
   ],
+  "useWhen": [
+    "building a standalone PTO IDE or multi-pane workbench page with shared top chrome, activity rail, pane headers, inspector docks, and status strip",
+    "hosting the same PTO pane framework inside a VS Code webview while delegating native IDE chrome to VS Code",
+    "combining workbench-shell resizing with optional floating-playback-control without moving business content into the shared shell"
+  ],
   "requiredApis": [
     "window.PtoIdeFrame.init(root, options)",
     "window.PtoIdeFrame.initAll()"
