@@ -6,9 +6,7 @@
     'base',
     'ghost',
     'padding',
-    'channel-padding',
     'window',
-    'sampled',
     'current',
     'skipped',
   ]);
@@ -98,7 +96,7 @@
     const base = tokenRgb(tokenName);
     const background = tokenRgb('--background');
     const foreground = tokenRgb('--foreground');
-    const strength = state === 'sampled' || state === 'current'
+    const strength = state === 'current'
       ? 1
       : state === 'window'
         ? 0.9
@@ -108,8 +106,8 @@
       east: rgbString(mixRgb(base, background, strength * 0.76)),
       south: rgbString(mixRgb(base, background, strength * 0.62)),
       edge: rgbString(mixRgb(base, foreground, 0.58)),
-      lineWidth: state === 'current' ? 1.5 : state === 'sampled' ? 1.25 : state === 'window' ? 1.15 : 1,
-      topLineWidth: state === 'current' ? 2 : state === 'sampled' ? 1.6 : state === 'window' ? 1.4 : 1,
+      lineWidth: state === 'current' ? 1.5 : state === 'window' ? 1.15 : 1,
+      topLineWidth: state === 'current' ? 2 : state === 'window' ? 1.4 : 1,
     };
   }
 
@@ -125,18 +123,10 @@
     }
     if (state === 'padding') {
       return {
-        top: rgbString(tokenRgb('--surface-4'), 0.82),
-        east: rgbString(tokenRgb('--surface-3'), 0.72),
-        south: rgbString(tokenRgb('--surface-2'), 0.68),
-        edge: rgbString(foreground, 0.18),
-      };
-    }
-    if (state === 'channel-padding') {
-      return {
-        top: rgbString(tokenRgb('--surface-4'), 0.42),
-        east: rgbString(tokenRgb('--surface-3'), 0.36),
-        south: rgbString(tokenRgb('--surface-2'), 0.32),
-        edge: rgbString(foreground, 0.14),
+        top: 'rgba(90, 96, 104, 0.25)',
+        east: 'rgba(54, 60, 68, 0.25)',
+        south: 'rgba(42, 48, 56, 0.25)',
+        edge: 'rgba(190, 200, 212, 0.18)',
       };
     }
     if (state === 'skipped') {
@@ -148,10 +138,10 @@
       };
     }
     return {
-      top: cssValue('--surface-4', 'Canvas'),
-      east: cssValue('--surface-3', 'Canvas'),
-      south: cssValue('--surface-2', 'Canvas'),
-      edge: rgbString(tokenRgb('--background'), 0.62),
+      top: 'rgb(74, 80, 88)',
+      east: 'rgb(59, 65, 74)',
+      south: 'rgb(48, 54, 64)',
+      edge: 'rgba(10, 12, 16, 0.72)',
       lineWidth: 1,
       topLineWidth: 1,
     };
@@ -207,24 +197,15 @@
     if (
       voxel.state === 'ghost'
       || voxel.state === 'padding'
-      || voxel.state === 'channel-padding'
       || voxel.state === 'skipped'
     ) {
       return neutralFaces(voxel.state);
     }
 
-    const state = voxel.state === 'window' || voxel.state === 'sampled'
-      ? voxel.state
-      : 'base';
+    const state = voxel.state === 'window' ? 'window' : 'base';
     let token = voxel.tone === 'neutral' && state !== 'base'
       ? '--primary'
       : TONE_TOKENS[voxel.tone];
-    if (
-      state === 'sampled'
-      && (voxel.tone === 'neutral' || voxel.tone === 'input')
-    ) {
-      token = '--primary-hover';
-    }
     return token ? tokenFaces(token, state) : neutralFaces(state);
   }
 
@@ -316,7 +297,7 @@
     const frontBottomRight = p(extent.columns, extent.rows, 0);
     const backTopLeft = p(0, 0, extent.depth);
     ctx.save();
-    ctx.fillStyle = cssValue('--foreground-secondary', 'CanvasText');
+    ctx.fillStyle = cssValue('--foreground', 'CanvasText');
     ctx.font = `700 13px ${cssValue('--font-mono', 'ui-monospace, monospace')}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
@@ -374,7 +355,7 @@
         const center = drawVoxel(ctx, layout, voxel, facesFor(voxel));
         const shouldLabel = voxel.label
           && (options.autoLabelDensity === false || layout.unit >= 12 || voxel.state === 'current');
-        if (shouldLabel && voxel.state !== 'skipped' && voxel.state !== 'channel-padding') {
+        if (shouldLabel && voxel.state !== 'skipped') {
           ctx.fillStyle = voxel.state === 'current'
             ? cssValue('--background', 'Canvas')
             : cssValue('--foreground', 'CanvasText');
