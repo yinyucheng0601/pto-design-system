@@ -112,7 +112,7 @@ const controller = window.PtoTensorVolumeCanvas.render(
 | `reduction` | 归约数据 |
 | `fusion` | 融合数据 |
 
-`neutral` 和 `padding` 使用 API Visualizer Load3D 固定色板；其他 Tone 使用 PTO 语义 Token。不支持业务页面传入自定义颜色。
+`neutral` 和 `padding` 使用 API Visualizer Load3D 固定色板；其他 Tone 使用 PTO 语义 Token。没有选中、播放、当前处理或其他语义倾向时，体素默认使用 `neutral`，不要仅根据“输入 / 输出对象身份”自动上色。不支持业务页面传入自定义颜色。
 
 ## State 可选值
 
