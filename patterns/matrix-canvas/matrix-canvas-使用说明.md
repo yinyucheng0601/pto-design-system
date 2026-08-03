@@ -120,7 +120,7 @@ const controller = window.PtoMatrixCanvas.render(
 | `reduction` | 归约数据 |
 | `fusion` | 融合数据 |
 
-Tone 只表达数据语义。业务页面不应传入自定义颜色或覆盖 Pattern 的共享色板。
+Tone 只表达明确的数据语义或交互强调。没有选中、播放、当前处理或其他语义倾向时，普通格和 `createAggregatedCells` 生成的聚合格都默认使用 `neutral`。业务页面不应仅根据“输入 / 输出对象身份”自动上色，也不应传入自定义颜色或覆盖 Pattern 的共享色板。
 
 ## Style 可选值
 
@@ -129,7 +129,37 @@ Tone 只表达数据语义。业务页面不应传入自定义颜色或覆盖 Pa
 | `value` | 普通有值格 |
 | `empty` | 空格或弱内容格 |
 | `padding` | Padding 来源格，使用斜线纹理 |
+| `broadcast` | 广播生成格；在底层 Tone 上叠加半透明灰色蒙版，边界沿用普通连续网格 |
 | `aggregate` | 一个格子代表一片源数据的缩略格 |
+
+### 广播矩阵
+
+`broadcast` 用于区分真实存储的源数据与通过广播语义生成的数据。例如 Bias 从 `[1,16]` 广播为 `[16,16]` 时，第一行保留 `value`，后 15 行标记为 `broadcast`。
+
+```js
+const sourceColumns = 16;
+const targetRows = 16;
+const cells = [];
+
+for (let row = 0; row < targetRows; row += 1) {
+  for (let column = 0; column < sourceColumns; column += 1) {
+    cells.push({
+      row,
+      column,
+      value: bias[column],
+      style: row === 0 ? 'value' : 'broadcast',
+    });
+  }
+}
+
+const scene = {
+  extent: { rows: targetRows, columns: sourceColumns },
+  axes: { rows: 'broadcast rows', columns: 'bias columns' },
+  cells,
+};
+```
+
+`broadcast` 只表达数据来源，不代表弱化或 Padding。灰色蒙版覆盖在底层 Tone 之上，因此不会丢失输入、输出等语义；它也可以与 `current`、`selected` 等 States 叠加。`current` 保持最高视觉优先级，不叠加灰色蒙版。
 
 ## States 可选值
 
@@ -141,7 +171,7 @@ Tone 只表达数据语义。业务页面不应传入自定义颜色或覆盖 Pa
 | `column-focus` | 当前列 |
 | `written` | 已写入 |
 | `selected` | 已选择；聚合格使用完整蓝色填充 |
-| `current` | 当前处理格，使用警示色和内描边 |
+| `current` | 当前处理格，使用警示色和强化网格边界，不添加内部描边 |
 | `muted` | 弱化显示 |
 
 点击格子不会由 Pattern 自动写入 `selected`。Pattern 通过 `onSelect` 把点击结果交给业务，业务更新 Scene 后才会显示选中态。
@@ -290,7 +320,7 @@ const aggregateCells = window.PtoMatrixCanvas.createAggregatedCells(
 | `autoFit` | boolean | `true` | 初始和未改动视图时是否自动适配 |
 | `minZoom` | number | `0.015` | 最小缩放比例 |
 | `maxZoom` | number | `12` | 最大缩放比例 |
-| `scrollSpeed` | number | `1` | 滚轮浏览速度，内部限制为 `0.1–4` |
+| `scrollSpeed` | number | `1` | 横向/纵向滚动速度，内部限制为 `0.1–4` |
 | `padding.top` | number | `38` | 顶部留白 |
 | `padding.right` | number | `28` | 右侧留白 |
 | `padding.bottom` | number | `42` | 底部留白 |
@@ -300,8 +330,9 @@ const aggregateCells = window.PtoMatrixCanvas.createAggregatedCells(
 
 ## 交互
 
-- 滚轮或触控板：浏览矩阵。
-- `Shift + 滚轮`：横向浏览。
+- 滚轮：在矩阵范围内纵向滚动，到达上下边界后停止。
+- 触控板横向手势或 `Shift + 滚轮`：在矩阵范围内横向滚动，到达左右边界后停止。
+- 矩阵小于视窗时保持居中，滚轮事件继续交给外层页面。
 - `Ctrl/Command + 滚轮`：以指针位置为中心缩放。
 - `F` 或 `0`：适配完整矩阵。
 - `+` 或 `=`：放大。
@@ -309,7 +340,7 @@ const aggregateCells = window.PtoMatrixCanvas.createAggregatedCells(
 - 鼠标悬停：显示格子范围、数值或聚合统计。
 - 鼠标点击：通过 `onSelect` 上报格子。
 
-Pattern 不支持拖拽平移。
+Pattern 不支持拖拽平移，也不会把矩阵滚出边界形成无限画布。
 
 ## 更新、视图控制和销毁
 

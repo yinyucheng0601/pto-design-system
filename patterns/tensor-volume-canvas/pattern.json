@@ -49,6 +49,7 @@
         "reduction",
         "fusion"
       ],
+      "toneDefault": "neutral when no interaction state or explicit semantic emphasis is supplied",
       "state": [
         "base",
         "ghost",
@@ -120,6 +121,7 @@
   },
   "behavior": [
     "fixed depth projection uses depthX = 0.52 unit and depthY = 0.38 unit",
+    "base voxels default to neutral tone; semantic tones are opt-in and should represent an explicit interaction state or semantic emphasis",
     "voxels render from deep to shallow for stable occlusion",
     "ResizeObserver and resize() refit the scene without changing the fixed camera",
     "backing-store dimensions follow devicePixelRatio without changing CSS size",
