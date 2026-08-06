@@ -223,6 +223,18 @@
   user-select: none;
 }
 
+.pto-model-rank-deck[data-show-header="false"] .pto-model-rank-deck__viewport {
+  top: 0;
+}
+
+.pto-model-rank-deck[data-show-inspector="false"] .pto-model-rank-deck__header {
+  right: 0;
+}
+
+.pto-model-rank-deck[data-show-inspector="false"] .pto-model-rank-deck__viewport {
+  right: 0;
+}
+
 .pto-model-rank-deck__canvas,
 .pto-model-rank-deck__canvas canvas {
   position: absolute;
@@ -443,7 +455,7 @@
 
 .pto-model-rank-deck__link.is-pp { --rank-link: #38BDF8; }
 .pto-model-rank-deck__link.is-tp { --rank-link: #A855F7; }
-.pto-model-rank-deck__link.is-ep { --rank-link: #F97316; }
+.pto-model-rank-deck__link.is-ep { --rank-link: #14B8A6; }
 .pto-model-rank-deck__link.is-edp { --rank-link: #8B5CF6; }
 .pto-model-rank-deck__link-hit { fill: none; stroke: transparent; stroke-width: 18; pointer-events: stroke; cursor: pointer; }
 

@@ -57,6 +57,21 @@
       "preview": "patterns/model-parallel-rank-deck/pattern.html"
     },
     {
+      "id": "hierarchical-timeline",
+      "path": "patterns/hierarchical-timeline/pattern.json",
+      "preview": "patterns/hierarchical-timeline/pattern.html"
+    },
+    {
+      "id": "communication-traffic-sankey",
+      "path": "patterns/communication-traffic-sankey/pattern.json",
+      "preview": "patterns/communication-traffic-sankey/pattern.html"
+    },
+    {
+      "id": "moe-routing",
+      "path": "patterns/moe-routing/pattern.json",
+      "preview": "patterns/moe-routing/pattern.html"
+    },
+    {
       "id": "model-architecture-training-sidecar",
       "path": "patterns/model-architecture-training-sidecar/pattern.json",
       "preview": "patterns/model-architecture-training-sidecar/pattern.html"

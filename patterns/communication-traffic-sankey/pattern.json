@@ -1,0 +1,75 @@
+{
+  "id": "communication-traffic-sankey",
+  "name": "Hierarchical Communication Traffic Sankey",
+  "type": "svg",
+  "approvalStatus": "approved",
+  "description": "A pure hierarchical communication Sankey rendered as a signal field. Rank rails expand into configured child endpoints such as Expert, Token Group, AIC, AIV, or Unattributed; spectral ribbons cross a fabric gate while product chrome, metrics, legends, and timeline panels remain outside the pattern.",
+  "closestExistingPattern": "none",
+  "whyExistingIsInsufficient": "Memory architecture patterns explain physical topology but cannot express many-to-many rank traffic, conservation, routing skew, or source-to-destination attribution.",
+  "source": {
+    "patternHtml": "patterns/communication-traffic-sankey/pattern.html",
+    "patternCss": "patterns/communication-traffic-sankey/pattern.css",
+    "renderScript": "patterns/communication-traffic-sankey/pattern.js",
+    "evidence": [
+      "github_issues/PTOAS/PTOAS_issues.md#254",
+      "github_issues/pypto-lib/pypto-lib_issues.md#156",
+      "github_issues/pypto-lib/pypto-lib_issues.md#456",
+      "github_issues/pypto-lib/pypto-lib_issues.md#502"
+    ]
+  },
+  "visualObjects": [
+    "Expandable Rank Rail",
+    "Configurable Child Endpoint",
+    "Expert Capacity Marker",
+    "Unattributed Node",
+    "Spectral Traffic Ribbon",
+    "Selection Signal Trace",
+    "Fabric Signal Gate"
+  ],
+  "states": ["normal", "hover", "link-selected", "child-selected", "rank-expanded", "expert-hot", "capacity-warning", "overflow", "empty-window"],
+  "requiredApis": [
+    "window.PtoCommunicationTrafficSankeyPattern.render(container, options)",
+    "controller.setData(data)",
+    "controller.setWindow(start, end)",
+    "controller.setVisualConfig(config)",
+    "controller.toggleRank(side, rank)",
+    "controller.focusEventIds(ids)",
+    "controller.clearSelection()",
+    "controller.destroy()"
+  ],
+  "dataContract": {
+    "graph": ["id", "title", "primaryMeasure", "ranks", "events", "timeRange", "defaultWindow", "defaultExpanded"],
+    "rank": ["rank", "node", "optional sourceChildren / targetChildren / children"],
+    "event": ["id", "timestamp", "duration", "value or bytes", "sourceRank", "targetRank", "sourceChild or sourceEngine", "targetChild or targetEngine", "streamId", "taskId", "transport"]
+  },
+  "encoding": {
+    "ribbonWidth": "sum(event.value or event.bytes) for events whose start timestamp is in the selected window",
+    "ribbonGradientStart": "source rank, or gray when the expanded source endpoint is Unattributed",
+    "ribbonGradientEnd": "destination rank, or gray when the expanded destination endpoint is Unattributed",
+    "ribbonTransition": "direct interpolation from source-rank color to destination-rank color without a forced white midpoint",
+    "nodeHeight": "aggregated send or receive value in the active primaryMeasure",
+    "rankRail": "rank containment and drill state",
+    "rankHeader": "collapsed and expanded states share one title/detail typography, text anchor, and side-relative position; expansion only changes the chevron and reveals the rail and children",
+    "childEndpoint": "configured Expert, Token Group, AIC, AIV, or Unattributed hierarchy",
+    "capacityMarker": "current child value divided by configured capacity limit",
+    "fabricGate": "a visual crossing plane, not a transfer node",
+    "selectionTrace": "the currently focused aggregated route"
+  },
+  "allowedOverrides": [
+    "container size",
+    "data and initial expanded ranks",
+    "profile window through controller.setWindow()",
+    "non-semantic preview effects through controller.setVisualConfig()",
+    "selection and expansion callbacks"
+  ],
+  "forbiddenOverrides": [
+    "embedding product titles, KPIs, provenance badges, legends, timeline controls, or explanatory copy inside the pattern root",
+    "using glow or gradients to alter the byte-proportional ribbon boundary",
+    "reducing an entire aggregated ribbon's opacity because it contains some unattributed events",
+    "recreating the Sankey geometry in a consuming page",
+    "treating Rank-to-child expansion as a physical transfer hop"
+  ],
+  "agentReuseRule": "Load the shared pattern.css and pattern.js, mount one empty container, and let the shared SVG renderer own all graph internals. Product panels may control the window or consume selection callbacks but must remain sibling surfaces.",
+  "mockBoundary": "The repository supports the multi-rank problem and AllToAllv contract, but preview timestamps, measures, durations, child correlations, and capacity values are mock. Production data must preserve missing correlations as Unattributed and missing capacity as missing.",
+  "previewGate": "Approved by user on 2026-08-03 for registration and product consumption."
+}

@@ -1,0 +1,62 @@
+{
+  "id": "hierarchical-timeline",
+  "name": "Hierarchical Timeline",
+  "type": "canvas",
+  "description": "Resizable hierarchical timeline for profiling evidence. Owns expandable rows, a profiling window, horizontal zoom, event selection, and shared Swimlane Task Bar rendering while leaving domain hierarchy and event semantics to consumer data.",
+  "source": {
+    "visualContract": "Generalized from the hierarchy, zoom, window, and event-selection behaviors validated in pangu-moe-trainviz/microbatch-lifecycle-swimlane-mock.html; business-specific PP/MB/activation semantics are deliberately excluded.",
+    "renderScript": "patterns/hierarchical-timeline/pattern.js",
+    "patternHtml": "patterns/hierarchical-timeline/pattern.html",
+    "patternCss": "patterns/hierarchical-timeline/pattern.css",
+    "primitiveDependency": "patterns/swimlane-task/pattern.js"
+  },
+  "useWhen": [
+    "Events must be inspected across three or more expandable hierarchy levels.",
+    "A selected profiling window drives aggregation in another linked visualization.",
+    "Users need fit-to-window and deep horizontal zoom without losing row identity.",
+    "Timeline events must link to Inspector evidence through stable IDs."
+  ],
+  "doNotUseWhen": [
+    "The surface contains only one compact, non-expandable row.",
+    "There is no meaningful time, step, duration, overlap, or event ordering.",
+    "A real-time packet animation is the product question; this pattern represents captured or derived profiling events."
+  ],
+  "dataContract": {
+    "timeRange": "{ min, max, step }",
+    "window": "{ start, end }",
+    "rows": "[{ id, label, parentId?, depth?, events: [{ id, start, end, label, displayName?, color?, sourceEventIds?, transactionId?, objectRefs? }] }]",
+    "defaultExpandedIds": "string[]"
+  },
+  "requiredApis": [
+    "window.PtoHierarchicalTimelinePattern.render(container, options)",
+    "controller.setData(data)",
+    "controller.setWindow(start, end, emit)",
+    "controller.setActiveRows(ids)",
+    "controller.focusRelatedEventIds(ids)",
+    "controller.clearSelection(emit)",
+    "controller.fit()",
+    "controller.zoomIn()",
+    "controller.zoomOut()",
+    "controller.resize()",
+    "controller.destroy()"
+  ],
+  "states": [
+    "expanded",
+    "collapsed",
+    "active-row",
+    "selected-event",
+    "related-event",
+    "inside-window",
+    "outside-window",
+    "window-resize",
+    "zoomed"
+  ],
+  "rules": [
+    "Consumers define the hierarchy; the pattern must not hard-code microbatch, pipeline, communication, rank, engine, or operator levels.",
+    "Use stable event IDs and sourceEventIds to connect this timeline to graphs, Sankey ribbons, and Inspector evidence.",
+    "Render event bars through PtoSwimlaneTaskPattern.drawTaskBar; do not duplicate task-bar geometry or tooltip styling.",
+    "The profiling window represents an aggregate interval, not live packet motion.",
+    "Keep product-level tabs, diagnoses, filters, and actions outside the pattern."
+  ],
+  "agentReuseRule": "Load swimlane-task/pattern.js before hierarchical-timeline/pattern.js, then provide rows and events through render(). Do not copy the hierarchy, zoom, window, task-bar, or tooltip implementation into a business page."
+}

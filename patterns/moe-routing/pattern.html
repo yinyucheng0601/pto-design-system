@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MoE Routing Pattern</title>
+  <link rel="stylesheet" href="../../tokens/foundation.css">
+  <link rel="stylesheet" href="../../tokens/semantic.css">
+  <link rel="stylesheet" href="../../tokens/components.css">
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="./pattern.css">
+  <style>
+    html,body{height:100%;margin:0;background:var(--background);overflow:hidden}
+    #moeRoutingPattern{height:100%}
+  </style>
+</head>
+<body>
+  <main id="moeRoutingPattern" aria-label="openPangu MoE routing pattern"></main>
+  <script src="./demo-data.js"></script>
+  <script src="./pattern.js"></script>
+  <script>
+    const params=new URLSearchParams(location.search);
+    const theme=params.get('theme')==='light'?'light':'dark';
+    document.documentElement.dataset.theme=theme;
+    window.moeRoutingController=window.PtoMoeRouting.render('#moeRoutingPattern',{
+      initialView:params.get('view')==='journey'?'journey':'layer',
+      initialLayer:27,
+      initialToken:37,
+      activeRanks:[2,6,10,14],
+      showChrome:true,
+      syncDocumentTheme:true,
+      theme
+    });
+    window.addEventListener('message',event=>{
+      if(event.data?.type==='pto-preview-theme')window.moeRoutingController?.setTheme(event.data.theme==='light'?'light':'dark');
+    });
+  </script>
+</body>
+</html>

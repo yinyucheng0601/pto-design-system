@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hierarchical Timeline Pattern</title>
+  <link rel="stylesheet" href="../../tokens/foundation.css" />
+  <link rel="stylesheet" href="../../tokens/semantic.css" />
+  <link rel="stylesheet" href="../../tokens/components.css" />
+  <link rel="stylesheet" href="../../css/style.css" />
+  <link rel="stylesheet" href="../swimlane-task/pattern.css" />
+  <link rel="stylesheet" href="./pattern.css" />
+</head>
+<body class="hierarchical-timeline-preview-page">
+  <main class="hierarchical-timeline-preview-stage" id="timeline-preview"></main>
+  <script src="../swimlane-task/pattern.js"></script>
+  <script src="./pattern.js"></script>
+  <script>
+    window.PtoHierarchicalTimelinePattern.render(document.getElementById('timeline-preview'), {
+      data: {
+        ariaLabel: 'Example hierarchical profiling timeline',
+        timeRange: { min: 0, max: 80, step: 1 },
+        window: { start: 14, end: 58 },
+        defaultExpandedIds: ['iteration', 'communication', 'collective'],
+        rows: [
+          { id: 'iteration', label: 'Iteration', depth: 0, events: [{ id: 'iteration-1', start: 4, end: 70, label: 'Iteration', color: '#5f78d8' }] },
+          { id: 'communication', parentId: 'iteration', depth: 1, label: 'Communication', events: [{ id: 'communication-1', start: 14, end: 48, label: 'Communication', color: '#44b8a3' }] },
+          { id: 'collective', parentId: 'communication', depth: 2, label: 'Collective', events: [{ id: 'collective-1', start: 18, end: 43, label: 'All-to-all', color: '#dc70a5' }] },
+          { id: 'rank-0', parentId: 'collective', depth: 3, label: 'Rank 0', events: [{ id: 'rank-0-event', start: 19, end: 35, label: 'Transfer', color: '#58c9ba' }] },
+          { id: 'rank-2', parentId: 'collective', depth: 3, label: 'Rank 2', events: [{ id: 'rank-2-event', start: 23, end: 43, label: 'Transfer tail', color: '#f0c75e' }] },
+          { id: 'wait', parentId: 'iteration', depth: 1, label: 'Exposed wait', events: [{ id: 'wait-event', start: 43, end: 51, label: 'Wait', color: '#d65b75' }] }
+        ]
+      }
+    });
+  </script>
+</body>
+</html>

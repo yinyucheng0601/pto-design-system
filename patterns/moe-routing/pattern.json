@@ -1,0 +1,48 @@
+{
+  "id": "moe-routing",
+  "name": "MoE Routing Explorer",
+  "type": "svg",
+  "description": "Linked single-layer rank routing and single-token whole-network journey views for dense MoE traces.",
+  "source": {
+    "classification": "rendered-pattern",
+    "visualContract": "Generated SVG geometry, Top-K routing spokes, weighted-sum path, rank load state, and anchored tooltip behavior are owned by pattern.js.",
+    "patternHtml": "patterns/moe-routing/pattern.html",
+    "patternCss": "patterns/moe-routing/pattern.css",
+    "renderScript": "patterns/moe-routing/pattern.js",
+    "originalModule": "examples/openpangu-moe-routing"
+  },
+  "globalApi": "window.PtoMoeRouting",
+  "requiredApis": [
+    "render(root, options)",
+    "controller.setView(view)",
+    "controller.setLayer(layer)",
+    "controller.setToken(tokenId)",
+    "controller.setActiveRanks(rankIds)",
+    "controller.setTheme(theme)",
+    "controller.fit()",
+    "controller.setZoom(scale)",
+    "controller.zoomIn()",
+    "controller.zoomOut()",
+    "controller.step(direction)",
+    "controller.getState()",
+    "controller.destroy()"
+  ],
+  "useWhen": [
+    "comparing token load across 256 routed experts placed on 128 ranks at one MoE layer",
+    "following one token through Dense L0-L1 and MoE L2-L45",
+    "embedding MoE routing evidence inside a PTO workbench without duplicating page chrome"
+  ],
+  "allowedOverrides": [
+    "model and trace data",
+    "initial view, layer, token, active rank slice, language, and theme",
+    "showChrome for a standalone preview",
+    "selection and state-change callbacks"
+  ],
+  "forbiddenOverrides": [
+    "reimplementing expert geometry or weighted-sum routing in a consuming page",
+    "using an iframe when the renderer can be mounted directly",
+    "drawing page-local toolbar or theme chrome when embedded in ide-frame",
+    "changing gray inactive, foreground Top-K, primary weighted-sum, warning overload, or light-mode stripe semantics outside the pattern"
+  ],
+  "agentReuseRule": "Load shared PTO tokens, pattern.css, a compatible routing-data provider, and pattern.js. Mount with showChrome:false inside ide-frame and drive layer/token/view through the controller."
+}
