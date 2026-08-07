@@ -206,6 +206,7 @@
 .pto-moe-routing .moe-expert-node.is-inactive {
   fill: var(--foreground-disabled);
   stroke: none;
+  pointer-events: none;
 }
 
 .pto-moe-routing .moe-expert-node.is-routed {

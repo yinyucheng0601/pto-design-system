@@ -232,7 +232,8 @@
         const anomaly = anomalyLayers.get(layer);
         const band = append(svg, 'rect', { x, y: 42, width: columnW, height: 1187, class: `moe-layer-band${layer % 2 ? ' is-alternate' : ''}${anomaly ? ' is-anomaly' : ''}` });
         if (anomaly) tooltipTarget(band, anomaly.tooltip || `L${layer} · anomalous routing hotspot`, { type: 'layer-anomaly', layer });
-        append(svg, 'text', { x: x + columnW / 2, y: 28, 'text-anchor': 'middle', class: `moe-layer-label${anomaly ? ' is-anomaly' : ''}` }, `L${layer}`);
+        const layerLabel = append(svg, 'text', { x: x + columnW / 2, y: 28, 'text-anchor': 'middle', class: `moe-layer-label${anomaly ? ' is-anomaly' : ''}` }, `L${layer}`);
+        if (anomaly) tooltipTarget(layerLabel, anomaly.tooltip || `L${layer} · anomalous routing hotspot`, { type: 'layer-anomaly', layer });
         if (layer < 2) {
           const dense = tooltipTarget(append(svg, 'g'), `L${layer} · Dense FFN`, { type: 'dense-layer', layer });
           append(dense, 'rect', { x: x + 14, y: 600, width: columnW - 28, height: 36, rx: 18, class: 'moe-dense-node' });
