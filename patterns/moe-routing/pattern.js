@@ -18,6 +18,7 @@
     if (!validation.valid) throw new Error(`Invalid routing trace: ${validation.errors.join(' ')}`);
 
     const firstLayer = model.moeLayers.includes(options.initialLayer) ? options.initialLayer : model.moeLayers[0];
+    const anomalyLayers = new Map((options.anomalyLayers || []).map((entry) => [Number(entry.layer), entry]));
     const state = {
       view: options.initialView === 'journey' ? 'journey' : 'layer',
       layer: firstLayer,
@@ -30,6 +31,8 @@
     };
     const showChrome = options.showChrome !== false;
     let activeTooltipTarget = null;
+    let panGesture = null;
+    let suppressSelection = false;
     let destroyed = false;
     let controller = null;
     let resizeObserver = null;
@@ -101,8 +104,9 @@
       return `M ${x1} ${y1} C ${x1} ${y1 - bend}, ${x2} ${y2 + bend}, ${x2} ${y2}`;
     }
 
-    function renderQueue(group, expertId, load, threshold, isTarget, x, y, rankId) {
-      append(group, 'text', { x, y: y + 8, class: 'moe-expert-label' }, `E${expertId}`);
+    function renderQueue(group, expertId, load, threshold, isTarget, x, y, rankId, isAnomaly = false) {
+      const label = append(group, 'text', { x, y: y + 8, class: `moe-expert-label${isAnomaly ? ' is-anomaly' : ''}` }, `E${expertId}`);
+      if (isAnomaly) tooltipTarget(label, `L${state.layer} · R${rankId} · E${expertId} overload: ${load} routed copies`, { type: 'expert', layer: state.layer, expertId, rankId, load, overloaded: true });
       for (let slot = 0; slot < 5; slot += 1) {
         const filled = slot < Math.min(load, 5);
         const overflow = load > threshold && slot === 4;
@@ -110,7 +114,7 @@
           cx: x + 34 + slot * 9,
           cy: y + 4.5,
           r: 4.2,
-          class: `moe-queue-slot${filled ? ' is-filled' : ''}${overflow ? ' is-overflow' : ''}`,
+          class: `moe-queue-slot${filled ? ' is-filled' : ''}${overflow ? ' is-overflow' : ''}${isAnomaly ? ' is-anomaly' : ''}`,
         });
         if (overflow) tooltipTarget(token, `E${expertId} overload: ${load} copies > threshold ${threshold.toFixed(1)}`, { type: 'expert', expertId, rankId, load, overloaded: true });
       }
@@ -128,6 +132,9 @@
       const focusRoute = layerRoutes[state.tokenId];
       const targetExperts = new Set(focusRoute.map((route) => route.expertId));
       const targetRanks = new Set(focusRoute.map((route) => route.rankId));
+      const layerAnomaly = anomalyLayers.get(state.layer);
+      const anomalyRanks = new Set(layerAnomaly?.rankIds || []);
+      const anomalyExperts = new Set(layerAnomaly?.expertIds || []);
       const width = 2120;
       const height = 900;
       const gridX = 154;
@@ -151,14 +158,15 @@
         const row = Math.floor(rankId / 16);
         const x = gridX + column * (cardW + gapX);
         const y = gridY + row * (cardH + gapY);
-        const expertA = rankId * model.expertsPerRank;
-        const expertB = expertA + 1;
+        const ownedExperts = dataApi.expertsForRank ? dataApi.expertsForRank(rankId) : [rankId * model.expertsPerRank, rankId * model.expertsPerRank + 1];
+        const [expertA, expertB] = ownedExperts;
         const loadA = stats.expertLoads[expertA];
         const loadB = stats.expertLoads[expertB];
         const hot = loadA > stats.overloadThreshold || loadB > stats.overloadThreshold;
         const idle = loadA + loadB === 0;
         const target = targetRanks.has(rankId);
         const active = state.activeRanks.has(rankId);
+        const anomaly = anomalyRanks.has(rankId) || anomalyExperts.has(expertA) || anomalyExperts.has(expertB);
         const group = append(svg, 'g', { 'data-rank': rankId });
         const reason = hot ? 'overload threshold exceeded' : idle ? 'no routed copies' : 'normal load';
         tooltipTarget(group, `R${rankId} · E${expertA}: ${loadA} · E${expertB}: ${loadB} · ${reason}${active ? ' · active traffic slice' : ''}`, {
@@ -166,11 +174,11 @@
         });
         append(group, 'rect', {
           x, y, width: cardW, height: cardH, rx: 7,
-          class: `moe-rank-card${hot ? ' is-hot' : ''}${idle ? ' is-idle' : ''}${target ? ' is-target' : ''}${active ? ' is-context' : ''}`,
+          class: `moe-rank-card${hot ? ' is-hot' : ''}${idle ? ' is-idle' : ''}${target ? ' is-target' : ''}${active ? ' is-context' : ''}${anomaly ? ' is-anomaly' : ''}`,
         });
         append(group, 'text', { x: x + 7, y: y + 15, class: 'moe-rank-label' }, `R${rankId}`);
-        renderQueue(group, expertA, loadA, stats.overloadThreshold, targetExperts.has(expertA), x + 12, y + 27, rankId);
-        renderQueue(group, expertB, loadB, stats.overloadThreshold, targetExperts.has(expertB), x + 12, y + 50, rankId);
+        renderQueue(group, expertA, loadA, stats.overloadThreshold, targetExperts.has(expertA), x + 12, y + 27, rankId, anomalyExperts.has(expertA));
+        renderQueue(group, expertB, loadB, stats.overloadThreshold, targetExperts.has(expertB), x + 12, y + 50, rankId, anomalyExperts.has(expertB));
       }
 
       const bank = tooltipTarget(append(svg, 'g'), `${model.batchSize} input tokens at L${state.layer}`, { type: 'token', tokenId: state.tokenId, layer: state.layer });
@@ -221,8 +229,10 @@
 
       for (let layer = 0; layer < model.totalLayers; layer += 1) {
         const x = startX + layer * columnW;
-        append(svg, 'rect', { x, y: 42, width: columnW, height: 1187, class: `moe-layer-band${layer % 2 ? ' is-alternate' : ''}` });
-        append(svg, 'text', { x: x + columnW / 2, y: 28, 'text-anchor': 'middle', class: 'moe-layer-label' }, `L${layer}`);
+        const anomaly = anomalyLayers.get(layer);
+        const band = append(svg, 'rect', { x, y: 42, width: columnW, height: 1187, class: `moe-layer-band${layer % 2 ? ' is-alternate' : ''}${anomaly ? ' is-anomaly' : ''}` });
+        if (anomaly) tooltipTarget(band, anomaly.tooltip || `L${layer} · anomalous routing hotspot`, { type: 'layer-anomaly', layer });
+        append(svg, 'text', { x: x + columnW / 2, y: 28, 'text-anchor': 'middle', class: `moe-layer-label${anomaly ? ' is-anomaly' : ''}` }, `L${layer}`);
         if (layer < 2) {
           const dense = tooltipTarget(append(svg, 'g'), `L${layer} · Dense FFN`, { type: 'dense-layer', layer });
           append(dense, 'rect', { x: x + 14, y: 600, width: columnW - 28, height: 36, rx: 18, class: 'moe-dense-node' });
@@ -318,6 +328,55 @@
       if (event.relatedTarget?.closest?.('[data-tooltip]')) return;
       activeTooltipTarget = null;
       elements.tooltip.hidden = true;
+    }
+
+    function beginPan(event) {
+      if (event.button !== 0) return;
+      const scroll = event.currentTarget;
+      panGesture = { scroll, pointerId: event.pointerId, x: event.clientX, y: event.clientY, left: scroll.scrollLeft, top: scroll.scrollTop, moved: false };
+      scroll.setPointerCapture?.(event.pointerId);
+      scroll.classList.add('is-panning');
+    }
+
+    function movePan(event) {
+      if (!panGesture || event.pointerId !== panGesture.pointerId) return;
+      const dx = event.clientX - panGesture.x;
+      const dy = event.clientY - panGesture.y;
+      panGesture.moved = panGesture.moved || Math.hypot(dx, dy) > 3;
+      if (!panGesture.moved) return;
+      event.preventDefault();
+      panGesture.scroll.scrollLeft = panGesture.left - dx;
+      panGesture.scroll.scrollTop = panGesture.top - dy;
+      elements.tooltip.hidden = true;
+    }
+
+    function endPan(event) {
+      if (!panGesture || event.pointerId !== panGesture.pointerId) return;
+      const { scroll, pointerId, moved } = panGesture;
+      panGesture = null;
+      scroll.classList.remove('is-panning');
+      try { scroll.releasePointerCapture?.(pointerId); } catch (_) { /* no-op */ }
+      suppressSelection = moved;
+      if (moved) globalScope.requestAnimationFrame(() => { suppressSelection = false; });
+    }
+
+    function wheelZoom(event) {
+      event.preventDefault();
+      const scroll = event.currentTarget;
+      const rect = scroll.getBoundingClientRect();
+      const anchorX = event.clientX - rect.left;
+      const anchorY = event.clientY - rect.top;
+      const oldScale = state.scale;
+      const contentX = scroll.scrollLeft + anchorX;
+      const contentY = scroll.scrollTop + anchorY;
+      state.fitMode = false;
+      applyScale(oldScale * Math.exp(-event.deltaY * 0.0015));
+      const ratio = state.scale / oldScale;
+      globalScope.requestAnimationFrame(() => {
+        scroll.scrollLeft = contentX * ratio - anchorX;
+        scroll.scrollTop = contentY * ratio - anchorY;
+      });
+      notifyState();
     }
 
     function emitSelection(target) {
@@ -438,10 +497,21 @@
       svg.addEventListener('pointerover', showTooltip);
       svg.addEventListener('pointermove', moveTooltip);
       svg.addEventListener('pointerout', hideTooltip);
-      svg.addEventListener('click', (event) => emitSelection(event.target.closest?.('[data-selection]')));
+      svg.addEventListener('click', (event) => {
+        if (suppressSelection) { suppressSelection = false; return; }
+        emitSelection(event.target.closest?.('[data-selection]'));
+      });
       svg.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' || event.key === ' ') emitSelection(event.target.closest?.('[data-selection]'));
       });
+    });
+    Object.values(elements.panels).forEach((panel) => {
+      const scroll = panel.querySelector('.moe-svg-scroll');
+      scroll.addEventListener('pointerdown', beginPan);
+      scroll.addEventListener('pointermove', movePan);
+      scroll.addEventListener('pointerup', endPan);
+      scroll.addEventListener('pointercancel', endPan);
+      scroll.addEventListener('wheel', wheelZoom, { passive: false });
     });
     controller.setTheme(state.theme);
     syncView({ notify: false });

@@ -74,6 +74,13 @@
 .pto-moe-routing .moe-svg-scroll {
   overflow: auto;
   scrollbar-color: var(--border-strong) transparent;
+  cursor: grab;
+  touch-action: none;
+}
+
+.pto-moe-routing .moe-svg-scroll.is-panning {
+  cursor: grabbing;
+  user-select: none;
 }
 
 .pto-moe-routing .moe-diagram {
@@ -123,6 +130,10 @@
   fill: color-mix(in srgb, var(--warning) 22%, var(--surface-2));
 }
 
+.pto-moe-routing .moe-rank-card.is-anomaly {
+  fill: color-mix(in srgb, var(--danger) 18%, var(--surface-2));
+}
+
 .pto-moe-routing .moe-rank-label,
 .pto-moe-routing .moe-axis-label,
 .pto-moe-routing .moe-layer-label {
@@ -155,6 +166,16 @@
 
 .pto-moe-routing .moe-queue-slot.is-overflow {
   fill: var(--warning);
+}
+
+.pto-moe-routing .moe-queue-slot.is-anomaly.is-filled,
+.pto-moe-routing .moe-queue-slot.is-anomaly.is-overflow,
+.pto-moe-routing .moe-expert-label.is-anomaly {
+  fill: var(--danger);
+}
+
+.pto-moe-routing .moe-expert-label.is-anomaly {
+  font-weight: 700;
 }
 
 .pto-moe-routing .moe-flow-bus {
@@ -209,6 +230,17 @@
 :root[data-theme='light'] .pto-moe-routing .moe-layer-band.is-alternate,
 .pto-moe-routing[data-theme='light'] .moe-layer-band.is-alternate {
   fill: #f8f8f8;
+}
+
+.pto-moe-routing .moe-layer-band.is-anomaly,
+:root[data-theme='light'] .pto-moe-routing .moe-layer-band.is-anomaly,
+.pto-moe-routing[data-theme='light'] .moe-layer-band.is-anomaly {
+  fill: color-mix(in srgb, var(--danger) 14%, var(--moe-pattern-bg));
+}
+
+.pto-moe-routing .moe-layer-label.is-anomaly {
+  fill: var(--danger);
+  font-weight: 700;
 }
 
 .pto-moe-routing .moe-aggregate-path {
