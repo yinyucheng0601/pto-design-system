@@ -334,9 +334,7 @@
     function beginPan(event) {
       if (event.button !== 0) return;
       const scroll = event.currentTarget;
-      panGesture = { scroll, pointerId: event.pointerId, x: event.clientX, y: event.clientY, left: scroll.scrollLeft, top: scroll.scrollTop, moved: false };
-      scroll.setPointerCapture?.(event.pointerId);
-      scroll.classList.add('is-panning');
+      panGesture = { scroll, pointerId: event.pointerId, x: event.clientX, y: event.clientY, left: scroll.scrollLeft, top: scroll.scrollTop, moved: false, captured: false };
     }
 
     function movePan(event) {
@@ -345,6 +343,11 @@
       const dy = event.clientY - panGesture.y;
       panGesture.moved = panGesture.moved || Math.hypot(dx, dy) > 3;
       if (!panGesture.moved) return;
+      if (!panGesture.captured) {
+        panGesture.captured = true;
+        panGesture.scroll.setPointerCapture?.(event.pointerId);
+        panGesture.scroll.classList.add('is-panning');
+      }
       event.preventDefault();
       panGesture.scroll.scrollLeft = panGesture.left - dx;
       panGesture.scroll.scrollTop = panGesture.top - dy;
@@ -353,10 +356,10 @@
 
     function endPan(event) {
       if (!panGesture || event.pointerId !== panGesture.pointerId) return;
-      const { scroll, pointerId, moved } = panGesture;
+      const { scroll, pointerId, moved, captured } = panGesture;
       panGesture = null;
       scroll.classList.remove('is-panning');
-      try { scroll.releasePointerCapture?.(pointerId); } catch (_) { /* no-op */ }
+      if (captured) try { scroll.releasePointerCapture?.(pointerId); } catch (_) { /* no-op */ }
       suppressSelection = moved;
       if (moved) globalScope.requestAnimationFrame(() => { suppressSelection = false; });
     }
