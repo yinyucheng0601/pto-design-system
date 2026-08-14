@@ -1,0 +1,1208 @@
+{
+  "schema_version": "model_architecture.v1",
+  "model": {
+    "name": "openPangu-2.0-Flash FlashAttentionScore",
+    "framework": "pytorch/vllm/ascend-npu",
+    "source_root": "/Users/yin/pto/model-architecture/sources"
+  },
+  "extraction_scope": {
+    "kind": "full_source",
+    "notes": [
+      "Source-validated FlashAttentionScore operator subgraph extracted from openPangu attention implementation.",
+      "This is an architecture subgraph, not a profiling trace slice.",
+      "Reference-granularity operators include MsdPreProcess/MsdPostProcess, RowMax/Sum, Add(init 0), Mul(exp), Quant, Log, and softmax LSE branch."
+    ]
+  },
+  "sources": [
+    {
+      "id": "runtime_config",
+      "kind": "config",
+      "path": "/Users/yin/pto/model-architecture/sources/openPangu-2.0-Flash/config.json",
+      "role": "source_of_truth"
+    },
+    {
+      "id": "hf_config_class",
+      "kind": "source",
+      "path": "/Users/yin/pto/model-architecture/sources/openPangu-2.0-Flash/configuration_openpangu_v2.py",
+      "role": "source_of_truth"
+    },
+    {
+      "id": "model_impl",
+      "kind": "source",
+      "path": "/Users/yin/pto/model-architecture/sources/openPangu-2.0-Infer/components/omni-npu/src/omni_npu/v1/models/pangu/pangu_v2_moe.py",
+      "role": "source_of_truth"
+    },
+    {
+      "id": "attention_impl",
+      "kind": "source",
+      "path": "/Users/yin/pto/model-architecture/sources/openPangu-2.0-Infer/components/omni-npu/src/omni_npu/v1/layers/attention/npu_pangu.py",
+      "role": "source_of_truth"
+    },
+    {
+      "id": "mtp_impl",
+      "kind": "source",
+      "path": "/Users/yin/pto/model-architecture/sources/openPangu-2.0-Infer/components/omni-npu/src/omni_npu/v1/models/pangu/pangu_v2_moe_mtp.py",
+      "role": "source_of_truth"
+    },
+    {
+      "id": "moe_impl",
+      "kind": "source",
+      "path": "/Users/yin/pto/model-architecture/sources/openPangu-2.0-Infer/components/omni-npu/src/omni_npu/layers/fused_moe/layer.py",
+      "role": "supporting_evidence"
+    },
+    {
+      "id": "model_card",
+      "kind": "model_card",
+      "path": "/Users/yin/pto/model-architecture/sources/openPangu-2.0-Flash/README.md",
+      "role": "supporting_evidence"
+    }
+  ],
+  "symbol_table": {
+    "B": "batch",
+    "T": "sequence",
+    "H": 2560,
+    "V": 151552,
+    "L": 46,
+    "N_h": 48,
+    "D_nope": 128,
+    "D_rope": 64,
+    "D_qk": 192,
+    "D_v": 128,
+    "R_q": 1024,
+    "R_kv": 512,
+    "R_kv_plus_rope": 576,
+    "I_dense": 9216,
+    "I_moe": 1024,
+    "E": 256,
+    "E_shared": 1,
+    "top_k": 8,
+    "K_index": 2048,
+    "N_index": 24,
+    "S_max": 524288,
+    "S_mhc": 4,
+    "N_sink": 128,
+    "W_router": 3,
+    "N_mtp": 3
+  },
+  "nodes": [
+    {
+      "id": "o_causal_conv",
+      "kind": "op",
+      "label": "Output Causal Conv1D",
+      "op_type": "CausalConv1D",
+      "attrs": {
+        "kernel_width_symbol": "W_router",
+        "path": "MoME output stream",
+        "residual_connection": "fused_in_mome_conv"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "NPUPanguSparseAttention creates o_conv for MoME",
+          "confidence": "confirmed",
+          "line": 1023
+        }
+      ]
+    },
+    {
+      "id": "flash_mm_qk",
+      "kind": "op",
+      "label": "MM QK",
+      "op_type": "MatMul",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "Q × Kᵀ",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "flash_add_bias",
+      "kind": "op",
+      "label": "Add",
+      "op_type": "Add",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "PSE / attention bias",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "flash_scale",
+      "kind": "op",
+      "label": "Mul",
+      "op_type": "Mul",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "scale attention score",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "flash_select",
+      "kind": "op",
+      "label": "Select",
+      "op_type": "Select",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "boolean attention mask",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "flash_softmax",
+      "kind": "op",
+      "label": "Flash Softmax",
+      "op_type": "Softmax",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "online softmax",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "flash_dropout",
+      "kind": "op",
+      "label": "DropOutDoMask",
+      "op_type": "Dropout",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "optional dropout mask",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "flash_mm_pv",
+      "kind": "op",
+      "label": "MM PV",
+      "op_type": "MatMul",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "P × V",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "flash_div",
+      "kind": "op",
+      "label": "Div",
+      "op_type": "Div",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "softmax normalization",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "query_tensor",
+      "kind": "input",
+      "label": "Query",
+      "role": "logical query tensor",
+      "attrs": {
+        "graph_view": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "logical query tensor",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "key_tensor",
+      "kind": "input",
+      "label": "Key",
+      "role": "logical key tensor",
+      "attrs": {
+        "graph_view": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "logical key tensor",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "value_tensor",
+      "kind": "input",
+      "label": "Value",
+      "role": "logical value tensor",
+      "attrs": {
+        "graph_view": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "logical value tensor",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "attention_bias_tensor",
+      "kind": "input",
+      "label": "PSE / Mask",
+      "role": "optional attention bias or mask",
+      "attrs": {
+        "graph_view": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "optional attention bias or mask",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "attention_out_tensor",
+      "kind": "output",
+      "label": "Attention Out",
+      "role": "attention output tensor",
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "attention output returned by sparse attention",
+          "confidence": "confirmed"
+        }
+      ]
+    },
+    {
+      "id": "flash_msd_pre_q",
+      "kind": "op",
+      "label": "MsdPreProcess (Q)",
+      "op_type": "MsdPreProcess",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "Q dequant/preprocess",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "flash_rowmax_q",
+      "kind": "op",
+      "label": "RowMax/Sum (QK)",
+      "op_type": "RowMaxSum",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "online row max and sum",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "flash_msd_post_q",
+      "kind": "op",
+      "label": "MsdPostProcess (QK)",
+      "op_type": "MsdPostProcess",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "QK score postprocess",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "flash_msd_pre_kv",
+      "kind": "op",
+      "label": "MsdPreProcess (PV)",
+      "op_type": "MsdPreProcess",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "PV dequant/preprocess",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "flash_rowmax_pv",
+      "kind": "op",
+      "label": "RowMax/Sum (PV)",
+      "op_type": "RowMaxSum",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "PV online row max and sum",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "flash_add_init",
+      "kind": "op",
+      "label": "Add (init 0)",
+      "op_type": "Add",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "initialize accumulated output",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "flash_mul_exp",
+      "kind": "op",
+      "label": "Mul (exp)",
+      "op_type": "Mul",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "exponential rescale",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "flash_quant",
+      "kind": "op",
+      "label": "Quant",
+      "op_type": "Quant",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "quantize attention output",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "flash_log",
+      "kind": "op",
+      "label": "Log",
+      "op_type": "Log",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "log softmax normalization",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "flash_lse_add",
+      "kind": "op",
+      "label": "Add (softmax_lse)",
+      "op_type": "Add",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "compose softmax LSE output",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "flash_msd_pre_v",
+      "kind": "op",
+      "label": "MsdPreProcess (V)",
+      "op_type": "MsdPreProcess",
+      "attrs": {
+        "stage": "flash_attention_score"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "V dequant/preprocess",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "qk_score_tensor",
+      "kind": "state",
+      "state_type": "intermediate_tensor",
+      "label": "QK Score",
+      "role": "intermediate tensor value",
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "QK Score",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "scaled_score_tensor",
+      "kind": "state",
+      "state_type": "intermediate_tensor",
+      "label": "Scaled Score",
+      "role": "intermediate tensor value",
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "Scaled Score",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "masked_score_tensor",
+      "kind": "state",
+      "state_type": "intermediate_tensor",
+      "label": "Masked Score",
+      "role": "intermediate tensor value",
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "Masked Score",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "softmax_prob_tensor",
+      "kind": "state",
+      "state_type": "intermediate_tensor",
+      "label": "Softmax P",
+      "role": "intermediate tensor value",
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "Softmax P",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "softmax_max_tensor",
+      "kind": "state",
+      "state_type": "intermediate_tensor",
+      "label": "Softmax Max",
+      "role": "intermediate tensor value",
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "Softmax Max",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "softmax_sum_tensor",
+      "kind": "state",
+      "state_type": "intermediate_tensor",
+      "label": "Softmax Sum",
+      "role": "intermediate tensor value",
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "Softmax Sum",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "pv_output_tensor",
+      "kind": "state",
+      "state_type": "intermediate_tensor",
+      "label": "PV Output",
+      "role": "intermediate tensor value",
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "PV Output",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "softmax_lse_tensor",
+      "kind": "state",
+      "state_type": "intermediate_tensor",
+      "label": "Softmax LSE",
+      "role": "intermediate tensor value",
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "Softmax LSE",
+          "confidence": "inferred"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_q_pre",
+      "source": "query_tensor",
+      "target": "flash_msd_pre_q",
+      "tensor": {
+        "name": "query",
+        "shape": "[B,T,N_h,D]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "query",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_key_pre",
+      "source": "key_tensor",
+      "target": "flash_msd_pre_kv",
+      "tensor": {
+        "name": "key",
+        "shape": "[B,T,N_h,D]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "key",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_pre_q_mm",
+      "source": "flash_msd_pre_q",
+      "target": "flash_mm_qk",
+      "tensor": {
+        "name": "q_preprocessed",
+        "shape": "[B,T,N_h,D]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "q_preprocessed",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_pre_k_mm",
+      "source": "flash_msd_pre_kv",
+      "target": "flash_mm_qk",
+      "tensor": {
+        "name": "k_preprocessed",
+        "shape": "[B,T,N_h,D]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "k_preprocessed",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_mm_rowmax",
+      "source": "flash_mm_qk",
+      "target": "flash_rowmax_q",
+      "tensor": {
+        "name": "qk_score",
+        "shape": "[B,T,N_h,D]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "qk_score",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_rowmax_post",
+      "source": "flash_rowmax_q",
+      "target": "flash_msd_post_q",
+      "tensor": {
+        "name": "row_max_sum",
+        "shape": "[B,T,N_h,D]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "row_max_sum",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_post_add",
+      "source": "flash_msd_post_q",
+      "target": "flash_add_bias",
+      "tensor": {
+        "name": "qk_score_post",
+        "shape": "[B,T,N_h,D]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "qk_score_post",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_bias_add",
+      "source": "attention_bias_tensor",
+      "target": "flash_add_bias",
+      "tensor": {
+        "name": "pse_or_mask",
+        "shape": "broadcastable",
+        "dtype": "bf16/fp32/bool"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "pse_or_mask",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_add_scale",
+      "source": "flash_add_bias",
+      "target": "flash_scale",
+      "tensor": {
+        "name": "biased_score",
+        "shape": "[B,N_h,T,S_cache]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "biased_score",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_scale_select",
+      "source": "flash_scale",
+      "target": "flash_select",
+      "tensor": {
+        "name": "scaled_score",
+        "shape": "[B,N_h,T,S_cache]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "scaled_score",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_select_softmax",
+      "source": "flash_select",
+      "target": "flash_softmax",
+      "tensor": {
+        "name": "masked_score",
+        "shape": "[B,N_h,T,S_cache]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "masked_score",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_softmax_dropout",
+      "source": "flash_softmax",
+      "target": "flash_dropout",
+      "tensor": {
+        "name": "softmax_probability",
+        "shape": "[B,N_h,T,S_cache]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "softmax_probability",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_dropout_pre_pv",
+      "source": "flash_dropout",
+      "target": "flash_msd_pre_v",
+      "tensor": {
+        "name": "dropout_probability",
+        "shape": "[B,N_h,T,S_cache]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "dropout_probability",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_pre_pv_mm",
+      "source": "flash_msd_pre_v",
+      "target": "flash_mm_pv",
+      "tensor": {
+        "name": "value_preprocessed",
+        "shape": "[B,T,N_h,D]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "value_preprocessed",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_value_pv",
+      "source": "value_tensor",
+      "target": "flash_mm_pv",
+      "tensor": {
+        "name": "value",
+        "shape": "[B,S_cache,N_h,D_v]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "value",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_pv_rowmax",
+      "source": "flash_mm_pv",
+      "target": "flash_rowmax_pv",
+      "tensor": {
+        "name": "pv_output",
+        "shape": "[B,T,N_h,D]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "pv_output",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_rowmax_addinit",
+      "source": "flash_rowmax_pv",
+      "target": "flash_add_init",
+      "tensor": {
+        "name": "row_max_sum",
+        "shape": "[B,T,N_h,D]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "row_max_sum",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_addinit_exp",
+      "source": "flash_add_init",
+      "target": "flash_mul_exp",
+      "tensor": {
+        "name": "prev_mm2_res",
+        "shape": "[B,T,N_h,D]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "prev_mm2_res",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_exp_div",
+      "source": "flash_mul_exp",
+      "target": "flash_div",
+      "tensor": {
+        "name": "exp_rescale",
+        "shape": "[B,T,N_h,D]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "exp_rescale",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_pv_div",
+      "source": "flash_mm_pv",
+      "target": "flash_div",
+      "tensor": {
+        "name": "pv_output",
+        "shape": "[B,T,N_h,D]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "pv_output",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_div_quant",
+      "source": "flash_div",
+      "target": "flash_quant",
+      "tensor": {
+        "name": "attention_out",
+        "shape": "[B,T,N_h,D]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "attention_out",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_quant_out",
+      "source": "flash_quant",
+      "target": "attention_out_tensor",
+      "tensor": {
+        "name": "attention_out_quantized",
+        "shape": "[B,T,N_h,D]",
+        "dtype": "bf16/fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "attention_out_quantized",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_softmax_log",
+      "source": "flash_softmax",
+      "target": "flash_log",
+      "tensor": {
+        "name": "softmax_sum",
+        "shape": "[B,N_h,T,1]",
+        "dtype": "fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "softmax_sum",
+          "confidence": "inferred"
+        }
+      ]
+    },
+    {
+      "id": "e_log_lse",
+      "source": "flash_log",
+      "target": "flash_lse_add",
+      "tensor": {
+        "name": "log_softmax_sum",
+        "shape": "[B,N_h,T]",
+        "dtype": "fp32"
+      },
+      "provenance": [
+        {
+          "source": "attention_impl",
+          "fact": "log_softmax_sum",
+          "confidence": "inferred"
+        }
+      ]
+    }
+  ],
+  "visual_layout": {
+    "direction": "vertical",
+    "nodes": {
+      "flash_msd_pre_q": {
+        "x": 720,
+        "y": 200,
+        "width": 520,
+        "height": 62
+      },
+      "flash_msd_pre_kv": {
+        "x": 720,
+        "y": 280,
+        "width": 300,
+        "height": 62
+      },
+      "flash_mm_qk": {
+        "x": 720,
+        "y": 370,
+        "width": 520,
+        "height": 62
+      },
+      "flash_rowmax_q": {
+        "x": 720,
+        "y": 460,
+        "width": 520,
+        "height": 62
+      },
+      "flash_msd_post_q": {
+        "x": 720,
+        "y": 550,
+        "width": 520,
+        "height": 62
+      },
+      "flash_add_bias": {
+        "x": 720,
+        "y": 640,
+        "width": 520,
+        "height": 62
+      },
+      "flash_scale": {
+        "x": 720,
+        "y": 730,
+        "width": 520,
+        "height": 62
+      },
+      "flash_select": {
+        "x": 720,
+        "y": 820,
+        "width": 520,
+        "height": 62
+      },
+      "flash_softmax": {
+        "x": 720,
+        "y": 910,
+        "width": 520,
+        "height": 62
+      },
+      "flash_dropout": {
+        "x": 720,
+        "y": 1000,
+        "width": 520,
+        "height": 62
+      },
+      "flash_mm_pv": {
+        "x": 720,
+        "y": 1180,
+        "width": 520,
+        "height": 62
+      },
+      "flash_rowmax_pv": {
+        "x": 720,
+        "y": 1270,
+        "width": 520,
+        "height": 62
+      },
+      "flash_add_init": {
+        "x": 720,
+        "y": 1360,
+        "width": 520,
+        "height": 62
+      },
+      "flash_mul_exp": {
+        "x": 720,
+        "y": 1450,
+        "width": 520,
+        "height": 62
+      },
+      "flash_div": {
+        "x": 720,
+        "y": 1540,
+        "width": 520,
+        "height": 62
+      },
+      "flash_quant": {
+        "x": 720,
+        "y": 1630,
+        "width": 520,
+        "height": 62
+      },
+      "attention_out_tensor": {
+        "x": 720,
+        "y": 1740,
+        "width": 220,
+        "height": 48
+      },
+      "flash_log": {
+        "x": 1220,
+        "y": 1000,
+        "width": 300,
+        "height": 62
+      },
+      "flash_lse_add": {
+        "x": 1220,
+        "y": 1090,
+        "width": 300,
+        "height": 62
+      },
+      "softmax_lse_tensor": {
+        "x": 1220,
+        "y": 1180,
+        "width": 220,
+        "height": 48
+      },
+      "query_tensor": {
+        "x": 220,
+        "y": 120,
+        "width": 220,
+        "height": 48
+      },
+      "key_tensor": {
+        "x": 1220,
+        "y": 120,
+        "width": 220,
+        "height": 48
+      },
+      "value_tensor": {
+        "x": 1220,
+        "y": 860,
+        "width": 220,
+        "height": 48
+      },
+      "attention_bias_tensor": {
+        "x": 220,
+        "y": 590,
+        "width": 220,
+        "height": 48
+      },
+      "softmax_max_tensor": {
+        "x": 1220,
+        "y": 700,
+        "width": 220,
+        "height": 48
+      },
+      "softmax_sum_tensor": {
+        "x": 1220,
+        "y": 780,
+        "width": 220,
+        "height": 48
+      },
+      "softmax_prob_tensor": {
+        "x": 220,
+        "y": 860,
+        "width": 220,
+        "height": 48
+      },
+      "qk_score_tensor": {
+        "x": 220,
+        "y": 410,
+        "width": 220,
+        "height": 48
+      },
+      "scaled_score_tensor": {
+        "x": 220,
+        "y": 680,
+        "width": 220,
+        "height": 48
+      },
+      "masked_score_tensor": {
+        "x": 220,
+        "y": 770,
+        "width": 220,
+        "height": 48
+      },
+      "pv_output_tensor": {
+        "x": 220,
+        "y": 1130,
+        "width": 220,
+        "height": 48
+      },
+      "flash_msd_pre_v": {
+        "x": 720,
+        "y": 1090,
+        "width": 300,
+        "height": 62
+      }
+    }
+  }
+}

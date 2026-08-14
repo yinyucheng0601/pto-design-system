@@ -1,0 +1,530 @@
+{
+  "width": 1348,
+  "height": 1792,
+  "model": {
+    "name": "openPangu-2.0-Flash FlashAttentionScore",
+    "framework": "pytorch/vllm/ascend-npu",
+    "source_root": "/Users/yin/pto/model-architecture/sources"
+  },
+  "extraction_scope": {
+    "kind": "full_source",
+    "notes": [
+      "Source-validated FlashAttentionScore operator subgraph extracted from openPangu attention implementation.",
+      "This is an architecture subgraph, not a profiling trace slice.",
+      "Reference-granularity operators include MsdPreProcess/MsdPostProcess, RowMax/Sum, Add(init 0), Mul(exp), Quant, Log, and softmax LSE branch."
+    ]
+  },
+  "sourceSchema": "model_architecture.v1",
+  "nodes": [
+    {
+      "id": "o_causal_conv",
+      "label": "Output Causal Conv1D",
+      "kind": "op",
+      "typeLabel": "CausalConv1D",
+      "colorKey": "sem:linear",
+      "width": 214.0,
+      "height": 56.0,
+      "x": 486,
+      "y": 72
+    },
+    {
+      "id": "flash_mm_qk",
+      "label": "MM QK",
+      "kind": "op",
+      "typeLabel": "MatMul",
+      "colorKey": "sem:attention",
+      "width": 520.0,
+      "height": 62.0,
+      "x": 654,
+      "y": 354
+    },
+    {
+      "id": "flash_add_bias",
+      "label": "Add",
+      "kind": "op",
+      "typeLabel": "Add",
+      "colorKey": "sem:linear",
+      "width": 520.0,
+      "height": 62.0,
+      "x": 654,
+      "y": 624
+    },
+    {
+      "id": "flash_scale",
+      "label": "Mul",
+      "kind": "op",
+      "typeLabel": "Mul",
+      "colorKey": "sem:linear",
+      "width": 520.0,
+      "height": 62.0,
+      "x": 654,
+      "y": 714
+    },
+    {
+      "id": "flash_select",
+      "label": "Select",
+      "kind": "op",
+      "typeLabel": "Select",
+      "colorKey": "sem:gate",
+      "width": 520.0,
+      "height": 62.0,
+      "x": 654,
+      "y": 804
+    },
+    {
+      "id": "flash_softmax",
+      "label": "Flash Softmax",
+      "kind": "op",
+      "typeLabel": "Softmax",
+      "colorKey": "sem:linear",
+      "width": 520.0,
+      "height": 62.0,
+      "x": 654,
+      "y": 894
+    },
+    {
+      "id": "flash_dropout",
+      "label": "DropOutDoMask",
+      "kind": "op",
+      "typeLabel": "Dropout",
+      "colorKey": "sem:linear",
+      "width": 520.0,
+      "height": 62.0,
+      "x": 654,
+      "y": 984
+    },
+    {
+      "id": "flash_mm_pv",
+      "label": "MM PV",
+      "kind": "op",
+      "typeLabel": "MatMul",
+      "colorKey": "sem:linear",
+      "width": 520.0,
+      "height": 62.0,
+      "x": 654,
+      "y": 1164
+    },
+    {
+      "id": "flash_div",
+      "label": "Div",
+      "kind": "op",
+      "typeLabel": "Div",
+      "colorKey": "sem:linear",
+      "width": 520.0,
+      "height": 62.0,
+      "x": 654,
+      "y": 1524
+    },
+    {
+      "id": "query_tensor",
+      "label": "Query",
+      "kind": "tensor",
+      "typeLabel": "Input",
+      "colorKey": "io:input",
+      "width": 220.0,
+      "height": 48.0,
+      "x": 154,
+      "y": 104
+    },
+    {
+      "id": "key_tensor",
+      "label": "Key",
+      "kind": "tensor",
+      "typeLabel": "Input",
+      "colorKey": "io:input",
+      "width": 220.0,
+      "height": 48.0,
+      "x": 1154,
+      "y": 104
+    },
+    {
+      "id": "value_tensor",
+      "label": "Value",
+      "kind": "tensor",
+      "typeLabel": "Input",
+      "colorKey": "io:input",
+      "width": 220.0,
+      "height": 48.0,
+      "x": 1154,
+      "y": 844
+    },
+    {
+      "id": "attention_bias_tensor",
+      "label": "PSE / Mask",
+      "kind": "tensor",
+      "typeLabel": "Input",
+      "colorKey": "io:input",
+      "width": 220.0,
+      "height": 48.0,
+      "x": 154,
+      "y": 574
+    },
+    {
+      "id": "attention_out_tensor",
+      "label": "Attention Out",
+      "kind": "tensor",
+      "typeLabel": "Output",
+      "colorKey": "io:output",
+      "width": 220.0,
+      "height": 48.0,
+      "x": 654,
+      "y": 1724
+    },
+    {
+      "id": "flash_msd_pre_q",
+      "label": "MsdPreProcess (Q)",
+      "kind": "op",
+      "typeLabel": "MsdPreProcess",
+      "colorKey": "sem:linear",
+      "width": 520.0,
+      "height": 62.0,
+      "x": 654,
+      "y": 184
+    },
+    {
+      "id": "flash_rowmax_q",
+      "label": "RowMax/Sum (QK)",
+      "kind": "op",
+      "typeLabel": "RowMaxSum",
+      "colorKey": "sem:attention",
+      "width": 520.0,
+      "height": 62.0,
+      "x": 654,
+      "y": 444
+    },
+    {
+      "id": "flash_msd_post_q",
+      "label": "MsdPostProcess (QK)",
+      "kind": "op",
+      "typeLabel": "MsdPostProcess",
+      "colorKey": "sem:attention",
+      "width": 520.0,
+      "height": 62.0,
+      "x": 654,
+      "y": 534
+    },
+    {
+      "id": "flash_msd_pre_kv",
+      "label": "MsdPreProcess (PV)",
+      "kind": "op",
+      "typeLabel": "MsdPreProcess",
+      "colorKey": "sem:linear",
+      "width": 300.0,
+      "height": 62.0,
+      "x": 654,
+      "y": 264
+    },
+    {
+      "id": "flash_rowmax_pv",
+      "label": "RowMax/Sum (PV)",
+      "kind": "op",
+      "typeLabel": "RowMaxSum",
+      "colorKey": "sem:linear",
+      "width": 520.0,
+      "height": 62.0,
+      "x": 654,
+      "y": 1254
+    },
+    {
+      "id": "flash_add_init",
+      "label": "Add (init 0)",
+      "kind": "op",
+      "typeLabel": "Add",
+      "colorKey": "sem:linear",
+      "width": 520.0,
+      "height": 62.0,
+      "x": 654,
+      "y": 1344
+    },
+    {
+      "id": "flash_mul_exp",
+      "label": "Mul (exp)",
+      "kind": "op",
+      "typeLabel": "Mul",
+      "colorKey": "sem:linear",
+      "width": 520.0,
+      "height": 62.0,
+      "x": 654,
+      "y": 1434
+    },
+    {
+      "id": "flash_quant",
+      "label": "Quant",
+      "kind": "op",
+      "typeLabel": "Quant",
+      "colorKey": "sem:linear",
+      "width": 520.0,
+      "height": 62.0,
+      "x": 654,
+      "y": 1614
+    },
+    {
+      "id": "flash_log",
+      "label": "Log",
+      "kind": "op",
+      "typeLabel": "Log",
+      "colorKey": "sem:linear",
+      "width": 300.0,
+      "height": 62.0,
+      "x": 1154,
+      "y": 984
+    },
+    {
+      "id": "flash_lse_add",
+      "label": "Add (softmax_lse)",
+      "kind": "op",
+      "typeLabel": "Add",
+      "colorKey": "sem:linear",
+      "width": 300.0,
+      "height": 62.0,
+      "x": 1154,
+      "y": 1074
+    },
+    {
+      "id": "flash_msd_pre_v",
+      "label": "MsdPreProcess (V)",
+      "kind": "op",
+      "typeLabel": "MsdPreProcess",
+      "colorKey": "sem:linear",
+      "width": 300.0,
+      "height": 62.0,
+      "x": 654,
+      "y": 1074
+    },
+    {
+      "id": "qk_score_tensor",
+      "label": "QK Score",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 220.0,
+      "height": 48.0,
+      "x": 154,
+      "y": 394
+    },
+    {
+      "id": "scaled_score_tensor",
+      "label": "Scaled Score",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 220.0,
+      "height": 48.0,
+      "x": 154,
+      "y": 664
+    },
+    {
+      "id": "masked_score_tensor",
+      "label": "Masked Score",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 220.0,
+      "height": 48.0,
+      "x": 154,
+      "y": 754
+    },
+    {
+      "id": "softmax_prob_tensor",
+      "label": "Softmax P",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 220.0,
+      "height": 48.0,
+      "x": 154,
+      "y": 844
+    },
+    {
+      "id": "softmax_max_tensor",
+      "label": "Softmax Max",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 220.0,
+      "height": 48.0,
+      "x": 1154,
+      "y": 684
+    },
+    {
+      "id": "softmax_sum_tensor",
+      "label": "Softmax Sum",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 220.0,
+      "height": 48.0,
+      "x": 1154,
+      "y": 764
+    },
+    {
+      "id": "pv_output_tensor",
+      "label": "PV Output",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 220.0,
+      "height": 48.0,
+      "x": 154,
+      "y": 1114
+    },
+    {
+      "id": "softmax_lse_tensor",
+      "label": "Softmax LSE",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 220.0,
+      "height": 48.0,
+      "x": 1154,
+      "y": 1164
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_q_pre",
+      "source": "query_tensor",
+      "target": "flash_msd_pre_q",
+      "tensorLabel": "query | [B,T,N_h,D] | bf16/fp32"
+    },
+    {
+      "id": "e_key_pre",
+      "source": "key_tensor",
+      "target": "flash_msd_pre_kv",
+      "tensorLabel": "key | [B,T,N_h,D] | bf16/fp32"
+    },
+    {
+      "id": "e_pre_q_mm",
+      "source": "flash_msd_pre_q",
+      "target": "flash_mm_qk",
+      "tensorLabel": "q_preprocessed | [B,T,N_h,D] | bf16/fp32"
+    },
+    {
+      "id": "e_pre_k_mm",
+      "source": "flash_msd_pre_kv",
+      "target": "flash_mm_qk",
+      "tensorLabel": "k_preprocessed | [B,T,N_h,D] | bf16/fp32"
+    },
+    {
+      "id": "e_mm_rowmax",
+      "source": "flash_mm_qk",
+      "target": "flash_rowmax_q",
+      "tensorLabel": "qk_score | [B,T,N_h,D] | bf16/fp32"
+    },
+    {
+      "id": "e_rowmax_post",
+      "source": "flash_rowmax_q",
+      "target": "flash_msd_post_q",
+      "tensorLabel": "row_max_sum | [B,T,N_h,D] | bf16/fp32"
+    },
+    {
+      "id": "e_post_add",
+      "source": "flash_msd_post_q",
+      "target": "flash_add_bias",
+      "tensorLabel": "qk_score_post | [B,T,N_h,D] | bf16/fp32"
+    },
+    {
+      "id": "e_bias_add",
+      "source": "attention_bias_tensor",
+      "target": "flash_add_bias",
+      "tensorLabel": "pse_or_mask | broadcastable | bf16/fp32/bool"
+    },
+    {
+      "id": "e_add_scale",
+      "source": "flash_add_bias",
+      "target": "flash_scale",
+      "tensorLabel": "biased_score | [B,N_h,T,S_cache] | bf16/fp32"
+    },
+    {
+      "id": "e_scale_select",
+      "source": "flash_scale",
+      "target": "flash_select",
+      "tensorLabel": "scaled_score | [B,N_h,T,S_cache] | bf16/fp32"
+    },
+    {
+      "id": "e_select_softmax",
+      "source": "flash_select",
+      "target": "flash_softmax",
+      "tensorLabel": "masked_score | [B,N_h,T,S_cache] | bf16/fp32"
+    },
+    {
+      "id": "e_softmax_dropout",
+      "source": "flash_softmax",
+      "target": "flash_dropout",
+      "tensorLabel": "softmax_probability | [B,N_h,T,S_cache] | bf16/fp32"
+    },
+    {
+      "id": "e_dropout_pre_pv",
+      "source": "flash_dropout",
+      "target": "flash_msd_pre_v",
+      "tensorLabel": "dropout_probability | [B,N_h,T,S_cache] | bf16/fp32"
+    },
+    {
+      "id": "e_pre_pv_mm",
+      "source": "flash_msd_pre_v",
+      "target": "flash_mm_pv",
+      "tensorLabel": "value_preprocessed | [B,T,N_h,D] | bf16/fp32"
+    },
+    {
+      "id": "e_value_pv",
+      "source": "value_tensor",
+      "target": "flash_mm_pv",
+      "tensorLabel": "value | [B,S_cache,N_h,D_v] | bf16/fp32"
+    },
+    {
+      "id": "e_pv_rowmax",
+      "source": "flash_mm_pv",
+      "target": "flash_rowmax_pv",
+      "tensorLabel": "pv_output | [B,T,N_h,D] | bf16/fp32"
+    },
+    {
+      "id": "e_rowmax_addinit",
+      "source": "flash_rowmax_pv",
+      "target": "flash_add_init",
+      "tensorLabel": "row_max_sum | [B,T,N_h,D] | bf16/fp32"
+    },
+    {
+      "id": "e_addinit_exp",
+      "source": "flash_add_init",
+      "target": "flash_mul_exp",
+      "tensorLabel": "prev_mm2_res | [B,T,N_h,D] | bf16/fp32"
+    },
+    {
+      "id": "e_exp_div",
+      "source": "flash_mul_exp",
+      "target": "flash_div",
+      "tensorLabel": "exp_rescale | [B,T,N_h,D] | bf16/fp32"
+    },
+    {
+      "id": "e_pv_div",
+      "source": "flash_mm_pv",
+      "target": "flash_div",
+      "tensorLabel": "pv_output | [B,T,N_h,D] | bf16/fp32"
+    },
+    {
+      "id": "e_div_quant",
+      "source": "flash_div",
+      "target": "flash_quant",
+      "tensorLabel": "attention_out | [B,T,N_h,D] | bf16/fp32"
+    },
+    {
+      "id": "e_quant_out",
+      "source": "flash_quant",
+      "target": "attention_out_tensor",
+      "tensorLabel": "attention_out_quantized | [B,T,N_h,D] | bf16/fp32"
+    },
+    {
+      "id": "e_softmax_log",
+      "source": "flash_softmax",
+      "target": "flash_log",
+      "tensorLabel": "softmax_sum | [B,N_h,T,1] | fp32"
+    },
+    {
+      "id": "e_log_lse",
+      "source": "flash_log",
+      "target": "flash_lse_add",
+      "tensorLabel": "log_softmax_sum | [B,N_h,T] | fp32"
+    }
+  ],
+  "clusters": []
+}

@@ -1,0 +1,1455 @@
+{
+  "width": 2224,
+  "height": 4086,
+  "model": {
+    "name": "openPangu-2.0-Flash source architecture (skill refined)",
+    "framework": "pytorch/vllm/ascend-npu",
+    "source_root": "/Users/yin/pto/model-architecture/sources"
+  },
+  "extraction_scope": {
+    "kind": "full_source",
+    "full_main_layers": 46,
+    "trace_main_layers": null,
+    "notes": [
+      "Canonical graph is extracted from config.json plus openPangu-2.0-Infer source.",
+      "Weights were not downloaded; local safetensors files are Git LFS pointer files.",
+      "swa_layers includes MTP indices; visual branches separate main decoder layers from MTP layers.",
+      "Architecture skill refinement: FlashAttentionScore internals are modeled as source-level ops; intermediate tensors remain edge payloads."
+    ]
+  },
+  "sourceSchema": "model_architecture.v1",
+  "nodes": [
+    {
+      "id": "input_tokens",
+      "label": "Token IDs",
+      "kind": "tensor",
+      "typeLabel": "Input",
+      "colorKey": "io:input",
+      "width": 150.0,
+      "height": 48.0,
+      "x": 1829,
+      "y": 244
+    },
+    {
+      "id": "positions",
+      "label": "Position IDs",
+      "kind": "tensor",
+      "typeLabel": "Input",
+      "colorKey": "io:input",
+      "width": 156.4,
+      "height": 48.0,
+      "x": 1277,
+      "y": 244
+    },
+    {
+      "id": "causal_lm",
+      "label": "OpenPangu V2 For Causal LM",
+      "kind": "module",
+      "typeLabel": "Module",
+      "colorKey": "module:model",
+      "width": 257.20000000000005,
+      "height": 56.0,
+      "x": 173,
+      "y": 244
+    },
+    {
+      "id": "decoder_model",
+      "label": "OpenPangu V2 Model",
+      "kind": "module",
+      "typeLabel": "Module",
+      "colorKey": "module:decoder",
+      "width": 199.6,
+      "height": 56.0,
+      "x": 449,
+      "y": 244
+    },
+    {
+      "id": "token_embedding",
+      "label": "Vocab Parallel Embedding",
+      "kind": "op",
+      "typeLabel": "Embedding",
+      "colorKey": "sem:embedding",
+      "width": 242.8,
+      "height": 56.0,
+      "x": 1277,
+      "y": 360,
+      "parent": "model_core"
+    },
+    {
+      "id": "decoder_layer",
+      "label": "Decoder Layer Template",
+      "kind": "module",
+      "typeLabel": "Module",
+      "colorKey": "module:decoder",
+      "width": 228.4,
+      "height": 56.0,
+      "x": 1001,
+      "y": 476
+    },
+    {
+      "id": "mhc_attention",
+      "label": "mHC Attention Branch",
+      "kind": "module",
+      "typeLabel": "Module",
+      "colorKey": "sem:attention",
+      "width": 214.0,
+      "height": 56.0,
+      "x": 1001,
+      "y": 592,
+      "parent": "decoder_stack"
+    },
+    {
+      "id": "input_layernorm",
+      "label": "Input RMSNorm",
+      "kind": "op",
+      "typeLabel": "RMSNorm",
+      "colorKey": "sem:norm",
+      "width": 163.60000000000002,
+      "height": 56.0,
+      "x": 1001,
+      "y": 708,
+      "parent": "decoder_stack"
+    },
+    {
+      "id": "sparse_mla_attention",
+      "label": "Sparse MLA Attention",
+      "kind": "module",
+      "typeLabel": "Module",
+      "colorKey": "sem:attention",
+      "width": 214.0,
+      "height": 56.0,
+      "x": 1001,
+      "y": 824
+    },
+    {
+      "id": "q_a_proj",
+      "label": "Q Latent Linear",
+      "kind": "op",
+      "typeLabel": "Linear",
+      "colorKey": "sem:linear",
+      "width": 178.0,
+      "height": 56.0,
+      "x": 1415,
+      "y": 940,
+      "parent": "attention_block"
+    },
+    {
+      "id": "q_causal_conv",
+      "label": "Q Causal Conv1D",
+      "kind": "op",
+      "typeLabel": "CausalConv1D",
+      "colorKey": "sem:linear",
+      "width": 178.0,
+      "height": 56.0,
+      "x": 1415,
+      "y": 1056,
+      "parent": "attention_block"
+    },
+    {
+      "id": "q_a_norm",
+      "label": "Q LayerNorm",
+      "kind": "op",
+      "typeLabel": "RMSNorm",
+      "colorKey": "sem:norm",
+      "width": 150.0,
+      "height": 56.0,
+      "x": 1415,
+      "y": 1172,
+      "parent": "attention_block"
+    },
+    {
+      "id": "q_b_proj",
+      "label": "Q Up Linear",
+      "kind": "op",
+      "typeLabel": "Linear",
+      "colorKey": "sem:linear",
+      "width": 150.0,
+      "height": 56.0,
+      "x": 1277,
+      "y": 1288,
+      "parent": "attention_block"
+    },
+    {
+      "id": "kv_a_proj",
+      "label": "KV Latent Linear",
+      "kind": "op",
+      "typeLabel": "Linear",
+      "colorKey": "sem:attention",
+      "width": 185.2,
+      "height": 56.0,
+      "x": 1139,
+      "y": 940,
+      "parent": "attention_block"
+    },
+    {
+      "id": "kv_causal_conv",
+      "label": "KV Causal Conv1D",
+      "kind": "op",
+      "typeLabel": "CausalConv1D",
+      "colorKey": "sem:attention",
+      "width": 185.2,
+      "height": 56.0,
+      "x": 863,
+      "y": 1056,
+      "parent": "attention_block"
+    },
+    {
+      "id": "kv_a_norm",
+      "label": "KV LayerNorm",
+      "kind": "op",
+      "typeLabel": "RMSNorm",
+      "colorKey": "sem:norm",
+      "width": 156.4,
+      "height": 56.0,
+      "x": 1139,
+      "y": 1172,
+      "parent": "attention_block"
+    },
+    {
+      "id": "kv_b_proj",
+      "label": "KV Up Linear",
+      "kind": "op",
+      "typeLabel": "Linear",
+      "colorKey": "sem:attention",
+      "width": 156.4,
+      "height": 56.0,
+      "x": 1001,
+      "y": 1288,
+      "parent": "attention_block"
+    },
+    {
+      "id": "rope_apply",
+      "label": "Apply RoPE",
+      "kind": "op",
+      "typeLabel": "RotaryEmbedding",
+      "colorKey": "sem:embedding",
+      "width": 150.0,
+      "height": 56.0,
+      "x": 1139,
+      "y": 1404,
+      "parent": "attention_block"
+    },
+    {
+      "id": "dsa_indexer",
+      "label": "DSA Indexer",
+      "kind": "op",
+      "typeLabel": "SparseIndexer",
+      "colorKey": "sem:linear",
+      "width": 150.0,
+      "height": 56.0,
+      "x": 1139,
+      "y": 1520,
+      "parent": "attention_block"
+    },
+    {
+      "id": "attention_core",
+      "label": "Sparse FlashAttention",
+      "kind": "op",
+      "typeLabel": "Attention",
+      "colorKey": "sem:attention",
+      "width": 221.20000000000002,
+      "height": 56.0,
+      "x": 1139,
+      "y": 1636,
+      "parent": "attention_block"
+    },
+    {
+      "id": "o_causal_conv",
+      "label": "Output Causal Conv1D",
+      "kind": "op",
+      "typeLabel": "CausalConv1D",
+      "colorKey": "sem:linear",
+      "width": 214.0,
+      "height": 56.0,
+      "x": 1139,
+      "y": 1752,
+      "parent": "attention_block"
+    },
+    {
+      "id": "o_proj",
+      "label": "Output Projection",
+      "kind": "op",
+      "typeLabel": "Linear",
+      "colorKey": "sem:linear",
+      "width": 192.4,
+      "height": 56.0,
+      "x": 1139,
+      "y": 1868,
+      "parent": "attention_block"
+    },
+    {
+      "id": "post_attention_norm",
+      "label": "Post Attention RMSNorm",
+      "kind": "op",
+      "typeLabel": "RMSNorm",
+      "colorKey": "sem:norm",
+      "width": 228.4,
+      "height": 56.0,
+      "x": 1139,
+      "y": 1984,
+      "parent": "decoder_stack"
+    },
+    {
+      "id": "mhc_attention_post",
+      "label": "mHC Attention Merge",
+      "kind": "module",
+      "typeLabel": "Module",
+      "colorKey": "sem:attention",
+      "width": 206.8,
+      "height": 56.0,
+      "x": 1139,
+      "y": 2100,
+      "parent": "decoder_stack"
+    },
+    {
+      "id": "pre_mlp_norm",
+      "label": "Pre MLP RMSNorm",
+      "kind": "op",
+      "typeLabel": "RMSNorm",
+      "colorKey": "sem:norm",
+      "width": 178.0,
+      "height": 56.0,
+      "x": 1139,
+      "y": 2216,
+      "parent": "decoder_stack"
+    },
+    {
+      "id": "ffn_choice",
+      "label": "Feed Forward Choice",
+      "kind": "module",
+      "typeLabel": "Module",
+      "colorKey": "module:ffn",
+      "width": 206.8,
+      "height": 56.0,
+      "x": 1139,
+      "y": 2332
+    },
+    {
+      "id": "dense_mlp",
+      "label": "Dense MLP",
+      "kind": "module",
+      "typeLabel": "Module",
+      "colorKey": "module:ffn",
+      "width": 150.0,
+      "height": 56.0,
+      "x": 1001,
+      "y": 2448,
+      "parent": "ffn_block"
+    },
+    {
+      "id": "dense_gate_up",
+      "label": "Gate Up Projection",
+      "kind": "op",
+      "typeLabel": "MergedLinear",
+      "colorKey": "sem:gate",
+      "width": 199.6,
+      "height": 56.0,
+      "x": 1139,
+      "y": 2564,
+      "parent": "ffn_block"
+    },
+    {
+      "id": "dense_silu",
+      "label": "SiLU Multiply",
+      "kind": "op",
+      "typeLabel": "ActivationMultiply",
+      "colorKey": "sem:mlp",
+      "width": 163.60000000000002,
+      "height": 56.0,
+      "x": 1001,
+      "y": 2680,
+      "parent": "ffn_block"
+    },
+    {
+      "id": "dense_down",
+      "label": "Dense Down Projection",
+      "kind": "op",
+      "typeLabel": "Linear",
+      "colorKey": "sem:linear",
+      "width": 221.20000000000002,
+      "height": 56.0,
+      "x": 1001,
+      "y": 2796,
+      "parent": "ffn_block"
+    },
+    {
+      "id": "moe_ffn",
+      "label": "MoE FFN",
+      "kind": "module",
+      "typeLabel": "Module",
+      "colorKey": "module:ffn",
+      "width": 150.0,
+      "height": 56.0,
+      "x": 1277,
+      "y": 2448,
+      "parent": "ffn_block"
+    },
+    {
+      "id": "router_gate",
+      "label": "Router Gate",
+      "kind": "op",
+      "typeLabel": "Linear",
+      "colorKey": "sem:gate",
+      "width": 150.0,
+      "height": 56.0,
+      "x": 1415,
+      "y": 2564,
+      "parent": "moe_block"
+    },
+    {
+      "id": "route_topk",
+      "label": "TopK Router",
+      "kind": "op",
+      "typeLabel": "TopK",
+      "colorKey": "sem:gate",
+      "width": 150.0,
+      "height": 56.0,
+      "x": 1277,
+      "y": 2680,
+      "parent": "moe_block"
+    },
+    {
+      "id": "routed_expert_bank",
+      "label": "Routed Expert Bank",
+      "kind": "op",
+      "typeLabel": "FusedMoE",
+      "colorKey": "sem:moe",
+      "width": 199.6,
+      "height": 56.0,
+      "x": 1277,
+      "y": 2796,
+      "parent": "moe_block"
+    },
+    {
+      "id": "shared_expert_mlp",
+      "label": "Shared Expert MLP",
+      "kind": "module",
+      "typeLabel": "Module",
+      "colorKey": "module:ffn",
+      "width": 192.4,
+      "height": 56.0,
+      "x": 863,
+      "y": 2564,
+      "parent": "moe_block"
+    },
+    {
+      "id": "moe_combine",
+      "label": "MoE Combine",
+      "kind": "op",
+      "typeLabel": "Combine",
+      "colorKey": "sem:moe",
+      "width": 150.0,
+      "height": 56.0,
+      "x": 1139,
+      "y": 2912,
+      "parent": "moe_block"
+    },
+    {
+      "id": "post_mlp_norm",
+      "label": "Post MLP RMSNorm",
+      "kind": "op",
+      "typeLabel": "RMSNorm",
+      "colorKey": "sem:norm",
+      "width": 185.2,
+      "height": 56.0,
+      "x": 1139,
+      "y": 3028,
+      "parent": "ffn_block"
+    },
+    {
+      "id": "block_post_norm",
+      "label": "Block Post RMSNorm",
+      "kind": "op",
+      "typeLabel": "RMSNorm",
+      "colorKey": "sem:norm",
+      "width": 199.6,
+      "height": 56.0,
+      "x": 1139,
+      "y": 3144,
+      "parent": "decoder_stack"
+    },
+    {
+      "id": "final_norm",
+      "label": "Final RMSNorm",
+      "kind": "op",
+      "typeLabel": "RMSNorm",
+      "colorKey": "sem:norm",
+      "width": 163.60000000000002,
+      "height": 56.0,
+      "x": 1139,
+      "y": 3260,
+      "parent": "model_core"
+    },
+    {
+      "id": "lm_head",
+      "label": "LM Head",
+      "kind": "op",
+      "typeLabel": "Linear",
+      "colorKey": "sem:head",
+      "width": 150.0,
+      "height": 56.0,
+      "x": 1277,
+      "y": 3376,
+      "parent": "model_core"
+    },
+    {
+      "id": "logits",
+      "label": "Logits",
+      "kind": "tensor",
+      "typeLabel": "Output",
+      "colorKey": "io:output",
+      "width": 150.0,
+      "height": 48.0,
+      "x": 1277,
+      "y": 3492,
+      "parent": "model_core"
+    },
+    {
+      "id": "mtp_module",
+      "label": "Multi Token Predictor",
+      "kind": "module",
+      "typeLabel": "Module",
+      "colorKey": "module:model",
+      "width": 221.20000000000002,
+      "height": 56.0,
+      "x": 1001,
+      "y": 3376
+    },
+    {
+      "id": "mtp_input_norms",
+      "label": "MTP Input Norms",
+      "kind": "op",
+      "typeLabel": "RMSNorm",
+      "colorKey": "sem:norm",
+      "width": 178.0,
+      "height": 56.0,
+      "x": 1001,
+      "y": 3492,
+      "parent": "mtp_stack"
+    },
+    {
+      "id": "mtp_eh_proj",
+      "label": "MTP EH Projection",
+      "kind": "op",
+      "typeLabel": "Linear",
+      "colorKey": "sem:linear",
+      "width": 192.4,
+      "height": 56.0,
+      "x": 1139,
+      "y": 3608,
+      "parent": "mtp_stack"
+    },
+    {
+      "id": "mtp_decoder_layer",
+      "label": "MTP Decoder Layer",
+      "kind": "module",
+      "typeLabel": "Module",
+      "colorKey": "module:decoder",
+      "width": 192.4,
+      "height": 56.0,
+      "x": 1139,
+      "y": 3724,
+      "parent": "mtp_stack"
+    },
+    {
+      "id": "mtp_shared_head",
+      "label": "MTP Shared Head",
+      "kind": "module",
+      "typeLabel": "Module",
+      "colorKey": "module:model",
+      "width": 178.0,
+      "height": 56.0,
+      "x": 1139,
+      "y": 3840,
+      "parent": "mtp_stack"
+    },
+    {
+      "id": "mtp_logits",
+      "label": "MTP Logits",
+      "kind": "tensor",
+      "typeLabel": "Output",
+      "colorKey": "io:output",
+      "width": 150.0,
+      "height": 48.0,
+      "x": 1139,
+      "y": 3956,
+      "parent": "mtp_stack"
+    },
+    {
+      "id": "rope_cache",
+      "label": "RoPE Cache",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 150.0,
+      "height": 48.0,
+      "x": 1517,
+      "y": 360,
+      "parent": "attention_block"
+    },
+    {
+      "id": "kv_cache",
+      "label": "KV Cache",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 150.0,
+      "height": 48.0,
+      "x": 1517,
+      "y": 244,
+      "parent": "attention_block"
+    },
+    {
+      "id": "param_sink_state",
+      "label": "Parameter Sink",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 170.8,
+      "height": 48.0,
+      "x": 1517,
+      "y": 328,
+      "parent": "attention_block"
+    },
+    {
+      "id": "mome_state",
+      "label": "MoME State",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 150.0,
+      "height": 48.0,
+      "x": 1517,
+      "y": 444,
+      "parent": "attention_block"
+    },
+    {
+      "id": "expert_parallel_state",
+      "label": "Expert Parallel State",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 221.20000000000002,
+      "height": 48.0,
+      "x": 1731,
+      "y": 360,
+      "parent": "moe_block"
+    },
+    {
+      "id": "embedding_weight",
+      "label": "Embedding Weight",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 185.2,
+      "height": 48.0,
+      "x": 1517,
+      "y": 528,
+      "parent": "model_core"
+    },
+    {
+      "id": "attention_projection_weights",
+      "label": "Attention Projection Weights",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 230,
+      "height": 48.0,
+      "x": 1517,
+      "y": 612,
+      "parent": "attention_block"
+    },
+    {
+      "id": "dense_mlp_weights",
+      "label": "Dense MLP Weights",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 192.4,
+      "height": 48.0,
+      "x": 1517,
+      "y": 696,
+      "parent": "ffn_block"
+    },
+    {
+      "id": "router_weight",
+      "label": "Router Weight",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 163.60000000000002,
+      "height": 48.0,
+      "x": 1749,
+      "y": 612,
+      "parent": "moe_block"
+    },
+    {
+      "id": "expert_bank_weights",
+      "label": "Routed Expert Weights",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 221.20000000000002,
+      "height": 48.0,
+      "x": 1517,
+      "y": 780,
+      "parent": "moe_block"
+    },
+    {
+      "id": "shared_expert_weights",
+      "label": "Shared Expert Weights",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 221.20000000000002,
+      "height": 48.0,
+      "x": 1517,
+      "y": 864,
+      "parent": "moe_block"
+    },
+    {
+      "id": "lm_head_weight",
+      "label": "LM Head Weight",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 170.8,
+      "height": 48.0,
+      "x": 1749,
+      "y": 884,
+      "parent": "model_core"
+    },
+    {
+      "id": "mtp_head_weight",
+      "label": "MTP Head Weight",
+      "kind": "tensor",
+      "typeLabel": "State",
+      "colorKey": "io:state",
+      "width": 178.0,
+      "height": 48.0,
+      "x": 1538,
+      "y": 948,
+      "parent": "mtp_stack"
+    },
+    {
+      "id": "flash_mm_qk",
+      "label": "MM QK",
+      "kind": "op",
+      "typeLabel": "MatMul",
+      "colorKey": "sem:attention",
+      "width": 150.0,
+      "height": 56.0,
+      "x": 1001,
+      "y": 360
+    },
+    {
+      "id": "flash_add_bias",
+      "label": "Add",
+      "kind": "op",
+      "typeLabel": "Add",
+      "colorKey": "sem:linear",
+      "width": 150.0,
+      "height": 56.0,
+      "x": 1277,
+      "y": 476
+    },
+    {
+      "id": "flash_scale",
+      "label": "Mul",
+      "kind": "op",
+      "typeLabel": "Mul",
+      "colorKey": "sem:linear",
+      "width": 150.0,
+      "height": 56.0,
+      "x": 1277,
+      "y": 592
+    },
+    {
+      "id": "flash_select",
+      "label": "Select",
+      "kind": "op",
+      "typeLabel": "Select",
+      "colorKey": "sem:gate",
+      "width": 150.0,
+      "height": 56.0,
+      "x": 1277,
+      "y": 708
+    },
+    {
+      "id": "flash_softmax",
+      "label": "Flash Softmax",
+      "kind": "op",
+      "typeLabel": "Softmax",
+      "colorKey": "sem:linear",
+      "width": 163.60000000000002,
+      "height": 56.0,
+      "x": 1277,
+      "y": 824
+    },
+    {
+      "id": "flash_dropout",
+      "label": "DropOutDoMask",
+      "kind": "op",
+      "typeLabel": "Dropout",
+      "colorKey": "sem:linear",
+      "width": 163.60000000000002,
+      "height": 56.0,
+      "x": 863,
+      "y": 940
+    },
+    {
+      "id": "flash_mm_pv",
+      "label": "MM PV",
+      "kind": "op",
+      "typeLabel": "MatMul",
+      "colorKey": "sem:linear",
+      "width": 150.0,
+      "height": 56.0,
+      "x": 1139,
+      "y": 1056
+    },
+    {
+      "id": "flash_div",
+      "label": "Div",
+      "kind": "op",
+      "typeLabel": "Div",
+      "colorKey": "sem:linear",
+      "width": 150.0,
+      "height": 56.0,
+      "x": 863,
+      "y": 1172
+    },
+    {
+      "id": "query_tensor",
+      "label": "Query",
+      "kind": "tensor",
+      "typeLabel": "Input",
+      "colorKey": "io:input",
+      "width": 150.0,
+      "height": 48.0,
+      "x": 1703,
+      "y": 244
+    },
+    {
+      "id": "key_tensor",
+      "label": "Key",
+      "kind": "tensor",
+      "typeLabel": "Input",
+      "colorKey": "io:input",
+      "width": 150.0,
+      "height": 48.0,
+      "x": 725,
+      "y": 244
+    },
+    {
+      "id": "value_tensor",
+      "label": "Value",
+      "kind": "tensor",
+      "typeLabel": "Input",
+      "colorKey": "io:input",
+      "width": 150.0,
+      "height": 48.0,
+      "x": 2105,
+      "y": 244
+    },
+    {
+      "id": "attention_bias_tensor",
+      "label": "PSE / Mask",
+      "kind": "tensor",
+      "typeLabel": "Input",
+      "colorKey": "io:input",
+      "width": 150.0,
+      "height": 48.0,
+      "x": 1001,
+      "y": 244
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_input_to_embedding",
+      "source": "input_tokens",
+      "target": "token_embedding",
+      "tensorLabel": "input_ids | [B,T] | int64 | T<=S_max"
+    },
+    {
+      "id": "e_positions_to_rope_cache",
+      "source": "positions",
+      "target": "rope_cache",
+      "tensorLabel": "positions | [B,T] | int64 | T<=S_max"
+    },
+    {
+      "id": "e_embedding_to_decoder",
+      "source": "token_embedding",
+      "target": "decoder_layer",
+      "tensorLabel": "hidden_states | [B,T,H] | bf16"
+    },
+    {
+      "id": "e_decoder_to_mhc",
+      "source": "decoder_layer",
+      "target": "mhc_attention",
+      "tensorLabel": "hidden_states | [B,T,H] | bf16"
+    },
+    {
+      "id": "e_mhc_to_norm",
+      "source": "mhc_attention",
+      "target": "input_layernorm",
+      "tensorLabel": "hidden_states | [B,T,S_mhc,H] | bf16 | S_mhc=4"
+    },
+    {
+      "id": "e_norm_to_attention",
+      "source": "input_layernorm",
+      "target": "sparse_mla_attention",
+      "tensorLabel": "normalized_hidden | [B,T,S_mhc,H] | bf16"
+    },
+    {
+      "id": "e_attention_to_qa",
+      "source": "sparse_mla_attention",
+      "target": "q_a_proj",
+      "tensorLabel": "hidden_states | [B,T,H] | bf16"
+    },
+    {
+      "id": "e_qa_to_qconv",
+      "source": "q_a_proj",
+      "target": "q_causal_conv",
+      "tensorLabel": "q_lora | [B,T,R_q] | bf16"
+    },
+    {
+      "id": "e_qnorm_to_qb",
+      "source": "q_a_norm",
+      "target": "q_b_proj",
+      "tensorLabel": "q_lora_normed | [B,T,R_q] | bf16"
+    },
+    {
+      "id": "e_attention_to_kva",
+      "source": "sparse_mla_attention",
+      "target": "kv_a_proj",
+      "tensorLabel": "hidden_states | [B,T,H] | bf16"
+    },
+    {
+      "id": "e_kva_to_kvconv",
+      "source": "kv_a_proj",
+      "target": "kv_causal_conv",
+      "tensorLabel": "kv_lora | [B,T,R_kv] | bf16"
+    },
+    {
+      "id": "e_kvnorm_to_kvb",
+      "source": "kv_a_norm",
+      "target": "kv_b_proj",
+      "tensorLabel": "kv_lora_normed | [B,T,R_kv] | bf16"
+    },
+    {
+      "id": "e_qb_to_rope",
+      "source": "q_b_proj",
+      "target": "rope_apply",
+      "tensorLabel": "q_nope_q_rope | [B,T,N_h,D_qk] | bf16"
+    },
+    {
+      "id": "e_rope_cache_to_rope",
+      "source": "rope_cache",
+      "target": "rope_apply",
+      "tensorLabel": "cos_sin | [T,D_rope] | bf16 | T<=S_max"
+    },
+    {
+      "id": "e_rope_to_dsa",
+      "source": "rope_apply",
+      "target": "dsa_indexer",
+      "tensorLabel": "query_key_rotary | [B,T,N_h,D_qk] | bf16 | K_index<=2048"
+    },
+    {
+      "id": "e_rope_to_core",
+      "source": "rope_apply",
+      "target": "attention_core",
+      "tensorLabel": "query | [B,T,N_h,D_qk] | bf16"
+    },
+    {
+      "id": "e_kvb_to_core",
+      "source": "kv_b_proj",
+      "target": "attention_core",
+      "tensorLabel": "compressed_kv | [B,T,R_kv+D_v] | bf16"
+    },
+    {
+      "id": "e_dsa_to_core",
+      "source": "dsa_indexer",
+      "target": "attention_core",
+      "tensorLabel": "sparse_indices | [B,T,K_index] | int32 | K_index<=2048"
+    },
+    {
+      "id": "e_kv_cache_to_core",
+      "source": "kv_cache",
+      "target": "attention_core",
+      "tensorLabel": "kv_cache | [B,S_cache,R_kv+D_v] | bf16/fp8"
+    },
+    {
+      "id": "e_param_sink_to_core",
+      "source": "param_sink_state",
+      "target": "attention_core",
+      "tensorLabel": "sink_kv | [N_sink,R_kv+D_rope] | bf16 | N_sink=128"
+    },
+    {
+      "id": "e_mome_to_core",
+      "source": "mome_state",
+      "target": "attention_core",
+      "tensorLabel": "mome_state | [B,W_router,R_q/R_kv/D_v] | bf16 | W_router=3"
+    },
+    {
+      "id": "e_core_to_oconv",
+      "source": "attention_core",
+      "target": "o_causal_conv",
+      "tensorLabel": "attn_output | [B,T,N_h,D_v] | bf16"
+    },
+    {
+      "id": "e_o_to_post_attn",
+      "source": "o_proj",
+      "target": "post_attention_norm",
+      "tensorLabel": "hidden_states | [B,T,H] | bf16"
+    },
+    {
+      "id": "e_post_attn_to_mhc_post",
+      "source": "post_attention_norm",
+      "target": "mhc_attention_post",
+      "tensorLabel": "hidden_states | [B,T,H] | bf16"
+    },
+    {
+      "id": "e_mhc_post_to_pre_mlp",
+      "source": "mhc_attention_post",
+      "target": "pre_mlp_norm",
+      "tensorLabel": "hidden_states | [B,T,H] | bf16"
+    },
+    {
+      "id": "e_pre_mlp_to_ffn",
+      "source": "pre_mlp_norm",
+      "target": "ffn_choice",
+      "tensorLabel": "hidden_states | [B,T,H] | bf16/fp32 | layer_id<2 uses dense, layer_id>=2 uses moe"
+    },
+    {
+      "id": "e_ffn_to_dense",
+      "source": "ffn_choice",
+      "target": "dense_mlp",
+      "tensorLabel": "hidden_states | [B,T,H] | bf16 | layer_id<2"
+    },
+    {
+      "id": "e_dense_to_gateup",
+      "source": "dense_mlp",
+      "target": "dense_gate_up",
+      "tensorLabel": "hidden_states | [B,T,H] | bf16"
+    },
+    {
+      "id": "e_gateup_to_silu",
+      "source": "dense_gate_up",
+      "target": "dense_silu",
+      "tensorLabel": "gate_up | [B,T,2*I_dense] | bf16"
+    },
+    {
+      "id": "e_silu_to_dense_down",
+      "source": "dense_silu",
+      "target": "dense_down",
+      "tensorLabel": "activated | [B,T,I_dense] | bf16"
+    },
+    {
+      "id": "e_dense_down_to_post_mlp",
+      "source": "dense_down",
+      "target": "post_mlp_norm",
+      "tensorLabel": "dense_output | [B,T,H] | bf16"
+    },
+    {
+      "id": "e_ffn_to_moe",
+      "source": "ffn_choice",
+      "target": "moe_ffn",
+      "tensorLabel": "hidden_states | [B,T,H] | bf16/fp32 | layer_id>=2"
+    },
+    {
+      "id": "e_moe_to_router",
+      "source": "moe_ffn",
+      "target": "router_gate",
+      "tensorLabel": "hidden_states | [B,T,H] | bf16/fp32"
+    },
+    {
+      "id": "e_router_to_topk",
+      "source": "router_gate",
+      "target": "route_topk",
+      "tensorLabel": "router_logits | [B,T,E] | fp32 | top_k=8"
+    },
+    {
+      "id": "e_topk_to_expert",
+      "source": "route_topk",
+      "target": "routed_expert_bank",
+      "tensorLabel": "topk_ids_weights | [B,T,top_k] | int32/fp32 | top_k=8, expert_id<E"
+    },
+    {
+      "id": "e_ep_to_expert",
+      "source": "expert_parallel_state",
+      "target": "routed_expert_bank",
+      "tensorLabel": "expert_map | [E] | int32 | E=256"
+    },
+    {
+      "id": "e_moe_to_shared",
+      "source": "moe_ffn",
+      "target": "shared_expert_mlp",
+      "tensorLabel": "hidden_states | [B,T,H] | bf16 | E_shared=1"
+    },
+    {
+      "id": "e_expert_to_combine",
+      "source": "routed_expert_bank",
+      "target": "moe_combine",
+      "tensorLabel": "routed_output | [B,T,H] | bf16"
+    },
+    {
+      "id": "e_shared_to_combine",
+      "source": "shared_expert_mlp",
+      "target": "moe_combine",
+      "tensorLabel": "shared_output | [B,T,H] | bf16"
+    },
+    {
+      "id": "e_moe_combine_to_post_mlp",
+      "source": "moe_combine",
+      "target": "post_mlp_norm",
+      "tensorLabel": "moe_output | [B,T,H] | bf16"
+    },
+    {
+      "id": "e_post_mlp_to_block_norm",
+      "source": "post_mlp_norm",
+      "target": "block_post_norm",
+      "tensorLabel": "hidden_states | [B,T,H] | bf16 | only selected layer ids"
+    },
+    {
+      "id": "e_block_norm_to_final",
+      "source": "block_post_norm",
+      "target": "final_norm",
+      "tensorLabel": "hidden_states | [B,T,H] | bf16"
+    },
+    {
+      "id": "e_final_to_head",
+      "source": "final_norm",
+      "target": "lm_head",
+      "tensorLabel": "hidden_states | [B,T,H] | bf16"
+    },
+    {
+      "id": "e_head_to_logits",
+      "source": "lm_head",
+      "target": "logits",
+      "tensorLabel": "logits | [B,T,V] | fp32"
+    },
+    {
+      "id": "e_final_to_mtp",
+      "source": "final_norm",
+      "target": "mtp_module",
+      "tensorLabel": "previous_hidden_states | [B,T,H] | bf16 | N_mtp=3"
+    },
+    {
+      "id": "e_embedding_to_mtp_norms",
+      "source": "token_embedding",
+      "target": "mtp_input_norms",
+      "tensorLabel": "inputs_embeds | [B,T,H] | bf16"
+    },
+    {
+      "id": "e_mtp_to_norms",
+      "source": "mtp_module",
+      "target": "mtp_input_norms",
+      "tensorLabel": "input_pair | [B,T,H] | bf16"
+    },
+    {
+      "id": "e_norms_to_eh",
+      "source": "mtp_input_norms",
+      "target": "mtp_eh_proj",
+      "tensorLabel": "concat_embedding_hidden | [B,T,2*H] | bf16"
+    },
+    {
+      "id": "e_eh_to_mtp_decoder",
+      "source": "mtp_eh_proj",
+      "target": "mtp_decoder_layer",
+      "tensorLabel": "hidden_states | [B,T,H] | bf16"
+    },
+    {
+      "id": "e_mtp_decoder_to_head",
+      "source": "mtp_decoder_layer",
+      "target": "mtp_shared_head",
+      "tensorLabel": "hidden_states | [B,T,H] | bf16"
+    },
+    {
+      "id": "e_mtp_head_to_logits",
+      "source": "mtp_shared_head",
+      "target": "mtp_logits",
+      "tensorLabel": "mtp_logits | [B,T,V] | fp32"
+    },
+    {
+      "id": "e_embedding_weight_to_embedding",
+      "source": "embedding_weight",
+      "target": "token_embedding",
+      "tensorLabel": "embedding.weight | [V,H] | bf16"
+    },
+    {
+      "id": "e_attention_weights_to_q_a",
+      "source": "attention_projection_weights",
+      "target": "q_a_proj",
+      "tensorLabel": "mla_projection_weights | q/kv/o projection tensors | bf16"
+    },
+    {
+      "id": "e_dense_weights_to_gateup",
+      "source": "dense_mlp_weights",
+      "target": "dense_gate_up",
+      "tensorLabel": "dense_mlp_weights | gate/up/down tensors | bf16"
+    },
+    {
+      "id": "e_router_weight_to_gate",
+      "source": "router_weight",
+      "target": "router_gate",
+      "tensorLabel": "router.weight | [H,E] | bf16"
+    },
+    {
+      "id": "e_expert_weights_to_bank",
+      "source": "expert_bank_weights",
+      "target": "routed_expert_bank",
+      "tensorLabel": "expert_bank.weights | [E,H,I_moe] | bf16"
+    },
+    {
+      "id": "e_shared_weights_to_mlp",
+      "source": "shared_expert_weights",
+      "target": "shared_expert_mlp",
+      "tensorLabel": "shared_expert.weights | [E_shared,H,I_dense] | bf16"
+    },
+    {
+      "id": "e_lm_head_weight_to_head",
+      "source": "lm_head_weight",
+      "target": "lm_head",
+      "tensorLabel": "lm_head.weight | [H,V] | bf16"
+    },
+    {
+      "id": "e_mtp_head_weight_to_head",
+      "source": "mtp_head_weight",
+      "target": "mtp_shared_head",
+      "tensorLabel": "mtp_head.weight | [H,V] | bf16"
+    },
+    {
+      "id": "e_qconv_to_qnorm",
+      "source": "q_causal_conv",
+      "target": "q_a_norm",
+      "tensorLabel": "q_lora_after_mome | [B,T,R_q] | bf16"
+    },
+    {
+      "id": "e_kvconv_to_kvnorm",
+      "source": "kv_causal_conv",
+      "target": "kv_a_norm",
+      "tensorLabel": "kv_lora_plus_rope_after_mome | [B,T,R_kv+D_rope] | bf16"
+    },
+    {
+      "id": "e_oconv_to_o",
+      "source": "o_causal_conv",
+      "target": "o_proj",
+      "tensorLabel": "attn_output_after_mome | [B,T,N_h,D_v] | bf16"
+    },
+    {
+      "id": "e_flash_query_mm",
+      "source": "query_tensor",
+      "target": "flash_mm_qk",
+      "tensorLabel": "query | [B,T,N_h,D_qk] | bf16"
+    },
+    {
+      "id": "e_flash_key_mm",
+      "source": "key_tensor",
+      "target": "flash_mm_qk",
+      "tensorLabel": "key | [B,S_cache,N_h,D_qk] | bf16"
+    },
+    {
+      "id": "e_flash_mm_score",
+      "source": "flash_mm_qk",
+      "target": "flash_add_bias",
+      "tensorLabel": "qk_score | [B,N_h,T,S_cache] | bf16/fp32"
+    },
+    {
+      "id": "e_flash_bias",
+      "source": "attention_bias_tensor",
+      "target": "flash_add_bias",
+      "tensorLabel": "pse_or_mask | broadcastable | bf16/fp32/bool"
+    },
+    {
+      "id": "e_flash_add_scale",
+      "source": "flash_add_bias",
+      "target": "flash_scale",
+      "tensorLabel": "biased_score | [B,N_h,T,S_cache] | bf16/fp32"
+    },
+    {
+      "id": "e_flash_scaled_select",
+      "source": "flash_scale",
+      "target": "flash_select",
+      "tensorLabel": "scaled_score | [B,N_h,T,S_cache] | bf16/fp32"
+    },
+    {
+      "id": "e_flash_select_softmax",
+      "source": "flash_select",
+      "target": "flash_softmax",
+      "tensorLabel": "masked_score | [B,N_h,T,S_cache] | bf16/fp32"
+    },
+    {
+      "id": "e_flash_prob_dropout",
+      "source": "flash_softmax",
+      "target": "flash_dropout",
+      "tensorLabel": "softmax_probability | [B,N_h,T,S_cache] | bf16/fp32"
+    },
+    {
+      "id": "e_flash_dropout_pv",
+      "source": "flash_dropout",
+      "target": "flash_mm_pv",
+      "tensorLabel": "probability | [B,N_h,T,S_cache] | bf16/fp32"
+    },
+    {
+      "id": "e_flash_value_pv",
+      "source": "value_tensor",
+      "target": "flash_mm_pv",
+      "tensorLabel": "value | [B,S_cache,N_h,D_v] | bf16"
+    },
+    {
+      "id": "e_flash_pv_div",
+      "source": "flash_mm_pv",
+      "target": "flash_div",
+      "tensorLabel": "pv_output | [B,T,N_h,D_v] | bf16"
+    },
+    {
+      "id": "e_flash_div_out",
+      "source": "flash_div",
+      "target": "o_causal_conv",
+      "tensorLabel": "attention_out | [B,T,H] | bf16"
+    }
+  ],
+  "clusters": [
+    {
+      "id": "model_core",
+      "label": "Causal LM",
+      "x": 645,
+      "y": 44,
+      "width": 1319,
+      "height": 3998,
+      "parent": null,
+      "nodes": [
+        "token_embedding",
+        "final_norm",
+        "lm_head",
+        "logits",
+        "embedding_weight",
+        "lm_head_weight"
+      ],
+      "children": [
+        "decoder_stack",
+        "mtp_stack"
+      ],
+      "colorKey": "module:model"
+    },
+    {
+      "id": "decoder_stack",
+      "label": "Decoder Layer Template",
+      "x": 683,
+      "y": 108,
+      "width": 1243,
+      "height": 3092,
+      "parent": "model_core",
+      "nodes": [
+        "mhc_attention",
+        "input_layernorm",
+        "post_attention_norm",
+        "mhc_attention_post",
+        "pre_mlp_norm",
+        "post_mlp_norm",
+        "block_post_norm"
+      ],
+      "children": [
+        "attention_block",
+        "ffn_block"
+      ],
+      "colorKey": "module:decoder",
+      "repeat": "repeat 0-45, count 46"
+    },
+    {
+      "id": "attention_block",
+      "label": "Sparse MLA Attention",
+      "x": 742,
+      "y": 164,
+      "width": 918,
+      "height": 1760,
+      "parent": "decoder_stack",
+      "nodes": [
+        "q_a_proj",
+        "q_causal_conv",
+        "q_a_norm",
+        "q_b_proj",
+        "kv_a_proj",
+        "kv_causal_conv",
+        "kv_a_norm",
+        "kv_b_proj",
+        "rope_apply",
+        "dsa_indexer",
+        "attention_core",
+        "o_causal_conv",
+        "o_proj",
+        "rope_cache",
+        "kv_cache",
+        "param_sink_state",
+        "mome_state",
+        "attention_projection_weights"
+      ],
+      "children": [],
+      "colorKey": "sem:attention"
+    },
+    {
+      "id": "ffn_block",
+      "label": "Dense + MoE FFN",
+      "x": 711,
+      "y": 224,
+      "width": 1187,
+      "height": 2860,
+      "parent": "decoder_stack",
+      "nodes": [
+        "dense_mlp",
+        "dense_gate_up",
+        "dense_silu",
+        "dense_down",
+        "moe_ffn",
+        "post_mlp_norm",
+        "dense_mlp_weights"
+      ],
+      "children": [
+        "moe_block"
+      ],
+      "colorKey": "module:ffn"
+    },
+    {
+      "id": "moe_block",
+      "label": "MoE FFN",
+      "x": 739,
+      "y": 280,
+      "width": 1131,
+      "height": 2688,
+      "parent": "ffn_block",
+      "nodes": [
+        "router_gate",
+        "route_topk",
+        "routed_expert_bank",
+        "shared_expert_mlp",
+        "moe_combine",
+        "expert_parallel_state",
+        "router_weight",
+        "expert_bank_weights",
+        "shared_expert_weights"
+      ],
+      "children": [],
+      "colorKey": "module:ffn"
+    },
+    {
+      "id": "mtp_stack",
+      "label": "Multi Token Predictor",
+      "x": 884,
+      "y": 868,
+      "width": 772,
+      "height": 3140,
+      "parent": "model_core",
+      "nodes": [
+        "mtp_input_norms",
+        "mtp_eh_proj",
+        "mtp_decoder_layer",
+        "mtp_shared_head",
+        "mtp_logits",
+        "mtp_head_weight"
+      ],
+      "children": [],
+      "colorKey": "module:model"
+    }
+  ]
+}

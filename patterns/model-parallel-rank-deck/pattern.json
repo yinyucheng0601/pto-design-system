@@ -2,7 +2,7 @@
   "id": "model-parallel-rank-deck",
   "name": "Model Parallel Rank Three.js Deck",
   "type": "hybrid",
-  "description": "Shows 128 transparent Three.js Rank volumes in one empty default row, then reveals the canonical openPangu Layer payload after PP, TP, EP, or EDP is selected, with Layer depth aligned to the PP axis.",
+  "description": "Shows a configurable global inventory of transparent Three.js Rank volumes, supports row or grid overview layouts, can focus a communication group without revealing parallel overlays, and reveals the canonical openPangu Layer payload only after an explicit parallel or Rank drill-down.",
   "typography": {
     "bodyMinimumPx": 14,
     "uiMinimumPx": 12,
@@ -39,6 +39,8 @@
     "controller.selectNode(nodeId, layer, rank)",
     "controller.selectExpert(expertId)",
     "controller.selectGroup(groupId)",
+    "controller.focusCommunicationGroup(groupId)",
+    "controller.clearCommunicationGroup()",
     "controller.getRankManifest(rank)",
     "controller.getState()",
     "controller.destroy()"
@@ -50,6 +52,7 @@
   },
   "useWhen": [
     "presenting an ordered 128-Rank inventory before choosing a parallel split",
+    "presenting a smaller run scope such as 32 ranks while retaining a global-to-local communication-group workflow",
     "placing the complete shared model architecture into Three.js Rank volumes",
     "inspecting TP, PP, CP, EP, and EDP ownership across Layers, nodes, experts, and communication groups",
     "switching between model, topology, grouping, Rank focus, and Layer focus without creating a second Layer renderer"
@@ -59,6 +62,10 @@
     "options.topology with explicit sourceLevel",
     "options.partitionRules.stageRanges",
     "options.initialState",
+    "options.overviewLayout and options.overviewColumns",
+    "options.showOverviewLabels",
+    "options.showHeader and options.showInspector for workbench embedding",
+    "options.showGroundGrid for a neutral Three.js ground plane beneath the global Rank inventory",
     "options.batchSize",
     "options.syncUrl",
     "callbacks and externally supplied state"

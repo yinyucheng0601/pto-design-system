@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Layer Expansion Wireframe Options</title>
+  <link rel="stylesheet" href="../../tokens/foundation.css">
+  <link rel="stylesheet" href="../../tokens/semantic.css">
+  <link rel="stylesheet" href="../../tokens/components.css">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --wf-forward: #22d3ee;
+      --wf-backward: #818cf8;
+      --wf-module: #60a5fa;
+      --wf-moe: #fb923c;
+      --wf-residual: #a78bfa;
+      --wf-success: #34d399;
+      --wf-panel: color-mix(in srgb, var(--surface-1) 91%, transparent);
+    }
+    html { background: var(--background); color: var(--foreground); }
+    body {
+      margin: 0;
+      min-width: 1080px;
+      background:
+        radial-gradient(circle at 50% -10%, color-mix(in srgb, var(--primary) 10%, transparent), transparent 32rem),
+        var(--background);
+      font-family: var(--font-sans);
+    }
+    button { font: inherit; }
+    .page { width: min(1560px, calc(100% - 48px)); margin: 0 auto; padding: 34px 0 96px; }
+    .page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 32px; margin-bottom: 28px; }
+    .eyebrow { color: var(--primary); font: 800 11px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 10px 0 8px; font-size: 28px; line-height: 1.15; }
+    .intro { max-width: 780px; margin: 0; color: var(--foreground-secondary); font-size: 14px; line-height: 1.65; }
+    .rules { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; max-width: 480px; }
+    .rule { padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--surface-1); color: var(--foreground-secondary); font: 700 10px/1 var(--font-mono); }
+    .scheme-nav { position: sticky; top: 12px; z-index: 30; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin: 0 0 18px; padding: 9px; border: 1px solid var(--border); border-radius: 16px; background: color-mix(in srgb, var(--background) 90%, transparent); box-shadow: 0 14px 40px rgba(0,0,0,.24); backdrop-filter: blur(16px); }
+    .scheme-tab { display: grid; grid-template-columns: 32px minmax(0,1fr); gap: 10px; align-items: center; min-height: 52px; padding: 8px 11px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-1); color: var(--foreground); cursor: pointer; text-align: left; }
+    .scheme-tab:hover { border-color: color-mix(in srgb, var(--primary) 68%, var(--border)); }
+    .scheme-tab.is-active { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 12%, var(--surface-1)); }
+    .scheme-tab strong { grid-row: 1 / span 2; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: color-mix(in srgb, var(--primary) 17%, var(--surface-2)); color: var(--primary); font: 900 15px/1 var(--font-mono); }
+    .scheme-tab b { font-size: 12px; line-height: 1.1; }
+    .scheme-tab span { color: var(--foreground-muted); font: 700 9px/1.1 var(--font-mono); }
+    .options { display: grid; gap: 22px; }
+    .option {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--surface-1) 94%, transparent);
+      box-shadow: 0 18px 60px rgba(0,0,0,.16);
+      transition: border-color .16s ease, box-shadow .16s ease;
+    }
+    .option[data-selected="true"] { border-color: color-mix(in srgb, var(--primary) 72%, var(--border)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent), 0 22px 70px rgba(0,0,0,.22); }
+    .option-head { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 15px; align-items: center; padding: 17px 18px; border-bottom: 1px solid var(--border); }
+    .option-id { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; background: color-mix(in srgb, var(--primary) 15%, var(--surface-2)); color: var(--primary); font: 900 17px/1 var(--font-mono); }
+    .option-title { margin: 0 0 5px; font-size: 16px; }
+    .option-sub { margin: 0; color: var(--foreground-muted); font: 700 10px/1.35 var(--font-mono); }
+    .recommended { color: var(--success); }
+    .choose { min-height: 34px; padding: 0 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--foreground); cursor: pointer; font-size: 12px; font-weight: 750; }
+    .choose:hover { border-color: var(--primary); }
+    [data-selected="true"] .choose { border-color: var(--primary); background: var(--primary); color: var(--primary-foreground); }
+    .canvas-wrap { overflow-x: auto; padding: 16px; background: color-mix(in srgb, var(--background) 94%, var(--surface-1)); }
+    .canvas { position: relative; width: 1420px; min-height: 470px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--border) 74%, transparent); border-radius: 14px; background-color: #0f1115; background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px); background-size: 24px 24px; color: #dedfe3; }
+    .lane-label { position: absolute; left: 16px; width: 112px; color: #6f737b; font: 750 10px/1.15 var(--font-mono); text-transform: uppercase; }
+    .metric-label { top: 32px; }
+    .hidden-label { top: 100px; }
+    .module-label { top: 220px; }
+    .backward-label { bottom: 75px; }
+    .metric-lines { position: absolute; left: 140px; right: 22px; top: 22px; height: 54px; }
+    .metric-lines svg { width: 100%; height: 100%; overflow: visible; }
+    .metric-lines path { fill: none; stroke-width: 1.5; opacity: .8; }
+    .metric-lines .m1 { stroke: #38bdf8; } .metric-lines .m2 { stroke: #f59e0b; } .metric-lines .m3 { stroke: #ea580c; }
+    .rail { position: absolute; left: 140px; right: 22px; height: 24px; display: flex; align-items: center; }
+    .rail::before { content: ""; position: absolute; inset: 11px 0 auto; height: 2px; background: currentColor; opacity: .74; }
+    .rail.forward { top: 92px; color: var(--wf-forward); }
+    .rail.backward { bottom: 67px; color: var(--wf-backward); direction: rtl; }
+    .dot { position: relative; z-index: 1; width: 8px; height: 8px; border: 2px solid currentColor; border-radius: 50%; background: #0f1115; }
+    .arrow { position: relative; z-index: 1; color: currentColor; font: 900 15px/1 var(--font-mono); opacity: .55; }
+    .layers { position: absolute; left: 140px; right: 22px; top: 128px; bottom: 108px; display: flex; gap: 10px; align-items: stretch; }
+    .layer { position: relative; width: 76px; flex: 0 0 76px; display: grid; place-items: center; border: 1px dashed #30343c; border-radius: 9px; color: #777c85; font: 800 11px/1 var(--font-mono); }
+    .layer::before { content: ""; position: absolute; left: 50%; top: -28px; bottom: -28px; border-left: 1px dashed rgba(255,255,255,.08); }
+    .layer.expanded { width: 690px; flex-basis: 690px; padding: 13px; display: block; border: 1px solid color-mix(in srgb, var(--primary) 42%, #30343c); background: rgba(26,29,36,.93); color: #d7d9de; }
+    .option-a .canvas { min-height: 900px; }
+    .option-a .layer.expanded { width: 760px; flex-basis: 760px; }
+    .v-shell { position: relative; height: calc(100% - 28px); padding: 9px 10px 30px; overflow: hidden; }
+    .v-shared { display: flex; justify-content: center; gap: 7px; margin-bottom: 7px; }
+    .v-section-label { margin: 6px 0 5px 112px; color: #737985; font: 850 7.5px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+    .v-group { position: relative; display: grid; gap: 5px; margin-left: 112px; }
+    .v-residual-rail { position: absolute; left: -101px; top: 4px; bottom: 5px; width: 88px; border: 1px solid color-mix(in srgb, var(--wf-residual) 52%, transparent); border-right: 0; border-radius: 9px 0 0 9px; color: color-mix(in srgb, var(--wf-residual) 72%, #aeb2ba); }
+    .v-residual-rail span { position: absolute; left: 8px; top: 50%; width: 72px; transform: translateY(-50%); font: 750 7px/1.25 var(--font-mono); text-align: center; }
+    .v-node { position: relative; min-height: 31px; display: grid; grid-template-columns: minmax(130px,.9fr) auto minmax(0,1.5fr); gap: 8px; align-items: center; padding: 5px 7px; border: 1px solid color-mix(in srgb, var(--node-color, var(--wf-module)) 48%, #30343c); border-radius: 6px; background: color-mix(in srgb, var(--node-color, var(--wf-module)) 9%, #11141a); }
+    .v-node:not(:last-child)::after { content: "↓"; position: absolute; left: 50%; bottom: -10px; z-index: 3; transform: translateX(-50%); padding: 0 3px; background: #15181e; color: color-mix(in srgb, var(--node-color, var(--wf-forward)) 64%, #8b9099); font: 900 8px/1 var(--font-mono); }
+    .v-node.is-tensor { --node-color: var(--wf-forward); }
+    .v-node.is-residual { --node-color: var(--wf-residual); }
+    .v-node.is-moe { --node-color: var(--wf-moe); }
+    .v-node-name { color: color-mix(in srgb, var(--node-color, var(--wf-module)) 68%, #f1f3f5); font: 850 8.5px/1.1 var(--font-mono); }
+    .v-node-kind { padding: 3px 5px; border-radius: 4px; background: rgba(255,255,255,.045); color: #737985; font: 750 6.5px/1 var(--font-mono); text-transform: uppercase; }
+    .v-values { display: flex; justify-content: flex-end; gap: 4px; min-width: 0; }
+    .v-values span { padding: 3px 5px; border: 1px solid rgba(255,255,255,.07); border-radius: 4px; background: rgba(0,0,0,.16); color: #b8bcc4; font: 750 6.5px/1 var(--font-mono); white-space: nowrap; }
+    .v-values .warn { border-color: rgba(245,158,11,.32); color: #fbbf24; }
+    .v-aux { margin: 5px 0 5px 112px; padding: 5px 8px; border-left: 1px dashed var(--wf-moe); color: #c68a57; font: 750 7px/1 var(--font-mono); }
+    .v-backward { position: absolute; left: 10px; right: 10px; bottom: 6px; display: flex; align-items: center; gap: 8px; color: var(--wf-backward); font: 750 7px/1 var(--font-mono); }
+    .v-backward i { flex: 1; height: 1px; background: currentColor; opacity: .56; }
+    .expanded-title { display: flex; justify-content: space-between; align-items: center; padding-bottom: 9px; border-bottom: 1px solid #30343c; font: 850 11px/1 var(--font-mono); }
+    .expanded-title span:last-child { color: #7f8490; font-size: 9px; }
+    .inside { display: grid; grid-template-columns: minmax(0,1.55fr) minmax(220px,.9fr); gap: 12px; height: calc(100% - 27px); padding-top: 10px; }
+    .flow-box, .ledger, .bay, .lens, .attached-ledger { border: 1px solid #30343c; border-radius: 9px; background: rgba(11,13,17,.62); }
+    .flow-box { position: relative; padding: 12px; overflow: hidden; }
+    .shared { display: flex; justify-content: center; gap: 7px; margin-bottom: 11px; }
+    .chip { padding: 4px 7px; border: 1px solid #39404a; border-radius: 5px; color: #a3a7ae; background: #171a20; font: 750 8px/1 var(--font-mono); }
+    .flow-row { display: grid; grid-template-columns: 42px 1fr 50px; align-items: center; gap: 7px; min-height: 42px; }
+    .tensor { color: var(--wf-forward); font: 850 9px/1.25 var(--font-mono); }
+    .ops { position: relative; display: flex; align-items: center; gap: 5px; min-width: 0; }
+    .ops::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: #48505c; }
+    .op { position: relative; z-index: 1; padding: 5px 6px; border: 1px solid color-mix(in srgb, var(--op-color, var(--wf-module)) 58%, #30343c); border-radius: 5px; background: color-mix(in srgb, var(--op-color, var(--wf-module)) 13%, #11141a); color: color-mix(in srgb, var(--op-color, var(--wf-module)) 70%, #fff); white-space: nowrap; font: 800 7.5px/1 var(--font-mono); }
+    .op.residual { --op-color: var(--wf-residual); } .op.moe { --op-color: var(--wf-moe); }
+    .identity { margin: -2px 48px 2px 44px; height: 15px; border: 1px solid color-mix(in srgb, var(--wf-residual) 45%, transparent); border-bottom: 0; border-radius: 8px 8px 0 0; color: #898e98; font: 700 7px/1 var(--font-mono); text-align: center; }
+    .aux { margin: 2px 0 0 154px; color: #f5a65b; font: 750 7px/1 var(--font-mono); }
+    .back-mini { position: absolute; left: 12px; right: 12px; bottom: 10px; display: flex; justify-content: space-between; align-items: center; color: var(--wf-backward); font: 750 8px/1 var(--font-mono); }
+    .back-mini i { flex: 1; height: 1px; margin: 0 8px; background: currentColor; opacity: .55; }
+    .ledger { overflow: hidden; }
+    .ledger-title { padding: 8px 9px; border-bottom: 1px solid #30343c; color: #aeb2ba; font: 850 8px/1 var(--font-mono); text-transform: uppercase; }
+    .ledger-row { display: grid; grid-template-columns: 1.4fr repeat(3,.65fr); gap: 5px; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,.055); color: #898e98; font: 700 7px/1.2 var(--font-mono); }
+    .ledger-row.head { color: #5f6570; background: rgba(255,255,255,.025); }
+    .ledger-row b { color: #c8cbd1; font-weight: 750; }
+    .option-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 14px 18px 17px; border-top: 1px solid var(--border); }
+    .note { color: var(--foreground-secondary); font-size: 12px; line-height: 1.55; }
+    .note b { color: var(--foreground); }
+    .good::before { content: "优势  "; color: var(--success); font: 800 10px/1 var(--font-mono); }
+    .tradeoff::before { content: "取舍  "; color: var(--warning); font: 800 10px/1 var(--font-mono); }
+    .b-layers { right: 22px; bottom: auto; height: 62px; }
+    .b-layers .layer { height: 62px; }
+    .b-anchor { position: absolute; left: 350px; top: 190px; height: 24px; border-left: 1px solid var(--primary); }
+    .bay { position: absolute; left: 235px; right: 135px; top: 214px; bottom: 22px; display: grid; grid-template-columns: 1.25fr 1fr; gap: 12px; padding: 12px; }
+    .bay-flow { padding: 9px; }
+    .bay .ledger { height: 100%; }
+    .bay-title { margin-bottom: 10px; color: #d9dce2; font: 850 10px/1 var(--font-mono); }
+    .wide-flow { display: grid; grid-template-columns: 32px 1fr 34px; gap: 6px; align-items: center; margin: 8px 0; color: #aeb2ba; font: 750 8px/1 var(--font-mono); }
+    .wide-flow .track { height: 26px; display: flex; align-items: center; justify-content: center; border: 1px solid #30343c; border-radius: 6px; color: var(--wf-forward); background: #14171d; }
+    .wide-flow.reverse .track { color: var(--wf-backward); }
+    .c-layers { right: 22px; bottom: 136px; }
+    .lens-anchor { position: absolute; left: 354px; top: 200px; width: 92px; height: 48px; border-left: 1px solid var(--primary); border-bottom: 1px solid var(--primary); transform: skewX(-28deg); opacity: .7; }
+    .lens { position: absolute; left: 230px; top: 248px; width: 430px; bottom: 18px; padding: 12px; }
+    .attached-ledger { position: absolute; left: 680px; right: 100px; top: 248px; bottom: 18px; padding: 12px; }
+    .detail-title { display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #30343c; color: #d7d9de; font: 850 10px/1 var(--font-mono); }
+    .detail-title span { color: var(--wf-residual); }
+    .detail-row { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,.055); color: #898e98; font: 750 8px/1 var(--font-mono); }
+    .detail-row b { color: #d2d5da; }
+    .status-ok { color: var(--wf-success); } .status-warn { color: #fbbf24; }
+    .selection-toast { position: fixed; left: 50%; bottom: 20px; z-index: 20; transform: translateX(-50%) translateY(90px); display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid color-mix(in srgb, var(--primary) 55%, var(--border)); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--surface-2) 95%, transparent); box-shadow: 0 16px 42px rgba(0,0,0,.28); color: var(--foreground); font-size: 12px; opacity: 0; transition: .2s ease; }
+    .selection-toast.is-visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .selection-toast b { color: var(--primary); }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="page-head">
+      <div>
+        <div class="eyebrow">Model Architecture Training Sidecar · UI Decision</div>
+        <h1>点击 Layer 后，内部数据如何展开？</h1>
+        <p class="intro">以下只比较选中态。未选中时保持当前侧视图一比一不变。所有方案都包含 Forward、Backward、Residual identity、Attention、Dense/MoE、参数梯度与完整指标入口。</p>
+      </div>
+      <div class="rules">
+        <span class="rule">默认视图不变</span><span class="rule">画布可扩张</span><span class="rule">对象与标注同坐标系</span><span class="rule">Mock 数据明确标识</span>
+      </div>
+    </header>
+
+    <nav class="scheme-nav" aria-label="Wireframe 方案导航">
+      <button class="scheme-tab is-active" type="button" data-jump="A"><strong>A</strong><b>原位宽列展开</b><span>Layer 自身变宽 · 推荐</span></button>
+      <button class="scheme-tab" type="button" data-jump="B"><strong>B</strong><b>下方纵向展开</b><span>主模型宽度不变</span></button>
+      <button class="scheme-tab" type="button" data-jump="C"><strong>C</strong><b>局部放大镜</b><span>跟随指标账本</span></button>
+    </nav>
+
+    <section class="options">
+      <article class="option option-a" data-option="A" data-selected="true">
+        <header class="option-head"><div class="option-id">A</div><div><h2 class="option-title">原位宽列展开 <span class="recommended">· 推荐</span></h2><p class="option-sub">INLINE WIDE LAYER · Layer 自身变宽，其他 Layer 向两侧平移</p></div><button class="choose" type="button">已选择</button></header>
+        <div class="canvas-wrap"><div class="canvas">
+          <div class="lane-label metric-label">Metric<br>Std / Amax / Latency</div><div class="metric-lines"><svg viewBox="0 0 1200 54" preserveAspectRatio="none"><path class="m1" d="M0 31L80 22L160 27L240 11L320 19L400 15L480 32L560 23L640 28L720 9L800 21L880 17L960 35L1040 25L1120 29L1200 16"/><path class="m2" d="M0 40L80 36L160 42L240 31L320 37L400 29L480 39L560 34L640 45L720 35L800 41L880 30L960 37L1040 32L1120 39L1200 34"/><path class="m3" d="M0 49L80 45L160 47L240 39L320 43L400 40L480 46L560 41L640 49L720 43L800 46L880 38L960 44L1040 42L1120 47L1200 41"/></svg></div>
+          <div class="lane-label hidden-label">Tensor<br>Hidden state</div><div class="rail forward"><span class="dot"></span><span class="arrow">›</span><span class="dot"></span><span class="arrow">›</span><span class="dot"></span><span class="arrow">›</span><span class="dot"></span></div>
+          <div class="lane-label module-label">Module<br>Layer internals</div>
+          <div class="layers"><div class="layer">L11</div><div class="layer">L12</div><div class="layer expanded">
+            <div class="expanded-title"><span>L13 · Attention + MoE</span><span>PP1 · rank 8 · MOCK</span></div>
+            <div class="v-shell">
+              <div class="v-shared"><span class="chip">Position / RoPE · cos/sin cache</span><span class="chip">Attention Mask · causal</span></div>
+              <div class="v-node is-tensor"><b class="v-node-name">Input Hidden State · h₁₃</b><span class="v-node-kind">Tensor</span><div class="v-values"><span>μ +.003</span><span>σ 1.01</span><span>Amax 8.42</span><span>∇L2 .68</span></div></div>
+              <div class="v-section-label">Attention sublayer</div>
+              <div class="v-group"><div class="v-residual-rail"><span>Residual identity<br>h₁₃</span></div>
+                <div class="v-node"><b class="v-node-name">Attention RMSNorm</b><span class="v-node-kind">Norm</span><div class="v-values"><span>μ +.001</span><span>σ .99</span><span>Amax 6.82</span><span>.04ms</span></div></div>
+                <div class="v-node"><b class="v-node-name">Q / K / V + RoPE</b><span class="v-node-kind">Projection</span><div class="v-values"><span>σ .96</span><span>Amax 7.91</span><span>∇L2 .42</span><span>.18ms</span></div></div>
+                <div class="v-node"><b class="v-node-name">Attention Logits</b><span class="v-node-kind">QKᵀ/√d</span><div class="v-values"><span>min −12.8</span><span>max 14.7</span><span>σ 3.42</span><span>.22ms</span></div></div>
+                <div class="v-node"><b class="v-node-name">Attention Probability</b><span class="v-node-kind">Softmax</span><div class="v-values"><span>min 0</span><span>max .71</span><span>Σerr 2e−4</span><span>.09ms</span></div></div>
+                <div class="v-node"><b class="v-node-name">Context → Output Projection</b><span class="v-node-kind">Activation</span><div class="v-values"><span>σ .72</span><span>Amax 5.84</span><span>∇L2 .51</span><span>.31ms</span></div></div>
+                <div class="v-node is-residual"><b class="v-node-name">Residual Add ① · r₁₃</b><span class="v-node-kind">Add</span><div class="v-values"><span>μ +.004</span><span>σ 1.03</span><span class="warn">Amax 8.73</span><span>.08ms</span></div></div>
+              </div>
+              <div class="v-section-label">MoE sublayer</div>
+              <div class="v-group"><div class="v-residual-rail"><span>Residual identity<br>r₁₃</span></div>
+                <div class="v-node"><b class="v-node-name">Pre-MLP RMSNorm</b><span class="v-node-kind">Norm</span><div class="v-values"><span>μ 0</span><span>σ 1.00</span><span>Amax 6.54</span><span>.04ms</span></div></div>
+                <div class="v-node is-moe"><b class="v-node-name">Router Probability → Top-8</b><span class="v-node-kind">Routing</span><div class="v-values"><span>Pmax .62</span><span>entropy 1.84</span><span>imbalance 1.09×</span><span>.14ms</span></div></div>
+                <div class="v-node is-moe"><b class="v-node-name">Dispatch Buffer / EP All-to-All</b><span class="v-node-kind">Communication</span><div class="v-values"><span>tokens 4096</span><span>send 32MB</span><span>recv 31MB</span><span>.26ms</span></div></div>
+                <div class="v-node is-moe"><b class="v-node-name">Expert FFN Output</b><span class="v-node-kind">Experts</span><div class="v-values"><span>σ .84</span><span>Amax 6.92</span><span>load 87%</span><span>.71ms</span></div></div>
+                <div class="v-node is-moe"><b class="v-node-name">EP Combine Output</b><span class="v-node-kind">Activation</span><div class="v-values"><span>μ −.002</span><span>σ .79</span><span>Amax 6.31</span><span>.23ms</span></div></div>
+                <div class="v-node is-residual"><b class="v-node-name">Residual Add ② · h₁₄</b><span class="v-node-kind">Add</span><div class="v-values"><span>μ +.002</span><span>σ 1.04</span><span>Amax 9.01</span><span>.07ms</span></div></div>
+              </div>
+              <div class="v-aux">Router auxiliary loss · load balance 0.014 · z-loss 0.003 → Total Loss branch</div>
+              <div class="v-backward"><span>g₁₃ · L2 .68</span><i></i><span>Backward activation gradient + local parameter gradients</span><i></i><span>g₁₄ · L2 .71</span></div>
+            </div>
+          </div><div class="layer">L14</div><div class="layer">L15</div><div class="layer">L16</div></div>
+          <div class="lane-label backward-label">Tensor<br>Activation gradient</div><div class="rail backward"><span class="dot"></span><span class="arrow">‹</span><span class="dot"></span><span class="arrow">‹</span><span class="dot"></span><span class="arrow">‹</span><span class="dot"></span></div>
+        </div></div>
+        <footer class="option-foot"><div class="note good"><b>空间语义最强。</b> 内部节点与真实 Layer 位置绑定，Residual 绕行和前后向关系最清楚。</div><div class="note tradeoff"><b>横向位移最大。</b> 展开后画布宽度增加，需要自动平移保证选中 Layer 位于视口中央。</div></footer>
+      </article>
+
+      <article class="option" data-option="B" data-selected="false">
+        <header class="option-head"><div class="option-id">B</div><div><h2 class="option-title">下方纵向展开</h2><p class="option-sub">VERTICAL DETAIL BAY · Layer 列宽不变，在模型下方打开详情舱</p></div><button class="choose" type="button">选择此方案</button></header>
+        <div class="canvas-wrap"><div class="canvas">
+          <div class="lane-label metric-label">Metric<br>Layer trends</div><div class="metric-lines"><svg viewBox="0 0 1200 54" preserveAspectRatio="none"><path class="m1" d="M0 31L120 22L240 28L360 13L480 25L600 18L720 30L840 14L960 29L1080 19L1200 24"/><path class="m2" d="M0 43L120 35L240 41L360 33L480 39L600 31L720 42L840 34L960 40L1080 32L1200 38"/></svg></div><div class="lane-label hidden-label">Tensor<br>Hidden state</div><div class="rail forward"><span class="dot"></span><span class="arrow">›</span><span class="dot"></span><span class="arrow">›</span><span class="dot"></span><span class="arrow">›</span><span class="dot"></span></div>
+          <div class="layers b-layers"><div class="layer">L11</div><div class="layer">L12</div><div class="layer" style="border-color:#4369ef;color:#8ea5ff;background:rgba(67,105,239,.1)">L13</div><div class="layer">L14</div><div class="layer">L15</div><div class="layer">L16</div><div class="layer">L17</div><div class="layer">L18</div><div class="layer">L19</div><div class="layer">L20</div></div><div class="b-anchor"></div>
+          <div class="bay"><div class="bay-flow"><div class="bay-title">Layer L13 · internal dataflow</div><div class="wide-flow"><span>h₁₃</span><div class="track">Norm → Q/K/V → Logits → Softmax → Context → O Proj → Add ①</div><span>r₁₃</span></div><div class="wide-flow"><span>r₁₃</span><div class="track" style="color:var(--wf-moe)">Norm → Router → Top-k → Dispatch → Experts → Combine → Add ②</div><span>h₁₄</span></div><div class="wide-flow reverse"><span>g₁₃</span><div class="track">Attention grad ◁ Residual grad ◁ MoE grad</div><span>g₁₄</span></div></div><div class="ledger"><div class="ledger-title">Complete metric matrix</div><div class="ledger-row head"><span>Object</span><span>Std</span><span>Amax</span><span>ms</span></div><div class="ledger-row"><b>All forward tensors</b><span>✓</span><span>✓</span><span>✓</span></div><div class="ledger-row"><b>All backward tensors</b><span>✓</span><span>✓</span><span>✓</span></div><div class="ledger-row"><b>Parameters / grad</b><span>L2</span><span>ratio</span><span>—</span></div><div class="ledger-row"><b>Communication</b><span>tokens</span><span>bytes</span><span>✓</span></div></div></div>
+        </div></div>
+        <footer class="option-foot"><div class="note good"><b>主图位移最少。</b> 可以容纳最完整的指标表，并支持多个内部对象同时对比。</div><div class="note tradeoff"><b>空间对应较弱。</b> Layer 自身并没有真正变宽，详情通过锚线关联，和最初交互要求有偏差。</div></footer>
+      </article>
+
+      <article class="option" data-option="C" data-selected="false">
+        <header class="option-head"><div class="option-id">C</div><div><h2 class="option-title">局部放大镜 + 跟随指标账本</h2><p class="option-sub">FOCUS LENS · Layer 轻微加宽，放大镜和详情面板跟随当前对象</p></div><button class="choose" type="button">选择此方案</button></header>
+        <div class="canvas-wrap"><div class="canvas">
+          <div class="lane-label metric-label">Metric<br>Layer trends</div><div class="metric-lines"><svg viewBox="0 0 1200 54" preserveAspectRatio="none"><path class="m1" d="M0 31L120 22L240 28L360 13L480 25L600 18L720 30L840 14L960 29L1080 19L1200 24"/><path class="m3" d="M0 45L120 39L240 44L360 34L480 42L600 36L720 46L840 37L960 43L1080 35L1200 41"/></svg></div><div class="lane-label hidden-label">Tensor<br>Hidden state</div><div class="rail forward"><span class="dot"></span><span class="arrow">›</span><span class="dot"></span><span class="arrow">›</span><span class="dot"></span><span class="arrow">›</span><span class="dot"></span></div>
+          <div class="layers c-layers"><div class="layer">L11</div><div class="layer">L12</div><div class="layer" style="width:104px;flex-basis:104px;border-color:#4369ef;color:#8ea5ff;background:rgba(67,105,239,.1)">L13</div><div class="layer">L14</div><div class="layer">L15</div><div class="layer">L16</div><div class="layer">L17</div><div class="layer">L18</div></div><div class="lens-anchor"></div>
+          <div class="lens"><div class="bay-title">Layer L13 · focus lens</div><div class="identity">Residual identity · h₁₃</div><div class="wide-flow"><span>h₁₃</span><div class="track">Norm → Attention → Add ①</div><span>r₁₃</span></div><div class="identity">Residual identity · r₁₃</div><div class="wide-flow"><span>r₁₃</span><div class="track" style="color:var(--wf-moe)">Router → Dispatch → Experts → Add ②</div><span>h₁₄</span></div><div class="wide-flow reverse"><span>g₁₃</span><div class="track">activation gradient</div><span>g₁₄</span></div></div>
+          <div class="attached-ledger"><div class="detail-title"><b>Residual Add ①</b><span>WARNING</span></div><div class="detail-row"><span>Definition</span><b>h₁₃ + attention_output</b><span></span></div><div class="detail-row"><span>Mean</span><b>+0.0041</b><span class="status-ok">NORMAL</span></div><div class="detail-row"><span>Std σ</span><b>1.018</b><span class="status-ok">NORMAL</span></div><div class="detail-row"><span>Amax</span><b>8.73</b><span class="status-warn">WARNING</span></div><div class="detail-row"><span>Gradient L2</span><b>0.714</b><span class="status-ok">NORMAL</span></div><div class="detail-row"><span>Latency</span><b>0.08 ms</b><span class="status-ok">NORMAL</span></div><div class="detail-row"><span>Context</span><b>step 18420 · MB 3/8</b><span>MOCK</span></div></div>
+        </div></div>
+        <footer class="option-foot"><div class="note good"><b>单节点诊断最强。</b> 指标定义、数值、参考范围和异常判断可以集中表达。</div><div class="note tradeoff"><b>最依赖浮层。</b> 同时扫视全部内部指标较弱，拖拽和缩放时也最容易出现跟随漂移。</div></footer>
+      </article>
+    </section>
+  </main>
+  <div class="selection-toast" role="status" aria-live="polite">已选择方案 <b>A · 原位宽列展开</b>，回复我 A 即可开始实现。</div>
+  <script>
+    const labels={A:'A · 原位宽列展开',B:'B · 下方纵向展开',C:'C · 局部放大镜 + 跟随指标账本'};
+    const cards=[...document.querySelectorAll('[data-option]')];
+    const tabs=[...document.querySelectorAll('[data-jump]')];
+    const toast=document.querySelector('.selection-toast');
+    let toastTimer=0;
+    function selectOption(id,notify=true){
+      cards.forEach(card=>{
+        const selected=card.dataset.option===id;
+        card.dataset.selected=String(selected);
+        card.querySelector('.choose').textContent=selected?'已选择':'选择此方案';
+      });
+      tabs.forEach(tab=>tab.classList.toggle('is-active',tab.dataset.jump===id));
+      history.replaceState(null,'',`#option-${id.toLowerCase()}`);
+      toast.innerHTML=`已选择方案 <b>${labels[id]}</b>，回复我 ${id} 即可开始实现。`;
+      if(notify){toast.classList.add('is-visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('is-visible'),3200);}
+    }
+    cards.forEach(card=>card.querySelector('.choose').addEventListener('click',()=>selectOption(card.dataset.option)));
+    tabs.forEach(tab=>tab.addEventListener('click',()=>{
+      const id=tab.dataset.jump;
+      selectOption(id,false);
+      document.querySelector(`[data-option="${id}"]`).scrollIntoView({behavior:'smooth',block:'start'});
+    }));
+    const initial=location.hash.match(/option-([abc])/i)?.[1]?.toUpperCase()||'A';
+    selectOption(initial,false);
+  </script>
+</body>
+</html>

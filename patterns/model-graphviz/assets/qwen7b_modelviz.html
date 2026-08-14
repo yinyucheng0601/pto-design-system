@@ -778,6 +778,7 @@
     function activeQwenClusters() {
       if (state.collapsedModules.has('transformer')) return [];
       return QWEN_CLUSTERS
+        .filter((cluster) => cluster.id !== 'transformer-core')
         .filter((cluster) => isClusterActive(cluster.id))
         .map((cluster) => {
           const box = computeClusterBox(cluster.id);

@@ -1,0 +1,21 @@
+{
+  "capturedAt": "2026-07-28T10:45:00+08:00",
+  "captureRule": "Hashes were captured from the pre-refactor Core renderer, CSS, and preview HTML. The shared Rank API was added after the Core renderer boundary and is intentionally excluded from coreRendererSha256.",
+  "coreRendererBoundary": {
+    "start": "  function nodeHtml(",
+    "end": "  function elementFromHtml("
+  },
+  "coreRendererSha256": "bf3108037eb2fc5a0baf4ecd859c833918d788ff532e5ed88561c0967725e30e",
+  "patternCssSha256": "8813d5bc94eef48d08117859c6634e6c2494021e97e773c7fa0dede94ec3b711",
+  "patternHtmlSha256": "09635a01c8773baaa2569db648741e2effeb347fa90d6084e738c33b94599048",
+  "modelContract": {
+    "decoderLayers": 46,
+    "denseLayers": [0, 1],
+    "moeLayerRange": [2, 45],
+    "stageRanges": [[0, 11], [12, 22], [23, 34], [35, 45]],
+    "routedExperts": 256,
+    "topK": 8,
+    "staticScenes": ["input", "output", "mtp"]
+  },
+  "baselineUpdatePolicy": "Blocking. Do not update any hash without a separate diff report and explicit user approval. This file has no auto-update mode."
+}

@@ -230,6 +230,19 @@
   filter: var(--model-graphviz-node-shadow);
 }
 
+.pto-model-graphviz-svg.is-performance-heatmap
+  .pto-model-graphviz-node.is-performance-heatmap-node > rect:first-child {
+  fill: var(--model-graphviz-performance-fill) !important;
+  fill-opacity: 0.96 !important;
+}
+
+.pto-model-graphviz-svg.is-performance-heatmap
+  .pto-model-graphviz-node.is-performance-heatmap-node .pto-model-graphviz-node-label,
+.pto-model-graphviz-svg.is-performance-heatmap
+  .pto-model-graphviz-node.is-performance-heatmap-node .pto-model-graphviz-node-type {
+  fill: var(--model-graphviz-performance-text);
+}
+
 .pto-model-graphviz-node-label {
   fill: var(--model-graphviz-node-label);
   font-family: var(--font-sans);
@@ -248,7 +261,7 @@
 .pto-model-graphviz-node-type {
   fill: var(--model-graphviz-node-type);
   font-family: var(--font-sans);
-  font-size: calc(var(--font-size-label-xs) - 2px);
+  font-size: 12px;
   font-weight: var(--font-weight-medium);
   text-anchor: middle;
   dominant-baseline: middle;
@@ -266,13 +279,96 @@
   filter: var(--model-graphviz-parent-shadow);
 }
 
+.pto-model-graphviz-cluster > rect:first-child {
+  pointer-events: visibleStroke;
+}
+
 .pto-model-graphviz-cluster-label {
   fill: var(--model-graphviz-cluster-label);
   font-family: var(--font-sans);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: var(--font-weight-bold);
   dominant-baseline: middle;
   pointer-events: none;
+}
+
+.pto-model-graphviz-layer-pager-label {
+  fill: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 20px;
+  font-weight: var(--font-weight-bold);
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+.pto-model-graphviz-layer-pager-mask {
+  fill: var(--model-graphviz-stage-bg);
+  filter: none !important;
+  pointer-events: none;
+}
+
+.pto-model-graphviz-layer-step {
+  cursor: pointer;
+  outline: none;
+}
+
+.pto-model-graphviz-layer-step-bg {
+  fill: var(--surface-3);
+  stroke: none;
+  stroke-width: 0;
+  filter: none !important;
+  transition: fill var(--duration-fast) var(--easing-default), stroke var(--duration-fast) var(--easing-default);
+}
+
+.pto-model-graphviz-layer-step-icon {
+  fill: none;
+  stroke: var(--foreground);
+  stroke-width: 1.5px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.pto-model-graphviz-layer-step:hover .pto-model-graphviz-layer-step-bg,
+.pto-model-graphviz-layer-step:focus-visible .pto-model-graphviz-layer-step-bg {
+  fill: var(--surface-4);
+  stroke: none;
+}
+
+.pto-model-graphviz-layer-step.is-disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.pto-model-graphviz-layer-dot {
+  cursor: pointer;
+  outline: none;
+}
+
+.pto-model-graphviz-layer-dot-hit { fill: transparent; }
+
+.pto-model-graphviz-layer-dot-mark {
+  fill: var(--surface-4);
+  stroke: color-mix(in srgb, var(--foreground-muted) 46%, transparent);
+  stroke-width: 1px;
+  transition: fill var(--duration-fast) var(--easing-default), stroke var(--duration-fast) var(--easing-default), stroke-width var(--duration-fast) var(--easing-default);
+}
+
+.pto-model-graphviz-layer-dot.heat-1 .pto-model-graphviz-layer-dot-mark { fill: #4145AB; }
+.pto-model-graphviz-layer-dot.heat-2 .pto-model-graphviz-layer-dot-mark { fill: #39A2FC; }
+.pto-model-graphviz-layer-dot.heat-3 .pto-model-graphviz-layer-dot-mark { fill: #45F884; }
+.pto-model-graphviz-layer-dot.heat-4 .pto-model-graphviz-layer-dot-mark { fill: #E8D721; }
+.pto-model-graphviz-layer-dot.heat-5 .pto-model-graphviz-layer-dot-mark { fill: #DA3907; }
+
+.pto-model-graphviz-layer-dot:hover .pto-model-graphviz-layer-dot-mark,
+.pto-model-graphviz-layer-dot:focus-visible .pto-model-graphviz-layer-dot-mark {
+  stroke: var(--foreground);
+  stroke-width: 1.5px;
+}
+
+.pto-model-graphviz-layer-dot.is-selected .pto-model-graphviz-layer-dot-mark {
+  stroke: var(--foreground);
+  stroke-width: 2.5px;
 }
 
 .pto-model-graphviz-cluster-title-pill {
@@ -309,7 +405,7 @@
 .pto-model-graphviz-cluster-title-tag-text,
 .pto-model-graphviz-report-node-badge-text {
   font-family: var(--font-sans);
-  font-size: 7px;
+  font-size: 12px;
   font-weight: var(--font-weight-bold);
   dominant-baseline: central;
   text-rendering: geometricPrecision;
@@ -317,7 +413,7 @@
 }
 
 .pto-model-graphviz-report-node-badge-text {
-  font-size: 9.5px;
+  font-size: var(--font-size-label-sm);
 }
 
 .pto-model-graphviz-toggle {
@@ -359,6 +455,10 @@
 
 .pto-model-architecture-stage .pto-model-graphviz-cluster {
   cursor: default;
+}
+
+.pto-model-architecture-stage .pto-model-graphviz-cluster.is-structural-root {
+  display: none;
 }
 
 .pto-model-architecture-stage [tabindex]:focus,
@@ -427,7 +527,7 @@
 
 :root[data-theme='light'] .pto-model-architecture-stage .pto-model-graphviz-node-type {
   fill: var(--model-graphviz-node-type);
-  font-size: calc(var(--font-size-label-xs) - 4px);
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -674,7 +774,7 @@
 .pto-model-graphviz-edge-tag text {
   fill: var(--model-graphviz-edge-tag-fg);
   font-family: var(--font-sans);
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0;
 }
@@ -777,6 +877,6 @@
   border-radius: var(--radius-pill);
   background: var(--state-muted);
   color: var(--foreground-secondary);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1;
 }

@@ -251,7 +251,7 @@
     }
     function pivot(){return state.pivot||{x:0,y:0,z:-(config.layerCount-1)*config.depthGap/2};}
     function transformValue(){const p=pivot();return `scale(${state.zoom}) rotateX(${state.rx}deg) rotateY(${state.ry}deg) translate3d(${-p.x}px,${-p.y}px,${-p.z}px)`;}
-    function apply(){syncLayerExpansion();scene.style.left=`calc(50% + ${state.panX}px)`;scene.style.top=`calc(50% + ${state.panY}px)`;scene.style.transform=transformValue();readout.textContent=`${Math.round(state.zoom*100)}%`;scheduleOverlay();}
+    function apply(){syncLayerExpansion();scene.style.left=`calc(50% + ${state.panX}px)`;scene.style.top=`calc(50% + ${state.panY}px)`;scene.style.transform=transformValue();if(readout)readout.textContent=`${Math.round(state.zoom*100)}%`;scheduleOverlay();}
     function syncButtons(){
       root.dataset.view=state.view;root.dataset.parallel=state.parallelMode;
       root.querySelectorAll('[data-deck-view]').forEach(button=>{const active=button.dataset.deckView===state.view;button.classList.toggle('is-active',active);button.setAttribute('aria-pressed',String(active));});

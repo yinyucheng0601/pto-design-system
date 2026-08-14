@@ -2,7 +2,7 @@
   "id": "model-graphviz",
   "name": "Model Graphviz",
   "type": "svg",
-  "description": "Reusable SVG visual contract for TorchVista/Graphviz model architecture maps, report overlays, and evidence/focus overlays. Captures the approved DeepSeek V3.2 graph style and bundles clean architecture schema assets for DeepSeek V3.2, Qwen7B, openPangu-2.0-Flash, and local Pangu MoE variants; the legacy Gemma schema and openPangu Ultra-MoE 718B schema remain available as assets but are excluded from the preview gallery. The contract keeps default depth-2 folding, no default selected operator, pill module/op nodes, rounded-rect tensor/state nodes, transparent parent cluster shells with a fixed --radius-xl (16px) corner for every container including repeated layer templates, white edges, vertically centered node label+type stacks, the shared model-architecture op-category color profile for gallery model previews with communication operators in a blue-green lane, left-side Parameter/Weight input nodes, right-side State/Cache auxiliary nodes, semantic-first colormap defaults for common op roles with unknown keys expanded through the shared palette, red/green forbidden hue ranges in generated palettes, stronger light-mode node fills with no default op/module node border, strict semantic module hierarchy, explicit op semantic colors before parent fallback, folded representative edge dedupe, edge tag graph-node collision avoidance with perpendicular fallback offsets, stable expand/collapse viewport anchoring, centered report-priority container title pills, no-extra-border priority tags, top-right corner fold controls, right-inset expand controls, no graph shadows, and no-border clicked-operator preview cards with dark code surfaces. The base renderer also owns optional controller behavior formerly duplicated by model-training-graphviz: evidence hover panels, edge-object hover panels for tagged tensor/parameter/activation flows, edge type tags, selected/related emphasis, hierarchy-aware focus, drag pan, Command-wheel zoom, and stable non-refitting phase/focus changes. New model graph pages should derive cluster boxes from the bounding box of their visible children while reserving cluster-title and external parameter-edge clearance, lay the decoder chain out as a single top-to-bottom column (Gate/Up the only parallel pair), use transform-based cursor-anchored pan/zoom through renderController when interaction is needed, show a single neutral selection stroke with no browser focus ring only after user selection, and place a repeat-count badge at the cluster top-left under the title.",
+  "description": "Reusable SVG visual contract for TorchVista/Graphviz model architecture maps, report overlays, and evidence/focus overlays. Captures the approved DeepSeek V3.2 graph style and bundles clean architecture schema assets for DeepSeek V3.2, Qwen7B, openPangu-2.0-Flash, and local Pangu MoE variants; the legacy Gemma schema and openPangu Ultra-MoE 718B schema remain available as assets but are excluded from the preview gallery. The contract keeps default depth-2 folding, no default selected operator, pill module/op nodes, rounded-rect tensor/state nodes, transparent parent cluster shells with a fixed --radius-xl (16px) corner for every meaningful container including repeated layer templates, white edges, vertically centered node labels, the shared model-architecture op-category color profile for gallery model previews with communication operators in a blue-green lane, left-side Parameter/Weight input nodes, right-side State/Cache auxiliary nodes, semantic-first colormap defaults for common op roles with unknown keys expanded through the shared palette, red/green forbidden hue ranges in generated palettes, and an optional operator performance-share heatmap using the DeepSeek report's max-normalized blue-purple-orange-red ramp with a 0.64 exponent. Structural-only roots may remain in source hierarchy while their visual frame is omitted. The base renderer also owns optional controller behavior formerly duplicated by model-training-graphviz: evidence hover panels, edge-object hover panels for tagged tensor/parameter/activation flows, edge type tags, selected/related emphasis, hierarchy-aware focus, drag pan, Command-wheel zoom, and stable non-refitting phase/focus changes.",
   "typography": {
     "bodyMinimumPx": 14,
     "uiMinimumPx": 12,
@@ -81,6 +81,12 @@
     "selectableClusters": "Set interaction.selectableClusters=false for pages where blank space inside expanded parent containers must pan only and must not open an inspector."
   },
   "reportOverlayContract": {
+    "performanceHeatmap": {
+      "scope": "Op nodes with finite timeSharePct values, or a numeric metricBadge fallback, only; activates by default when such values exist",
+      "normalization": "Divide by the maximum mapped Op time share, clamp to 0..1, then apply exponent 0.64",
+      "colorStops": ["rgb(35, 99, 166)", "rgb(102, 82, 174)", "rgb(202, 105, 22)", "rgb(220, 45, 45)"],
+      "fallback": "Nodes without performance values retain their semantic fill; selection and related strokes remain renderer-owned"
+    },
     "priorityColors": {
       "P0": "#FF2D7A",
       "P1": "#FF9D00",
@@ -169,6 +175,8 @@
       "window.PtoModelGraphvizPattern.renderController(container, graph, options)",
       "window.PtoModelGraphvizPattern.buildColorMap(keys)",
       "window.PtoModelGraphvizPattern.modelArchitectureColormap(graph, options)",
+      "window.PtoModelGraphvizPattern.applyPerformanceHeatmap(svg, graph, options)",
+      "window.PtoModelGraphvizPattern.performanceHeatmapColor(value, maxValue, options)",
       "window.PtoModelGraphvizPattern.buildHierarchy(graph)",
       "window.PtoModelGraphvizPattern.relationForNode(graph, evidenceMap, nodeId, relatedNodeIds)",
       "window.PtoModelGraphvizPattern.reportPriorityColors",

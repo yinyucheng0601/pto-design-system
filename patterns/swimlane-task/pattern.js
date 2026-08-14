@@ -8,13 +8,14 @@
     maxInWidth: 42,
     minOutWidth: 12,
     maxOutWidth: 48,
-    selectedLightenAmount: 28,
-    emphasizedLightenAmount: 14,
+    selectedLightenAmount: 10,
+    emphasizedLightenAmount: 6,
     baseFillAlpha: 0.24,
     borderSelected: 'rgba(255,255,255,0.88)',
     borderRelated: 'rgba(255,255,255,0.46)',
     borderDefault: 'rgba(255,255,255,0.16)',
     textColor: 'rgba(255,255,255,0.92)',
+    darkTextColor: 'rgba(15,23,42,0.94)',
     topHighlight: 'rgba(255,255,255,0.08)',
   };
 
@@ -94,7 +95,7 @@
     const r = Math.min(255, (value >> 16) + amount);
     const g = Math.min(255, ((value >> 8) & 0xff) + amount);
     const b = Math.min(255, (value & 0xff) + amount);
-    return `rgb(${r},${g},${b})`;
+    return `#${[r, g, b].map((channel) => channel.toString(16).padStart(2, '0')).join('')}`;
   }
 
   function alphaHexColor(color, alpha) {
@@ -114,7 +115,38 @@
     const r = mix(from >> 16, to >> 16);
     const g = mix((from >> 8) & 0xff, (to >> 8) & 0xff);
     const b = mix(from & 0xff, to & 0xff);
-    return `rgb(${r},${g},${b})`;
+    return `#${[r, g, b].map((channel) => channel.toString(16).padStart(2, '0')).join('')}`;
+  }
+
+  function parseColorChannels(color) {
+    const value = String(color || '').trim();
+    const hex = value.match(/^#([0-9a-f]{6})$/i);
+    if (hex) {
+      const number = parseInt(hex[1], 16);
+      return [(number >> 16) & 0xff, (number >> 8) & 0xff, number & 0xff];
+    }
+    const rgb = value.match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i);
+    if (!rgb) return null;
+    return rgb.slice(1, 4).map((channel) => Math.max(0, Math.min(255, Number(channel))));
+  }
+
+  function relativeLuminance(color) {
+    const channels = parseColorChannels(color);
+    if (!channels) return 0;
+    const linear = channels.map((channel) => {
+      const value = channel / 255;
+      return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+  }
+
+  function readableTextColor(backgroundColor, options = {}) {
+    const background = relativeLuminance(backgroundColor);
+    const lightColor = options.lightColor || DEFAULTS.textColor;
+    const darkColor = options.darkColor || DEFAULTS.darkTextColor;
+    const lightContrast = (1.05) / (background + 0.05);
+    const darkContrast = (background + 0.05) / (relativeLuminance(darkColor) + 0.05);
+    return darkContrast > lightContrast ? darkColor : lightColor;
   }
 
   function stableHash(input) {
@@ -522,11 +554,12 @@
     ctx.fillStyle = alphaHexColor(displayColor, DEFAULTS.baseFillAlpha);
     ctx.fillRect(barX, barY, width, height);
 
-    [
+    const segmentFills = [
       { x: barX, w: inW, fill: mixHexColors(displayColor, '#ffffff', 0.16) },
       { x: barX + inW, w: computeW, fill: displayColor },
       { x: barX + inW + computeW, w: outW, fill: mixHexColors(displayColor, '#0b0f17', 0.2) },
-    ].forEach((segment) => {
+    ];
+    segmentFills.forEach((segment) => {
       if (segment.w <= 0) return;
       ctx.fillStyle = segment.fill;
       ctx.fillRect(segment.x, barY, segment.w, height);
@@ -542,7 +575,7 @@
     ctx.lineWidth = options.isSelected ? 1.4 : 1;
     ctx.stroke();
 
-    if (width < 28) {
+    if (width < 28 || options.showLabel === false) {
       return {
         displayColor,
         borderColor,
@@ -551,7 +584,7 @@
     }
 
     const segments = buildTaskSegmentSpec(task, width);
-    const font = width >= 72 ? `600 9px ${fontFamily}` : `600 8px ${fontFamily}`;
+    const font = `600 12px ${fontFamily}`;
 
     ctx.save();
     ctx.beginPath();
@@ -561,13 +594,13 @@
     ctx.textBaseline = 'middle';
 
     [
-      { x: barX, w: inW, align: 'center', text: segments[0].text },
-      { x: barX + inW, w: computeW, align: 'left', text: segments[1].text },
-      { x: barX + inW + computeW, w: outW, align: 'center', text: segments[2].text },
+      { x: barX, w: inW, align: 'center', text: segments[0].text, fill: segmentFills[0].fill },
+      { x: barX + inW, w: computeW, align: 'left', text: segments[1].text, fill: segmentFills[1].fill },
+      { x: barX + inW + computeW, w: outW, align: 'center', text: segments[2].text, fill: segmentFills[2].fill },
     ].forEach((segment, index) => {
       if (!segment.text) return;
       if (segment.w < (index === 1 ? 20 : 14)) return;
-      ctx.fillStyle = DEFAULTS.textColor;
+      ctx.fillStyle = readableTextColor(segment.fill);
       if (segment.align === 'left') {
         ctx.textAlign = 'left';
         const maxChars = Math.max(4, Math.floor((segment.w - 8) / 6));
@@ -596,6 +629,8 @@
     lightenHexColor,
     alphaHexColor,
     mixHexColors,
+    relativeLuminance,
+    readableTextColor,
     stableHash,
     hslToHex,
     hashColor,

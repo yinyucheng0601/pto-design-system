@@ -15,7 +15,7 @@ design-system-share/
 ├── README.md                    ← 当前文件，给你看的使用说明
 ├── SKILL.md                     ← 给 AI 看的规则（让 AI 先读这个）
 ├── DESIGN.md                    ← 设计系统全景说明（颜色 / 字体 / 间距 / 组件 / 治理）
-├── design-system-preview.html   ← 基础组件辅助预览；完整页面优先看 patterns
+├── design-system-preview.html   ← 基础组件辅助预览（样式与交互在 preview/）；完整页面优先看 patterns
 ├── references/
 │   ├── quick-reference.md       ← 一页速查：所有 token 和 class 名
 │   ├── pto-design-system-map.md ← 元素分类规则（什么时候用什么按钮）
@@ -29,6 +29,7 @@ design-system-share/
 │   ├── tokens.json              ← 生成产物，不手改
 │   └── tokens.js                ← 生成产物，不手改
 ├── css/style.css                ← 真正的 class 实现
+├── preview/                     ← preview 页脚手架：preview.css / preview.js（design-system-preview.html 的独立样式与交互，preview-only，业务页不要引用）
 ├── scripts/audit-theme.mjs      ← light/dark token、硬编码颜色、对比度检查
 ├── scripts/audit-typography.mjs ← 14px 正文基线、token 完整性、data-viz 小字号例外检查
 ├── assets/                      ← pattern 运行时需要的 SVG 资源（例如 fx.svg）
@@ -67,7 +68,7 @@ design-system-share/
 | `model-graphviz` | TorchVista / 模型 Graphviz / Qwen-7B / openPangu-2.0-Flash 架构页 / 报告 overlay | `patterns/model-graphviz/pattern.html` |
 | `model-training-graphviz` | 在共享模型 Graphviz 上叠加训练 evidence、phase、edge tag 与相关节点强调 | `patterns/model-training-graphviz/pattern.js` |
 | `model-architecture-3d-deck` | openPangu 深度堆叠架构、iso/front/right 视图和平行标注 | `patterns/model-architecture-3d-deck/pattern.js` |
-| `model-parallel-rank-deck` | 将完整模型 Layer 编译到 Three.js Rank volumes 并检查并行归属 | `patterns/model-parallel-rank-deck/pattern.js` |
+| `model-parallel-rank-deck` | 将完整模型 Layer 编译到 Three.js Rank volumes；支持全局网格、通信组聚焦与并行归属检查 | `patterns/model-parallel-rank-deck/pattern.js` |
 | `model-architecture-training-sidecar` | 在 3D deck 右视图上增加训练流、梯度、loss、metric 与 Layer 下钻 | `patterns/model-architecture-training-sidecar/pattern.js` |
 | `training-metrics-chart` | 训练指标曲线、异常点、interest-window brush 和 step cursor | `patterns/training-metrics-chart/pattern.js` |
 | `memory-architecture` | 910B / 950 内存层级、MTE route、AIC/AIV 组合图、graph-only iframe、60% 默认缩放、拖拽和 Command-wheel 缩放 | `patterns/memory-architecture/pattern.js` |
@@ -229,7 +230,7 @@ AI 应该先问清楚：
 在指令里**强调一次**：「请先读 `SKILL.md`，并按里面的 Workflow A/B/C 输出」。大多数情况这一句就够了。
 
 **Q：我自己改了 PTO 主仓库的 token，这个文件夹会自动同步吗？**
-不会，这是一份**复制**。主仓库改动后需要把 `DESIGN.md` / `design-system-preview.html` / `tokens/*` / `css/style.css` / `swimlane/styles.css` / `patterns/` 重新复制进来。
+不会，这是一份**复制**。主仓库改动后需要把 `references/DESIGN.md` / `design-system-preview.html` / `preview/` / `tokens/*` / `css/style.css` / `swimlane/styles.css` / `patterns/` 重新复制进来。
 
 **Q：可以把 AI 生成的新组件回流到 PTO 系统里吗？**
 可以而且应该。流程是：AI 先做 preview → 你审核 → 审核通过后**先把样式塞进 `tokens/` 和 `css/style.css`**，**再**让业务模块去消费。绝对不要先在业务模块里用、回头再补到系统里。

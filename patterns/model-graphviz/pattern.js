@@ -105,6 +105,10 @@
     P1: '#FF9D00',
     P2: '#FFE600',
   };
+  const PERFORMANCE_HEATMAP_TURBO_STOPS = Object.freeze([
+    '#30123B', '#4145AB', '#4675ED', '#39A2FC', '#1BCFD4',
+    '#45F884', '#A4FC3C', '#E8D721', '#FA8C19', '#DA3907',
+  ]);
   const MIN_ZOOM = 0.18;
   const MAX_ZOOM = 2.6;
   let renderSequence = 0;
@@ -124,6 +128,10 @@
     return Array.isArray(value) ? value.filter(Boolean) : [value].filter(Boolean);
   }
 
+  function escapeSelectorValue(value) {
+    return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  }
+
   function nodeMap(graph) {
     return new Map((graph.nodes || []).map((node) => [node.id, node]));
   }
@@ -140,6 +148,95 @@
       nodes: (source.nodes || []).map((node) => ({ ...node })),
       edges: (source.edges || []).map((edge) => ({ ...edge })),
     };
+  }
+
+  function performanceHeatmapValue(node, options = {}) {
+    if (typeof options.value === 'function') {
+      return Number(options.value(node));
+    }
+    const valueKey = options.valueKey || 'timeSharePct';
+    const directValue = Number(
+      node?.[valueKey]
+      ?? node?.performance?.[valueKey]
+      ?? node?.metrics?.[valueKey]
+      ?? node?.report?.[valueKey],
+    );
+    if (Number.isFinite(directValue)) return directValue;
+    const badgeMatch = String(node?.metricBadge || '').match(/-?\d+(?:\.\d+)?/);
+    return badgeMatch ? Number(badgeMatch[0]) : NaN;
+  }
+
+  function performanceHeatmapColor(value, maxValue, options = {}) {
+    const resolvedValue = Number(value);
+    const resolvedMin = Number(options.minValue);
+    const resolvedMax = Number(maxValue);
+    const logDomain = resolvedMin > 0 && resolvedMax > resolvedMin && resolvedValue > 0;
+    const rawRatio = logDomain
+      ? (Math.log(resolvedValue) - Math.log(resolvedMin)) / (Math.log(resolvedMax) - Math.log(resolvedMin))
+      : (resolvedMax > 0 ? resolvedValue / resolvedMax : 0);
+    const ratio = Math.max(0, Math.min(1, rawRatio));
+    const scaled = ratio * (PERFORMANCE_HEATMAP_TURBO_STOPS.length - 1);
+    const lowerIndex = Math.floor(scaled);
+    const upperIndex = Math.min(PERFORMANCE_HEATMAP_TURBO_STOPS.length - 1, lowerIndex + 1);
+    const mix = scaled - lowerIndex;
+    const lower = hexToRgb(PERFORMANCE_HEATMAP_TURBO_STOPS[lowerIndex]);
+    const upper = hexToRgb(PERFORMANCE_HEATMAP_TURBO_STOPS[upperIndex]);
+    const channels = ['r', 'g', 'b'].map((channel) => Math.round(
+      lower[channel] + (upper[channel] - lower[channel]) * mix,
+    ));
+    return `#${channels.map((channel) => channel.toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+  }
+
+  function performanceHeatmapTextColor(backgroundColor) {
+    const { r, g, b } = hexToRgb(backgroundColor);
+    const luminance = [r, g, b].map((channel) => {
+      const value = channel / 255;
+      return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    }).reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+    const lightContrast = 1.05 / (luminance + 0.05);
+    const darkTextLuminance = 0.009;
+    const darkContrast = (luminance + 0.05) / (darkTextLuminance + 0.05);
+    return darkContrast > lightContrast ? '#0F172A' : '#FFFFFF';
+  }
+
+  function applyPerformanceHeatmap(svg, graph, options = {}) {
+    if (!svg) return { enabled: false, maxValue: 0, mappedNodeCount: 0 };
+    const resolvedOptions = options === true ? { enabled: true } : (options || {});
+    svg.querySelectorAll('.is-performance-heatmap-node').forEach((node) => {
+      node.classList.remove('is-performance-heatmap-node');
+      node.style.removeProperty('--model-graphviz-performance-fill');
+      node.style.removeProperty('--model-graphviz-performance-text');
+      node.removeAttribute('data-performance-heatmap-value');
+    });
+    const candidates = (graph?.nodes || []).map((node) => ({
+      node,
+      value: performanceHeatmapValue(node, resolvedOptions),
+    })).filter(({ node, value }) => getNodeVisualKind(node) === 'op' && Number.isFinite(value));
+    const enabled = resolvedOptions.enabled !== false && candidates.length > 0;
+    svg.classList.toggle('is-performance-heatmap', enabled);
+    if (!enabled) return { enabled, maxValue: 0, mappedNodeCount: 0 };
+    const configuredMax = Number(resolvedOptions.maxValue);
+    const maxValue = configuredMax > 0
+      ? configuredMax
+      : Math.max(0, ...candidates.map(({ value }) => value));
+    const configuredMin = Number(resolvedOptions.minValue);
+    const positiveValues = candidates.map(({ value }) => value).filter((value) => value > 0);
+    const minValue = configuredMin > 0
+      ? configuredMin
+      : (positiveValues.length ? Math.min(...positiveValues) : 0);
+    const heatmapOptions = { ...resolvedOptions, minValue };
+    let mappedNodeCount = 0;
+    candidates.forEach(({ node, value }) => {
+      const host = svg.querySelector(`[data-node-id="${escapeSelectorValue(node.id)}"]`);
+      if (!host) return;
+      const fill = performanceHeatmapColor(value, maxValue, heatmapOptions);
+      host.classList.add('is-performance-heatmap-node');
+      host.style.setProperty('--model-graphviz-performance-fill', fill);
+      host.style.setProperty('--model-graphviz-performance-text', performanceHeatmapTextColor(fill));
+      host.setAttribute('data-performance-heatmap-value', String(value));
+      mappedNodeCount += 1;
+    });
+    return { enabled, minValue, maxValue, mappedNodeCount };
   }
 
   function buildHierarchy(graph) {
@@ -289,7 +386,7 @@
 
   function edgeTagFontSize(edge, options) {
     const value = Number(edge?.tagFontSize ?? options?.edgeTagFontSize);
-    return Number.isFinite(value) ? Math.max(8, Math.min(18, value)) : 9.5;
+    return Number.isFinite(value) ? Math.max(12, Math.min(18, value)) : 12;
   }
 
   function edgeTagHeight(edge, options) {
@@ -302,7 +399,7 @@
     return Number.isFinite(value) ? value : 0;
   }
 
-  function edgeTagWidth(label, fontSize = 9.5, paddingX = 9) {
+  function edgeTagWidth(label, fontSize = 12, paddingX = 9) {
     return Math.max(38, Math.min(132, String(label || '').length * fontSize * 0.6 + paddingX * 2));
   }
 
@@ -930,9 +1027,11 @@
   }
 
   function drawCluster(svg, cluster, color) {
+    const structuralRootClass = cluster.structuralRoot ? ' is-structural-root' : '';
     const group = createSvgElement('g', {
-      class: 'pto-model-graphviz-cluster',
+      class: `pto-model-graphviz-cluster${structuralRootClass}`,
       'data-cluster-id': cluster.id,
+      'data-structural-root': cluster.structuralRoot ? 'true' : null,
     });
     const isRepeat = Boolean(cluster.repeat);
     const radius = 16; // --radius-xl, matches DeepSeek parent-radius; keeps corner toggle inside
@@ -950,7 +1049,7 @@
       'stroke-dasharray': isRepeat ? '3 2' : null,
     }));
 
-    if (!cluster.reportPriority) {
+    if (!cluster.reportPriority && !isRepeat) {
       const label = createSvgElement('text', {
         class: 'pto-model-graphviz-cluster-label',
         x: cluster.x + 20,
@@ -960,13 +1059,133 @@
       group.appendChild(label);
     }
 
-    const toggleX = cluster.x + cluster.width - 13;
-    const toggleY = cluster.y + 13; // top-right corner anchor
+    const repeatCount = Number(cluster.repeatCount || cluster.instanceIndices?.length || 0);
+    const instanceIndices = Array.isArray(cluster.instanceIndices) && cluster.instanceIndices.length
+      ? cluster.instanceIndices.map(Number).filter(Number.isFinite)
+      : Array.from({ length: repeatCount }, (_, index) => index);
+    if (isRepeat && repeatCount > 1 && instanceIndices.length) {
+      const selectedInstanceIndex = instanceIndices.includes(Number(cluster.selectedInstanceIndex))
+        ? Number(cluster.selectedInstanceIndex)
+        : instanceIndices[0];
+      const selectedPosition = Math.max(0, instanceIndices.indexOf(selectedInstanceIndex));
+      const metrics = new Map((cluster.instanceMetrics || []).map((metric) => [Number(metric.instanceIndex), metric]));
+      const pagerLabelY = cluster.y + 28;
+      const pagerControlsY = cluster.y + 76;
+      const pager = createSvgElement('g', {
+        class: 'pto-model-graphviz-layer-pager',
+        'data-repeat-node-id': cluster.id,
+        role: 'radiogroup',
+        'aria-label': `${cluster.label || cluster.id} layers`,
+      });
+      pager.appendChild(createSvgElement('rect', {
+        class: 'pto-model-graphviz-layer-pager-mask',
+        x: cluster.x + 12,
+        y: cluster.y + 10,
+        width: cluster.width - 24,
+        height: 86,
+        rx: 10,
+        ry: 10,
+      }));
+      const pagerLabel = createSvgElement('text', {
+        class: 'pto-model-graphviz-layer-pager-label',
+        x: cluster.x + 24,
+        y: pagerLabelY,
+      });
+      const repeatLabel = String(cluster.label || cluster.id)
+        .replace(/\s*·\s*layers\s+\d+\s*[\u2013-]\s*\d+\s*$/i, '');
+      pagerLabel.textContent = `${repeatLabel} · Layer ${selectedInstanceIndex}/${instanceIndices[instanceIndices.length - 1]}`;
+      pager.appendChild(pagerLabel);
+
+      const buttonSize = 36;
+      const controlGap = 12;
+      const dotStep = 24;
+      const dotsWidth = instanceIndices.length * dotStep;
+      const controlsWidth = buttonSize * 2 + controlGap * 2 + dotsWidth;
+      const controlsLeft = cluster.x + (cluster.width - controlsWidth) / 2;
+      const previousX = controlsLeft;
+      const dotsLeft = previousX + buttonSize + controlGap;
+      const nextX = dotsLeft + dotsWidth + controlGap;
+      const appendStepButton = (direction, x, targetIndex, disabled) => {
+        const button = createSvgElement('g', {
+          class: `pto-model-graphviz-layer-step is-${direction}${disabled ? ' is-disabled' : ''}`,
+          'data-layer-step': direction,
+          'data-target-layer-index': targetIndex,
+          role: 'button',
+          tabindex: disabled ? '-1' : '0',
+          'aria-disabled': disabled ? 'true' : 'false',
+          'aria-label': direction === 'previous' ? 'Previous layer' : 'Next layer',
+        });
+        button.appendChild(createSvgElement('rect', {
+          class: 'pto-model-graphviz-layer-step-bg',
+          x,
+          y: pagerControlsY - buttonSize / 2,
+          width: buttonSize,
+          height: buttonSize,
+          rx: 8,
+          ry: 8,
+        }));
+        const centerX = x + buttonSize / 2;
+        const offset = direction === 'previous' ? 1 : -1;
+        button.appendChild(createSvgElement('path', {
+          class: 'pto-model-graphviz-layer-step-icon',
+          d: `M ${centerX + offset * 3} ${pagerControlsY - 6} L ${centerX - offset * 4} ${pagerControlsY} L ${centerX + offset * 3} ${pagerControlsY + 6}`,
+        }));
+        pager.appendChild(button);
+      };
+      appendStepButton(
+        'previous',
+        previousX,
+        instanceIndices[Math.max(0, selectedPosition - 1)],
+        selectedPosition === 0,
+      );
+      appendStepButton(
+        'next',
+        nextX,
+        instanceIndices[Math.min(instanceIndices.length - 1, selectedPosition + 1)],
+        selectedPosition === instanceIndices.length - 1,
+      );
+
+      instanceIndices.forEach((instanceIndex, position) => {
+        const metric = metrics.get(instanceIndex) || {};
+        const selected = instanceIndex === selectedInstanceIndex;
+        const hasData = Number.isFinite(Number(metric.timeUs));
+        const heatLevel = hasData ? Math.max(1, Math.min(5, Number(metric.heatLevel) || 1)) : 0;
+        const dotX = dotsLeft + dotStep * (position + 0.5);
+        const dot = createSvgElement('g', {
+          class: `pto-model-graphviz-layer-dot${selected ? ' is-selected' : ''}${hasData ? ` has-data heat-${heatLevel}` : ' has-no-data'}`,
+          'data-layer-index': instanceIndex,
+          'data-layer-time-us': hasData ? Number(metric.timeUs) : '',
+          role: 'radio',
+          tabindex: selected ? '0' : '-1',
+          'aria-checked': selected ? 'true' : 'false',
+          'aria-label': hasData
+            ? `Layer ${instanceIndex}, ${Number(metric.timeUs).toFixed(2)} microseconds`
+            : `Layer ${instanceIndex}, no timing data`,
+        });
+        dot.appendChild(createSvgElement('circle', {
+          class: 'pto-model-graphviz-layer-dot-hit',
+          cx: dotX,
+          cy: pagerControlsY,
+          r: 12,
+        }));
+        dot.appendChild(createSvgElement('circle', {
+          class: 'pto-model-graphviz-layer-dot-mark',
+          cx: dotX,
+          cy: pagerControlsY,
+          r: selected ? 7 : 5.5,
+        }));
+        pager.appendChild(dot);
+      });
+      group.appendChild(pager);
+    }
+
+    const toggleX = cluster.x + cluster.width - EXPAND_BUTTON_EDGE_GAP - EXPAND_BUTTON_RADIUS;
+    const toggleY = cluster.y + EXPAND_BUTTON_EDGE_GAP + EXPAND_BUTTON_RADIUS;
     group.appendChild(createSvgElement('circle', {
       class: 'pto-model-graphviz-toggle',
       cx: toggleX,
       cy: toggleY,
-      r: 7.5,
+      r: EXPAND_BUTTON_RADIUS,
     }));
     const icon = createSvgElement('text', {
       class: 'pto-model-graphviz-toggle-icon',
@@ -1055,8 +1274,8 @@
     const priority = String(node.reportPriority || '').toUpperCase();
     if (!priority) return;
 
-    const badgeWidth = estimateTextWidth(priority, 30, 36);
-    const badgeHeight = 16;
+    const badgeWidth = estimateTextWidth(priority, 38, 52);
+    const badgeHeight = 24;
     const x = -node.width / 2 + 8;
     const centerY = 0;
     const fill = getReportPriorityFill(priority);
@@ -1119,13 +1338,13 @@
     const label = createSvgElement('text', {
       class: 'pto-model-graphviz-node-label',
       x: node.collapsed ? -8 : 0,
-      y: visualKind === 'tensor' || node.hideTypeLabel || node.glyph ? 0 : -4,
+      y: visualKind === 'tensor' || visualKind === 'op' || node.hideTypeLabel || node.glyph ? 0 : -4,
       fill: NODE_TEXT_COLOR,
     });
     label.textContent = node.label || node.id;
     group.appendChild(label);
 
-    if (visualKind !== 'tensor' && !node.hideTypeLabel && !node.glyph) {
+    if (visualKind !== 'tensor' && visualKind !== 'op' && !node.hideTypeLabel && !node.glyph) {
       const type = createSvgElement('text', {
         class: 'pto-model-graphviz-node-type',
         x: node.collapsed ? -8 : 0,
@@ -1384,7 +1603,8 @@
       const label = el.querySelector('.pto-model-graphviz-node-label');
       const type = el.querySelector('.pto-model-graphviz-node-type');
       if (label) {
-        label.setAttribute('dominant-baseline', visualKind === 'tensor' ? 'middle' : 'auto');
+        const centeredLabel = visualKind === 'tensor' || visualKind === 'op' || node.hideTypeLabel || node.glyph;
+        label.setAttribute('dominant-baseline', centeredLabel ? 'middle' : 'auto');
         label.style.paintOrder = 'stroke';
       }
       if (type) type.style.opacity = '0.92';
@@ -1622,7 +1842,88 @@
     }
 
     const selectableClusters = selectable && interaction.selectableClusters !== false && opts.selectableClusters !== false;
-    clusterEntries.forEach(({ el, cluster }) => {
+    clusterEntries.forEach(({ el, cluster, layerPager }) => {
+      const controlRoot = layerPager || el;
+      const layerDots = Array.from(controlRoot.querySelectorAll('[data-layer-index]'));
+      const layerSteps = Array.from(controlRoot.querySelectorAll('[data-layer-step]'));
+      if (layerDots.length && typeof opts.onRepeatInstanceChange === 'function') {
+        const activateLayer = (instanceIndex, source) => {
+          if (!Number.isFinite(instanceIndex)) return;
+          hideHover();
+          opts.onRepeatInstanceChange({ nodeId: cluster.id, instanceIndex, source });
+        };
+        const activateLayerDot = (dot, source) => activateLayer(Number(dot.dataset.layerIndex), source);
+        const showLayerHover = (dot, event) => {
+          if (!hover) return;
+          const instanceIndex = Number(dot.dataset.layerIndex);
+          const timeValue = dot.dataset.layerTimeUs;
+          const timeUs = timeValue === '' ? Number.NaN : Number(timeValue);
+          hover.innerHTML = [
+            '<div class="pto-model-graphviz-hover-title"><div>',
+            `<small>Layer number</small><strong>Layer ${esc(instanceIndex)}</strong>`,
+            '</div></div>',
+            Number.isFinite(timeUs) ? `<p>${esc(timeUs.toFixed(2))} µs</p>` : '',
+          ].join('');
+          hover.classList.add('is-visible');
+          hover.setAttribute('aria-hidden', 'false');
+          placeHover(stage, hover, event);
+        };
+        layerDots.forEach((dot, dotIndex) => {
+          listen(dot, 'pointerdown', (event) => event.stopPropagation());
+          if (hoverEnabled) {
+            listen(dot, 'pointerenter', (event) => showLayerHover(dot, event));
+            listen(dot, 'pointermove', (event) => {
+              if (hover?.classList.contains('is-visible')) placeHover(stage, hover, event);
+            });
+            listen(dot, 'pointerleave', hideHover);
+          }
+          listen(dot, 'click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            activateLayerDot(dot, 'graph');
+          });
+          listen(dot, 'keydown', (event) => {
+            const keyTarget = event.key === 'Home'
+              ? 0
+              : event.key === 'End'
+                ? layerDots.length - 1
+                : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                  ? Math.max(0, dotIndex - 1)
+                  : event.key === 'ArrowRight' || event.key === 'ArrowDown'
+                    ? Math.min(layerDots.length - 1, dotIndex + 1)
+                    : -1;
+            if (keyTarget >= 0) {
+              event.preventDefault();
+              event.stopPropagation();
+              layerDots[keyTarget].focus();
+              activateLayerDot(layerDots[keyTarget], 'keyboard');
+              return;
+            }
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            event.stopPropagation();
+            activateLayerDot(dot, 'keyboard');
+          });
+        });
+        layerSteps.forEach((button) => {
+          const activateStep = (source) => {
+            if (button.getAttribute('aria-disabled') === 'true') return;
+            activateLayer(Number(button.dataset.targetLayerIndex), source);
+          };
+          listen(button, 'pointerdown', (event) => event.stopPropagation());
+          listen(button, 'click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            activateStep('graph');
+          });
+          listen(button, 'keydown', (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            event.stopPropagation();
+            activateStep('keyboard');
+          });
+        });
+      }
       el.setAttribute('tabindex', '0');
       el.setAttribute('role', 'button');
       el.setAttribute('aria-label', cluster.label || cluster.id);
@@ -1640,6 +1941,17 @@
         event.preventDefault();
         selectNode(cluster.id, { source: 'keyboard' });
       });
+    });
+
+    listen(stage, 'click', (event) => {
+      if (event.target !== stage && event.target !== svg) return;
+      if (suppressClick) {
+        suppressClick = false;
+        return;
+      }
+      hideHover();
+      clearSelection();
+      opts.onClearSelection?.({ source: 'canvas' });
     });
 
     if (panZoomEnabled) {
@@ -1756,6 +2068,7 @@
 
     const markerId = `pto-model-graphviz-arrowhead-${renderSequence += 1}`;
     const svg = createSvgElement('svg', {
+      class: 'pto-model-graphviz-svg',
       role: 'img',
       'aria-label': resolvedOptions.ariaLabel || 'PTO model graphviz pattern preview',
       viewBox: `0 0 ${width} ${height}`,
@@ -1774,7 +2087,7 @@
 
     (data.clusters || []).forEach((cluster) => {
       const el = drawCluster(svg, cluster, clusterColors.get(cluster.id) || normalizeColormapColor(CORE_COLORS[0], colorMapOptions));
-      clusterEntries.push({ el, cluster });
+      clusterEntries.push({ el, cluster, layerPager: el.querySelector('.pto-model-graphviz-layer-pager') });
     });
 
     const renderedEdges = new Set();
@@ -1798,10 +2111,20 @@
       edgeEntries.push({ el, edge, source: edge.source, target: edge.target, sourceNode: source, targetNode, avoidNodes: data.nodes, avoidClusters: data.clusters, tagEl: null });
     });
 
+    clusterEntries.forEach(({ layerPager }) => {
+      if (layerPager) svg.appendChild(layerPager);
+    });
+
     (data.nodes || []).forEach((node) => {
       const el = drawNode(svg, node, resolveNodeColor(node, colorMap, clusterColors), resolvedOptions);
       nodeEntries.push({ el, node });
     });
+
+    const performanceHeatmap = applyPerformanceHeatmap(
+      svg,
+      data,
+      resolvedOptions.performanceHeatmap,
+    );
 
     if (resolvedOptions.reportOverlays !== false) {
       (data.clusters || []).forEach((cluster) => {
@@ -1810,7 +2133,7 @@
     }
 
     target.appendChild(svg);
-    const metadata = { width, height, nodeEntries, edgeEntries, clusterEntries };
+    const metadata = { width, height, nodeEntries, edgeEntries, clusterEntries, performanceHeatmap };
     svg.ptoModelGraphviz = { graph: data, metadata };
     if (resolvedOptions.interaction || resolvedOptions.overlays || resolvedOptions.attachController) {
       svg.ptoModelGraphvizController = createController(target, svg, data, metadata, resolvedOptions);
@@ -1833,6 +2156,9 @@
     renderController,
     buildColorMap,
     modelArchitectureColormap,
+    applyPerformanceHeatmap,
+    performanceHeatmapColor,
+    performanceHeatmapTextColor,
     buildHierarchy,
     relationForNode,
     drawEdgeTags,
@@ -1847,6 +2173,10 @@
       baseColors: { ...MODEL_ARCHITECTURE_BASE_COLORS },
     },
     reportPriorityColors: { ...REPORT_PRIORITY_COLORS },
+    performanceHeatmapColormap: {
+      name: 'turbo',
+      stops: [...PERFORMANCE_HEATMAP_TURBO_STOPS],
+    },
     defaultDotLayout: { ...DEFAULT_DOT_LAYOUT },
     sourcePages: {
       deepseekV32: './assets/deepseek_v32_modelviz.html',
