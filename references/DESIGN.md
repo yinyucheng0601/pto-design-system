@@ -351,6 +351,14 @@ Current pattern sources:
 - `patterns/tensor-volume-canvas/pattern.html`
 - `patterns/tensor-volume-canvas/pattern.css`
 - `patterns/tensor-volume-canvas/pattern.js`
+- `patterns/matrix-canvas/pattern.json`
+- `patterns/matrix-canvas/pattern.html`
+- `patterns/matrix-canvas/pattern.css`
+- `patterns/matrix-canvas/pattern.js`
+- `patterns/tensor-title/pattern.json`
+- `patterns/tensor-title/pattern.html`
+- `patterns/tensor-title/pattern.css`
+- `patterns/tensor-title/pattern.js`
 - `patterns/workbench-shell/pattern.json`
 - `patterns/workbench-shell/pattern.html`
 - `patterns/workbench-shell/pattern.css`

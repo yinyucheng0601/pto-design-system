@@ -1,0 +1,89 @@
+{
+  "id": "tensor-title",
+  "family": "tensor-visualization",
+  "name": "Tensor Title",
+  "type": "header",
+  "description": "Shared DOM header pattern for the title strip above matrix and volume tensor visualizations. It renders tensor identity, logical/physical/tile shape, dtype, format, memory, owner, partition, state, provenance, step, axes, constraints, and a live status in a token-based header without adding product chrome or business rules.",
+  "source": {
+    "visualContract": [
+      "op-load3d-viz-head in pto_compute-graph-viewer/operator-planning/operator planning.html",
+      "tensorViewport.title in pto_compute-graph-viewer/tiling/src/app.js",
+      "lifecycle labels in pto_compute-graph-viewer/operator-planning/code-recovery.html",
+      "patterns/tensor-volume-canvas/pattern.json",
+      "patterns/matrix-canvas/pattern.json"
+    ],
+    "patternHtml": "patterns/tensor-title/pattern.html",
+    "patternCss": "patterns/tensor-title/pattern.css",
+    "renderScript": "patterns/tensor-title/pattern.js"
+  },
+  "useWhen": [
+    "placing a title strip directly above a tensor, matrix, volume, or tile visualization",
+    "showing the same tensor identity and metadata language across matrix-canvas, tensor-volume-canvas, and tiling viewports",
+    "linking a tensor header to selection, playback, tiling, memory, and provenance state",
+    "keeping logical shape, physical layout, memory placement, tile partition, and state separate instead of concatenating them into one string"
+  ],
+  "sceneContract": {
+    "label": "required string: primary tensor variable or object name",
+    "role": "optional enum: input, output, weight, bias, scratch, temp, reduction, fusion, broadcast, aggregate",
+    "logicalShape": "optional string or { label, dims }: user-facing logical shape, for example NCHW [1,4,16,16]",
+    "physicalShape": "optional string or { label, dims }: physical layout shape, for example NC1HWC0 [1,1,16,16,16]",
+    "tileShape": "optional string or { label, dims }: current tile shape, for example base tile [128,64]",
+    "dtype": "optional string: dtype or dtype chain, for example half → float → half",
+    "format": "optional string: format/layout identifier, for example NCHW, NC1HWC0, A1, A2, NZ, ZN, ND",
+    "axes": "optional string[]: axis labels, for example ['N', 'M', 'K']",
+    "memory": "optional object { tier, sizeBytes, offset, range, stride, alignment }: memory placement and address facts",
+    "owner": "optional string: queue, allocator, or owning object, for example inQueueX",
+    "queueDepth": "optional positive integer: queue slot depth when owner is a queue",
+    "partition": "optional object { blockCount, blockLength, tileLength, blockIndex, tileIndex, tileRange }: block/core and tile partition facts",
+    "state": "optional enum: alloc, loading, loaded, enqueued, computing, accumulated, produced, ready, current, selected, written, free, skipped",
+    "direction": "optional string: data movement direction, for example GM → UB or L1 → L0A",
+    "provenance": "optional object { symbol, file, line, evidence }: source code and evidence linkage",
+    "step": "optional object { phase, operationChips, stepIndex, totalSteps }: playback/step linkage",
+    "constraints": "optional string[]: constraints and notes such as 32B aligned, no tail, padding, broadcast, dynamic shape",
+    "status": "optional string: right-aligned live status, for example block 0 · tile 1/16"
+  },
+  "requiredApis": [
+    "window.PtoTensorTitle.render(host, scene, options) returning { update, destroy }",
+    "controller.update(nextScene, nextOptions)",
+    "controller.destroy()"
+  ],
+  "options": [
+    "ariaLabel",
+    "density: full | compact",
+    "showRole",
+    "showShapes",
+    "showChips",
+    "showStatus"
+  ],
+  "allowedOverrides": [
+    "scene.label, role, shapes, dtype, format, axes, memory, owner, queueDepth, partition, state, direction, provenance, step, constraints, and status",
+    "host container dimensions and aria label",
+    "header density and which field groups are visible",
+    "placement of the header host above a canvas or visualization"
+  ],
+  "forbiddenOverrides": [
+    "copying or rewriting the header layout, field normalization, byte formatting, or escape logic in a consuming page",
+    "overriding the shared token palette or replacing semantic tokens with page-local colors",
+    "deriving shapes, format, memory placement, state, or tiling facts inside the Pattern; business pages supply these facts",
+    "adding product-specific pane, card, toolbar, inspector, or playback chrome inside the header renderer",
+    "wrapping the header in a second bordered card or page-private header band",
+    "embedding this Pattern through an iframe in consuming pages"
+  ],
+  "typography": {
+    "uiMinimumPx": 11,
+    "microLabelMinimumPx": 11,
+    "dataVizFallback": "Every header field is readable text; compact density hides only secondary rows, never the primary label."
+  },
+  "behavior": [
+    "the primary line shows label, optional role, and optional direction",
+    "the meta line shows logical, physical, and tile shapes plus dtype and format",
+    "chips show memory tier and size, owner and queue depth, partition, state, and operation chips",
+    "the footer shows constraints and provenance when available",
+    "the right side shows status or step summary when available",
+    "compact density hides the footer and collapses chip rows while preserving the primary label",
+    "all text is inserted as text content, not HTML strings",
+    "controller.update re-renders the header in place without leaving stale nodes",
+    "controller.destroy clears the header and removes pattern state from the host"
+  ],
+  "agentReuseRule": "Load patterns/tensor-title/pattern.css and pattern.js, then call window.PtoTensorTitle.render(host, scene, options). Keep logical shape, physical shape, tile shape, format, memory, owner, partition, state, provenance, step, and constraints as structured fields supplied by the business page. Do not copy the header DOM/CSS, add a card shell, recolor with page-local values, or move tensor semantics into the Pattern."
+}

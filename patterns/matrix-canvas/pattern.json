@@ -157,6 +157,7 @@
     "for a [1,N] to [M,N] broadcast, the source row uses style value and the generated rows use style broadcast",
     "the current cell uses the warning fill and emphasized grid boundary without an inset outline",
     "cell boundaries mirror the API Visualizer Load3D A2 matrix visual language",
+    "padding cells use a low-saturation neutral wash plus adaptive diagonal hatch; when cells shrink, hatch contrast and a single micro slash increase so alignment padding remains legible at lane overview scale",
     "there is no drag-to-pan interaction",
     "wheel scrolls vertically; horizontal trackpad gestures or Shift plus wheel scroll horizontally; both axes stop at the matrix bounds instead of behaving like an infinite canvas",
     "when the matrix is smaller than the viewport it remains centered and wheel input is left available to the surrounding page",

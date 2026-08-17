@@ -130,6 +130,10 @@
       background: color-mix(in srgb, var(--surface-2) 76%, transparent);
     }
 
+    .canvas-stage.is-compact {
+      min-height: 172px;
+    }
+
     .canvas-toolbar {
       position: absolute;
       z-index: var(--z-raised);
@@ -478,6 +482,24 @@
           <canvas id="broadcastCanvas" aria-label="Bias matrix broadcast from 1 by 16 to 16 by 16"></canvas>
         </div>
       </article>
+
+      <article class="specimen is-wide">
+        <header class="specimen-head">
+          <div class="specimen-copy">
+            <h2>Small-cell padding · 48 B valid + 16 B align</h2>
+            <p>小 cell 下 padding 不能只靠低透明斜线；Pattern 会叠加低饱和底色与自适应 hatch，保持 32B lanes 中的 alignment padding 可辨。</p>
+          </div>
+        </header>
+        <div class="canvas-stage is-compact">
+          <div class="canvas-toolbar">
+            <div class="toolbar-control">
+              <button class="btn btn-ghost btn-sm" type="button" data-fit="small-padding">适配</button>
+              <span class="toolbar-readout" id="smallPaddingZoom">100%</span>
+            </div>
+          </div>
+          <canvas id="smallPaddingCanvas" aria-label="Small-cell matrix padding regression specimen"></canvas>
+        </div>
+      </article>
     </section>
 
     <p class="interaction-help">交互：滚轮纵向滚动 · 横向触控板手势或 Shift + 滚轮横向滚动 · Ctrl/Command + 滚轮缩放 · F / 0 适配 · + / − 缩放。滚动受矩阵边界约束，无拖拽平移。</p>
@@ -783,6 +805,33 @@ controller.update({
         { ariaLabel: 'Bias matrix broadcast from 1 by 16 to 16 by 16' }
       );
 
+      const smallPaddingCells = [];
+      for (let row = 0; row < 2; row += 1) {
+        for (let column = 0; column < 32; column += 1) {
+          smallPaddingCells.push({
+            id: `align-${row}-${column}`,
+            row,
+            column,
+            label: column < 24 ? String(column) : '',
+            style: column < 24 ? 'value' : 'padding',
+            tone: column < 24 ? 'output' : 'neutral',
+            states: column < 24 ? ['written'] : [],
+          });
+        }
+      }
+      const smallPaddingController = window.PtoMatrixCanvas.render(
+        document.getElementById('smallPaddingCanvas'),
+        {
+          extent: { rows: 2, columns: 32 },
+          axes: { rows: '32B lanes', columns: 'uint8 lanes' },
+          cells: smallPaddingCells,
+        },
+        {
+          ariaLabel: 'Small-cell GM to UB alignment padding specimen',
+          padding: { top: 28, right: 20, bottom: 34, left: 42 },
+        }
+      );
+
       const sourceRows = 240;
       const sourceColumns = 420;
       const values = new Float32Array(sourceRows * sourceColumns);
@@ -815,11 +864,13 @@ controller.update({
         document.getElementById('detailZoom').textContent = `${Math.round(detailController.getViewState().scale * 100)}%`;
         document.getElementById('aggregateZoom').textContent = `${Math.round(aggregateController.getViewState().scale * 100)}%`;
         document.getElementById('broadcastZoom').textContent = `${Math.round(broadcastController.getViewState().scale * 100)}%`;
+        document.getElementById('smallPaddingZoom').textContent = `${Math.round(smallPaddingController.getViewState().scale * 100)}%`;
       };
       [
         document.getElementById('detailCanvas'),
         document.getElementById('aggregateCanvas'),
         document.getElementById('broadcastCanvas'),
+        document.getElementById('smallPaddingCanvas'),
       ].forEach((canvas) => {
         ['wheel', 'pointermove', 'keydown'].forEach((eventName) => {
           canvas.addEventListener(eventName, () => window.requestAnimationFrame(refreshReadout));
@@ -839,6 +890,10 @@ controller.update({
         broadcastController.fit();
         refreshReadout();
       });
+      document.querySelector('[data-fit="small-padding"]').addEventListener('click', () => {
+        smallPaddingController.fit();
+        refreshReadout();
+      });
       document.querySelector('[data-zoom="aggregate"]').addEventListener('click', () => {
         aggregateController.setZoom(aggregateController.getViewState().scale * 2);
         refreshReadout();
@@ -850,6 +905,7 @@ controller.update({
         detailController.resize();
         aggregateController.resize();
         broadcastController.resize();
+        smallPaddingController.resize();
         legendControllers.forEach((controller) => controller.resize());
       };
       themeToggle.addEventListener('click', () => {
@@ -862,6 +918,7 @@ controller.update({
         detailController.destroy();
         aggregateController.destroy();
         broadcastController.destroy();
+        smallPaddingController.destroy();
         legendControllers.forEach((controller) => controller.destroy());
       });
       syncThemeLabel();

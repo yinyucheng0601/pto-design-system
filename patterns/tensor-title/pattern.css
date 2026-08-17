@@ -1,0 +1,123 @@
+.pto-tensor-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+  color: var(--foreground-secondary);
+  font: var(--type-body-sm);
+}
+
+.pto-tensor-title__body {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.pto-tensor-title__primary,
+.pto-tensor-title__meta,
+.pto-tensor-title__chips,
+.pto-tensor-title__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+}
+
+.pto-tensor-title__primary {
+  gap: var(--space-2);
+}
+
+.pto-tensor-title__meta,
+.pto-tensor-title__chips,
+.pto-tensor-title__footer {
+  gap: var(--space-2);
+}
+
+.pto-tensor-title__label {
+  color: var(--foreground);
+  font: var(--type-title-3);
+}
+
+.pto-tensor-title__role,
+.pto-tensor-title__state,
+.pto-tensor-title__direction {
+  min-height: 20px;
+  padding: 0 var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  color: var(--foreground);
+  font: var(--type-micro);
+  white-space: nowrap;
+}
+
+.pto-tensor-title__role {
+  color: var(--primary);
+}
+
+.pto-tensor-title__state {
+  color: var(--success);
+}
+
+.pto-tensor-title__direction {
+  color: var(--foreground-secondary);
+}
+
+.pto-tensor-title__shape {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font: var(--type-mono);
+}
+
+.pto-tensor-title__shape b {
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.pto-tensor-title__dtype,
+.pto-tensor-title__format,
+.pto-tensor-title__axis,
+.pto-tensor-title__constraint,
+.pto-tensor-title__source {
+  font: var(--type-mono);
+}
+
+.pto-tensor-title__chip {
+  min-height: 20px;
+  padding: 0 var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  color: var(--foreground-secondary);
+  font: var(--type-micro);
+  white-space: nowrap;
+}
+
+.pto-tensor-title__footer {
+  color: var(--foreground-muted);
+  font: var(--type-micro);
+}
+
+.pto-tensor-title__status {
+  flex: 0 0 auto;
+  color: var(--warning);
+  font: var(--type-mono);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.pto-tensor-title[data-density='compact'] {
+  gap: var(--space-1) var(--space-2);
+}
+
+.pto-tensor-title[data-density='compact'] .pto-tensor-title__meta,
+.pto-tensor-title[data-density='compact'] .pto-tensor-title__chips,
+.pto-tensor-title[data-density='compact'] .pto-tensor-title__footer {
+  display: none;
+}
