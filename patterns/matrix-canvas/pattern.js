@@ -232,19 +232,40 @@
     return { fill, stroke, text, tone, background, foreground };
   }
 
-  function drawHatch(ctx, rect) {
+  function drawPaddingPattern(ctx, rect) {
     const foreground = tokenRgb('--foreground');
+    const background = tokenRgb('--background');
+    const surface3 = tokenRgb('--surface-3');
+    const minDimension = Math.min(rect.width, rect.height);
+    const compactness = clamp((18 - minDimension) / 10, 0, 1);
+    const wash = mix(foreground, surface3, 0.16 + compactness * 0.12);
     ctx.save();
     ctx.beginPath();
     ctx.rect(rect.x, rect.y, rect.width, rect.height);
     ctx.clip();
-    ctx.strokeStyle = rgba(foreground, 0.1);
-    ctx.lineWidth = 1;
-    const step = clamp(Math.min(rect.width, rect.height) * 0.3, 6, 12);
+
+    ctx.fillStyle = rgba(wash, 0.16 + compactness * 0.16);
+    ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+
+    const step = minDimension < 11
+      ? clamp(minDimension * 0.72, 4, 7)
+      : clamp(minDimension * 0.42, 6, 12);
+    ctx.strokeStyle = rgba(foreground, 0.18 + compactness * 0.2);
+    ctx.lineWidth = minDimension < 14 ? 1.35 : 1;
+    ctx.lineCap = 'square';
     for (let start = rect.x - rect.height; start < rect.x + rect.width; start += step) {
       ctx.beginPath();
       ctx.moveTo(start, rect.y + rect.height);
       ctx.lineTo(start + rect.height, rect.y);
+      ctx.stroke();
+    }
+
+    if (minDimension < 14) {
+      ctx.strokeStyle = rgba(mix(foreground, background, 0.78), 0.46);
+      ctx.lineWidth = clamp(minDimension * 0.18, 1.2, 1.8);
+      ctx.beginPath();
+      ctx.moveTo(rect.x + rect.width * 0.18, rect.y + rect.height * 0.82);
+      ctx.lineTo(rect.x + rect.width * 0.82, rect.y + rect.height * 0.18);
       ctx.stroke();
     }
     ctx.restore();
@@ -292,14 +313,14 @@
       ctx.fillStyle = rgba(grayMask, 0.4);
       ctx.fillRect(box.x, box.y, box.width, box.height);
     }
+    if (cell.style === 'padding' && !cell.states.has('current')) drawPaddingPattern(ctx, box);
+    if (cell.style === 'aggregate') drawAggregate(ctx, cell, box, colors);
+
     ctx.save();
     ctx.strokeStyle = colors.stroke;
     ctx.lineWidth = cell.states.has('current') ? 2 : cell.states.has('selected') ? 1.5 : 1;
     ctx.strokeRect(box.x, box.y, box.width, box.height);
     ctx.restore();
-
-    if (cell.style === 'padding') drawHatch(ctx, box);
-    if (cell.style === 'aggregate') drawAggregate(ctx, cell, box, colors);
 
     const mono = cssValue('--font-mono', 'ui-monospace, monospace');
     ctx.textAlign = 'center';

@@ -77,6 +77,11 @@
       "preview": "patterns/matrix-canvas/pattern.html"
     },
     {
+      "id": "tensor-title",
+      "path": "patterns/tensor-title/pattern.json",
+      "preview": "patterns/tensor-title/pattern.html"
+    },
+    {
       "id": "workbench-shell",
       "path": "patterns/workbench-shell/pattern.json",
       "preview": "patterns/workbench-shell/pattern.html"
