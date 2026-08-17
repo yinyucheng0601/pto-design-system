@@ -44,8 +44,9 @@
     const random = mulberry32((tokenId + 1) * 0x45D9F3B ^ (layer + 11) * 0x119DE1F3);
     const selected = new Set();
     if (layer === 27) {
-      if (tokenId < 7 || tokenId === 37) selected.add(64);
-      if ((tokenId >= 7 && tokenId < 14) || tokenId === 37) selected.add(65);
+      if (tokenId < 21 || tokenId === 37) selected.add(64);
+      if ((tokenId >= 9 && tokenId < 30) || tokenId === 37) selected.add(65);
+      if (tokenId >= 90 && tokenId < 100) selected.add(228);
     }
     const hotExperts = [
       (layer * 17 + 3) % MODEL.expertCount,
@@ -55,7 +56,7 @@
     ];
     for (let slot = selected.size; slot < MODEL.topK; slot += 1) {
       let expertId;
-      if (slot < 2 && random() < 0.72) expertId = hotExperts[(tokenId + slot + layer) % hotExperts.length];
+      if (slot < 2 && random() < 0.06) expertId = hotExperts[(tokenId + slot + layer) % hotExperts.length];
       else expertId = Math.floor(random() * MODEL.expertCount);
       while (selected.has(expertId) || (layer === 27 && (expertId === 64 || expertId === 65))) expertId = (expertId + 1) % MODEL.expertCount;
       selected.add(expertId);

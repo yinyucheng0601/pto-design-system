@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PTO Pattern - Timeline Time Selection</title>
+  <script>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('embed')) document.documentElement.dataset.embedPreview = 'true';
+      const applyTheme = (theme) => {
+        if (theme === 'light' || theme === 'dark' || theme === 'glass') document.documentElement.dataset.theme = theme;
+      };
+      applyTheme(params.get('theme'));
+      window.addEventListener('message', (event) => {
+        if (event.data?.type === 'pto-preview-theme') applyTheme(event.data.theme);
+      });
+    })();
+  </script>
+  <link rel="stylesheet" href="../../tokens/foundation.css">
+  <link rel="stylesheet" href="../../tokens/semantic.css">
+  <link rel="stylesheet" href="../../tokens/components.css">
+  <link rel="stylesheet" href="./pattern.css">
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--background); color: var(--foreground); font: var(--text-body); }
+    .pattern-stage { width: min(820px, calc(100vw - 48px)); padding: 24px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--background-elevated); }
+    .pattern-title { margin: 0 0 6px; font: var(--text-title-2); }
+    .pattern-copy { margin: 0 0 16px; color: var(--foreground-secondary); font: var(--text-body-sm); }
+    .timeline-demo { position: relative; overflow: hidden; border: 1px solid var(--border-default); background: var(--surface-1); }
+    .timeline-demo__ruler, .timeline-demo__row { display: grid; grid-template-columns: 96px minmax(0, 1fr); }
+    .timeline-demo__ruler { position: relative; height: 30px; border-bottom: 1px solid var(--border-default); }
+    .timeline-demo__label { position: relative; z-index: 5; padding: 0 10px; background: var(--surface-2); color: var(--foreground-secondary); font: var(--text-mono); line-height: 28px; }
+    .timeline-demo__ruler-track { position: relative; }
+    .timeline-demo__ruler-track::before { content: "0 µs                                      500 µs                                      1 ms"; position: absolute; inset: 7px 8px auto; color: var(--foreground-muted); font: var(--text-mono); white-space: pre; }
+    .timeline-demo__row { height: 28px; border-bottom: 1px solid var(--border-subtle); }
+    .timeline-demo__track { position: relative; cursor: crosshair; outline: 0; background: repeating-linear-gradient(90deg, transparent 0 24.8%, var(--border-subtle) 25% 25.15%); }
+    .timeline-demo__track:focus-visible { box-shadow: inset 0 0 0 2px var(--focus-ring); }
+    .timeline-demo__event { position: absolute; top: 5px; height: 18px; border-radius: 2px; background: color-mix(in srgb, var(--primary) 46%, var(--surface-3)); pointer-events: none; }
+    html[data-embed-preview='true'] body { min-height: 0; display: block; overflow: hidden; background: transparent; }
+    html[data-embed-preview='true'] .pattern-stage { width: 100%; padding: 0; border: 0; background: transparent; }
+    html[data-embed-preview='true'] .pattern-title, html[data-embed-preview='true'] .pattern-copy { display: none; }
+  </style>
+</head>
+<body>
+  <main class="pattern-stage">
+    <h1 class="pattern-title">Timeline Time Selection</h1>
+    <p class="pattern-copy">拖拽选取时间；单击事件自动取事件边界；Ctrl/Command + 滚轮分发锚点缩放；方向键水平移动。</p>
+    <div class="timeline-demo">
+      <div class="timeline-demo__ruler">
+        <div class="timeline-demo__label">Time</div>
+        <div class="timeline-demo__ruler-track"></div>
+      </div>
+      <div class="timeline-demo__row"><div class="timeline-demo__label">Stream 0</div><div class="timeline-demo__track" tabindex="0"><span class="timeline-demo__event" style="left:12%;width:18%"></span><span class="timeline-demo__event" style="left:54%;width:22%"></span></div></div>
+      <div class="timeline-demo__row"><div class="timeline-demo__label">Stream 1</div><div class="timeline-demo__track" tabindex="0"><span class="timeline-demo__event" style="left:34%;width:12%"></span><span class="timeline-demo__event" style="left:79%;width:14%"></span></div></div>
+      <div class="timeline-demo__row"><div class="timeline-demo__label">Stream 2</div><div class="timeline-demo__track" tabindex="0"><span class="timeline-demo__event" style="left:20%;width:9%"></span><span class="timeline-demo__event" style="left:47%;width:19%"></span></div></div>
+    </div>
+  </main>
+  <script src="./pattern.js"></script>
+  <script>
+    (() => {
+      const helper = window.PtoTimelineTimeSelectionPattern;
+      const root = document.querySelector('.timeline-demo');
+      const tracks = [...root.querySelectorAll('.timeline-demo__track')];
+      const layer = helper.createSelectionLayer(root);
+      const summary = helper.createSelectionSummary(root, { labelWidth: 96 });
+      const update = (selection) => {
+        helper.updateSelectionLayer(layer, selection, {
+          rangeStart: 1000,
+          rangeEnd: 2000,
+          trackLeft: 96,
+          trackWidth: tracks[0].getBoundingClientRect().width,
+          top: 30,
+          height: 84,
+        });
+        helper.updateSelectionSummary(summary, selection, 'zh', {
+          rangeStart: 1000,
+          rangeEnd: 2000,
+          trackLeft: 96,
+          trackWidth: tracks[0].getBoundingClientRect().width,
+          scrollLeft: 0,
+          viewportWidth: root.getBoundingClientRect().width,
+        });
+      };
+      const hitTest = (track, x) => {
+        const width = track.getBoundingClientRect().width;
+        const hit = [...track.querySelectorAll('.timeline-demo__event')].find((event) => {
+          const left = parseFloat(event.style.left) / 100 * width;
+          const eventWidth = parseFloat(event.style.width) / 100 * width;
+          return x >= left && x <= left + eventWidth;
+        });
+        if (!hit) return null;
+        const start = helper.xToTime(parseFloat(hit.style.left) / 100 * width, width, 1000, 2000);
+        const end = helper.xToTime((parseFloat(hit.style.left) + parseFloat(hit.style.width)) / 100 * width, width, 1000, 2000);
+        return { ts: start, end, dur: end - start };
+      };
+      tracks.forEach((track) => helper.bindTimelineInteraction({
+        target: track,
+        getGeometry: () => ({ width: track.getBoundingClientRect().width, start: 1000, end: 2000 }),
+        hitTest: (x) => hitTest(track, x),
+        onPreview: update,
+        onCommit: update,
+        onEventSelect: (event) => update(helper.selectionFromEvent(event)),
+        onClear: () => update(null),
+        onNavigate: ({ direction }) => update({ kind: 'range', start: 1320 + direction * 40, end: 1600 + direction * 40 }),
+        onZoom: ({ direction, x }) => {
+          const anchor = helper.xToTime(x, track.getBoundingClientRect().width, 1000, 2000);
+          update({ kind: 'range', start: anchor - 80 / Math.max(1, direction + 2), end: anchor + 80 / Math.max(1, direction + 2) });
+        },
+      }));
+      update({ kind: 'range', start: 1320, end: 1600 });
+    })();
+  </script>
+</body>
+</html>

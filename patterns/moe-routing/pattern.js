@@ -104,24 +104,35 @@
       return `M ${x1} ${y1} C ${x1} ${y1 - bend}, ${x2} ${y2 + bend}, ${x2} ${y2}`;
     }
 
-    function renderQueue(group, expertId, load, threshold, isTarget, x, y, rankId, isAnomaly = false) {
+    function renderQueue(group, expertId, load, threshold, isTarget, x, y, rankId, isAnomaly, maxLoad) {
       const label = append(group, 'text', { x, y: y + 8, class: `moe-expert-label${isAnomaly ? ' is-anomaly' : ''}` }, `E${expertId}`);
-      if (isAnomaly) tooltipTarget(label, `L${state.layer} · R${rankId} · E${expertId} overload: ${load} routed copies`, { type: 'expert', layer: state.layer, expertId, rankId, load, overloaded: true });
-      for (let slot = 0; slot < 5; slot += 1) {
-        const filled = slot < Math.min(load, 5);
-        const overflow = load > threshold && slot === 4;
-        const token = append(group, 'circle', {
-          cx: x + 34 + slot * 9,
-          cy: y + 4.5,
-          r: 4.2,
-          class: `moe-queue-slot${filled ? ' is-filled' : ''}${overflow ? ' is-overflow' : ''}${isAnomaly ? ' is-anomaly' : ''}`,
-        });
-        if (overflow) tooltipTarget(token, `E${expertId} overload: ${load} copies > threshold ${threshold.toFixed(1)}`, { type: 'expert', expertId, rankId, load, overloaded: true });
+      if (isAnomaly) tooltipTarget(label, `L${state.layer} · R${rankId} · E${expertId}: ${load} routed copies`, { type: 'expert', layer: state.layer, expertId, rankId, load, overloaded: true });
+
+      const barX = x + 34;
+      const barY = y + 1.5;
+      const barW = 40;
+      const barH = 6;
+      const safeMax = maxLoad > 0 ? maxLoad : 1;
+      const visualCap = Math.max(safeMax, threshold * 3);
+      const fillW = Math.max(0, Math.min(barW, (load / visualCap) * barW));
+      const mean = threshold / 1.5;
+      const meanPos = visualCap > 0 ? (mean / visualCap) * barW : 0;
+
+      let severityClass = 'is-below-mean';
+      if (load > threshold) severityClass = 'is-over-threshold';
+      else if (load >= mean) severityClass = 'is-above-mean';
+
+      append(group, 'rect', { x: barX, y: barY, width: barW, height: barH, rx: 3, class: 'moe-load-bar' });
+      if (fillW > 0) {
+        const fill = append(group, 'rect', { x: barX, y: barY, width: fillW, height: barH, rx: 3, class: `moe-load-bar-fill ${severityClass}${isAnomaly ? ' is-anomaly' : ''}` });
+        tooltipTarget(fill, `E${expertId}: ${load} copies, ${(load / mean).toFixed(1)}× mean`, { type: 'expert', expertId, rankId, load, overloaded: load > threshold });
       }
-      if (load > 5) {
-        const count = append(group, 'text', { x: x + 77, y: y + 8, class: 'moe-queue-count' }, `+${load - 5}`);
-        tooltipTarget(count, `E${expertId} overload: ${load} copies > threshold ${threshold.toFixed(1)}`, { type: 'expert', expertId, rankId, load, overloaded: true });
+      if (meanPos > 0 && meanPos < barW) {
+        append(group, 'line', { x1: barX + meanPos, y1: barY - 1, x2: barX + meanPos, y2: barY + barH + 1, class: 'moe-load-bar-mean' });
       }
+
+      append(group, 'text', { x: barX + barW + 6, y: y + 8, class: load > threshold ? 'moe-load-count is-over' : 'moe-load-count' }, String(load));
+
       if (isTarget) append(group, 'circle', { cx: x + 24, cy: y + 4.5, r: 3.2, class: 'moe-dispatch-token' });
     }
 
@@ -177,8 +188,8 @@
           class: `moe-rank-card${hot ? ' is-hot' : ''}${idle ? ' is-idle' : ''}${target ? ' is-target' : ''}${active ? ' is-context' : ''}${anomaly ? ' is-anomaly' : ''}`,
         });
         append(group, 'text', { x: x + 7, y: y + 15, class: 'moe-rank-label' }, `R${rankId}`);
-        renderQueue(group, expertA, loadA, stats.overloadThreshold, targetExperts.has(expertA), x + 12, y + 27, rankId, anomalyExperts.has(expertA));
-        renderQueue(group, expertB, loadB, stats.overloadThreshold, targetExperts.has(expertB), x + 12, y + 50, rankId, anomalyExperts.has(expertB));
+        renderQueue(group, expertA, loadA, stats.overloadThreshold, targetExperts.has(expertA), x + 12, y + 27, rankId, anomalyExperts.has(expertA), stats.maximumExpertLoad);
+        renderQueue(group, expertB, loadB, stats.overloadThreshold, targetExperts.has(expertB), x + 12, y + 50, rankId, anomalyExperts.has(expertB), stats.maximumExpertLoad);
       }
 
       const bank = tooltipTarget(append(svg, 'g'), `${model.batchSize} input tokens at L${state.layer}`, { type: 'token', tokenId: state.tokenId, layer: state.layer });
@@ -196,7 +207,7 @@
         }), `T${String(state.tokenId).padStart(3, '0')} → E${route.expertId} / R${route.rankId} · weight ${route.weight.toFixed(4)}`, {
           type: 'route', tokenId: state.tokenId, layer: state.layer, ...route,
         });
-        path.style.strokeWidth = String(1 + route.weight * 5);
+        path.style.strokeWidth = String(2.5 + route.weight * 9);
       });
       append(svg, 'rect', { x: routerX, y: routerY, width: 160, height: 58, rx: 8, class: 'moe-router-box' });
       append(svg, 'text', { x: routerX + 21, y: routerY + 21, class: 'moe-router-title' }, 'TOP-8 ROUTER');

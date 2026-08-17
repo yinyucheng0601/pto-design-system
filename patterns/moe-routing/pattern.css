@@ -102,11 +102,16 @@
 }
 
 .pto-moe-routing .moe-rank-card,
-.pto-moe-routing .moe-router-box,
 .pto-moe-routing .moe-token-bank,
 .pto-moe-routing .moe-dense-node {
   fill: var(--surface-2);
   stroke: none;
+}
+
+.pto-moe-routing .moe-router-box {
+  fill: color-mix(in srgb, var(--primary) 18%, transparent);
+  stroke: var(--primary);
+  stroke-opacity: 0.35;
 }
 
 .pto-moe-routing .moe-rank-card.is-hot {
@@ -155,27 +160,46 @@
   font-weight: 600;
 }
 
-.pto-moe-routing .moe-queue-slot {
-  fill: var(--foreground-disabled);
+.pto-moe-routing .moe-load-bar {
+  fill: var(--border-subtle);
   stroke: none;
 }
 
-.pto-moe-routing .moe-queue-slot.is-filled {
+.pto-moe-routing .moe-load-bar-fill {
   fill: var(--foreground);
 }
 
-.pto-moe-routing .moe-queue-slot.is-overflow {
+.pto-moe-routing .moe-load-bar-fill.is-below-mean {
+  fill: var(--foreground-muted);
+}
+
+.pto-moe-routing .moe-load-bar-fill.is-above-mean {
+  fill: var(--foreground);
+}
+
+.pto-moe-routing .moe-load-bar-fill.is-over-threshold {
   fill: var(--warning);
 }
 
-.pto-moe-routing .moe-queue-slot.is-anomaly.is-filled,
-.pto-moe-routing .moe-queue-slot.is-anomaly.is-overflow,
-.pto-moe-routing .moe-expert-label.is-anomaly {
+.pto-moe-routing .moe-load-bar-fill.is-anomaly {
   fill: var(--danger);
 }
 
-.pto-moe-routing .moe-expert-label.is-anomaly {
-  font-weight: 700;
+.pto-moe-routing .moe-load-bar-mean {
+  stroke: var(--foreground-disabled);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+
+.pto-moe-routing .moe-load-count {
+  fill: var(--foreground-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.pto-moe-routing .moe-load-count.is-over {
+  fill: var(--warning);
+  font-weight: 600;
 }
 
 .pto-moe-routing .moe-flow-bus {

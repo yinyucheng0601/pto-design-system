@@ -1,0 +1,47 @@
+{
+  "id": "timeline-time-selection",
+  "name": "Timeline Time Selection",
+  "type": "hybrid",
+  "description": "Perfetto-style timeline interaction for click-to-select events, pointer-drag time ranges, a cross-track selection band, exact time summaries, modifier-wheel zoom dispatch, and keyboard horizontal navigation.",
+  "source": {
+    "visualContract": "Perfetto area and event selection behavior adapted to PTO token and interaction contracts",
+    "renderScript": "patterns/timeline-time-selection/pattern.js",
+    "patternHtml": "patterns/timeline-time-selection/pattern.html",
+    "patternCss": "patterns/timeline-time-selection/pattern.css"
+  },
+  "useWhen": [
+    "Selecting a continuous time interval on a timeline or swimlane surface.",
+    "Showing exact start, end, and duration values for a selected event or range.",
+    "Dispatching cursor-anchored Ctrl/Command-wheel zoom and keyboard horizontal navigation."
+  ],
+  "requiredApis": [
+    "window.PtoTimelineTimeSelectionPattern.bindTimelineInteraction",
+    "window.PtoTimelineTimeSelectionPattern.createSelectionLayer",
+    "window.PtoTimelineTimeSelectionPattern.createSelectionSummary",
+    "window.PtoTimelineTimeSelectionPattern.updateSelectionLayer",
+    "window.PtoTimelineTimeSelectionPattern.updateSelectionSummary",
+    "window.PtoTimelineTimeSelectionPattern.xToTime",
+    "window.PtoTimelineTimeSelectionPattern.timeToX"
+  ],
+  "states": [
+    "range",
+    "event",
+    "dragging",
+    "cleared"
+  ],
+  "allowedOverrides": [
+    "time range",
+    "track geometry",
+    "event hit testing",
+    "selection callbacks",
+    "zoom and navigation callbacks",
+    "--pto-timeline-label-width"
+  ],
+  "forbiddenOverrides": [
+    "drag threshold semantics",
+    "modifier-wheel interception outside the interaction target",
+    "page-local duplicate selection band DOM",
+    "danger color for ordinary time selection"
+  ],
+  "agentReuseRule": "Load pattern.css and pattern.js, bind interactions through window.PtoTimelineTimeSelectionPattern.bindTimelineInteraction, and render the shared selection layer and summary. Business pages own trace data and zoom state but must not duplicate pointer capture, click-versus-drag, time conversion, or selection overlay behavior."
+}
