@@ -53,6 +53,7 @@ design-system-share/
     ├── pass-ir-graph-node/      ← Pass-IR graph node 卡片和 compact/group 状态
     ├── tensor-volume-canvas/    ← API Visualizer 风格的固定视角三维 Tensor Canvas renderer
     ├── matrix-canvas/           ← 二维矩阵 Tensor Canvas，支持逐元素格与大矩阵聚合格
+    ├── tensor-title/            ← Tensor / Matrix / Volume 上方的共享标题条：shape、format、memory、tiling、state 与溯源
     └── swimlane-task/           ← 执行 trace / timeline 泳道任务条 canvas renderer
 ```
 
@@ -78,6 +79,7 @@ design-system-share/
 | `pass-ir-graph-node` | Pass-IR 节点卡、group node、compact node | `patterns/pass-ir-graph-node/pattern.js` |
 | `tensor-volume-canvas` | NCHW / A1 / Load3D / Conv / Tiling / Code Recovery 的固定视角三维 Tensor 体素渲染 | `patterns/tensor-volume-canvas/pattern.js` |
 | `matrix-canvas` | 二维矩阵 Tensor、Load3D A2 状态，以及业务可注入数量的缩略格概览 | `patterns/matrix-canvas/pattern.js` |
+| `tensor-title` | Tensor / Matrix / Volume 上方的共享标题条，统一身份、shape、dtype、format、memory、owner、partition、state、provenance、step、axes 与约束 | `patterns/tensor-title/pattern.js` |
 | `swimlane-task` | 执行 trace / timeline 的泳道任务条 | `patterns/swimlane-task/pattern.js` |
 
 ## 在三种环境里加载
@@ -184,6 +186,7 @@ AI 应该先问清楚：
 | Pass-IR graph 节点卡 | `patterns/pass-ir-graph-node` |
 | 固定视角三维 Tensor / Load3D 体素状态 | `patterns/tensor-volume-canvas`；页面将业务状态转换为 voxel 数据并直接调用共享 renderer |
 | 二维矩阵 Tensor / 大矩阵缩略概览 | `patterns/matrix-canvas`；页面保持源 shape，通过任意 span + summary 或目标缩略格行列数表达聚合区域 |
+| Tensor / Matrix / Volume 上方的标题与元数据条 | `patterns/tensor-title`；页面把逻辑 shape、物理 layout、memory、tiling、state、provenance 和 step 作为结构化字段传入 |
 | TorchVista / 模型 Graphviz / Qwen-7B / openPangu-2.0-Flash 架构页 / 报告 overlay | `patterns/model-graphviz` |
 | 模型训练 evidence / phase / edge tag overlay | `patterns/model-training-graphviz` |
 | 深度堆叠模型架构与平行标注 | `patterns/model-architecture-3d-deck` |

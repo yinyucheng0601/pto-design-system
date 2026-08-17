@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PTO Tensor Title Pattern</title>
+  <link rel="icon" href="data:,">
+  <script>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      const applyPreviewTheme = (theme) => {
+        if (theme !== 'light' && theme !== 'dark' && theme !== 'glass') return;
+        document.documentElement.dataset.theme = theme;
+        window.dispatchEvent(new CustomEvent('pto-preview-theme-applied'));
+      };
+      applyPreviewTheme(params.get('theme'));
+      window.addEventListener('message', (event) => {
+        if (event.data?.type === 'pto-preview-theme') applyPreviewTheme(event.data.theme);
+      });
+    })();
+  </script>
+  <link rel="stylesheet" href="../../tokens/foundation.css">
+  <link rel="stylesheet" href="../../tokens/semantic.css">
+  <link rel="stylesheet" href="../../tokens/components.css">
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="./pattern.css">
+  <style>
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      min-height: 100%;
+      margin: 0;
+      background: var(--background);
+      color: var(--foreground);
+      font: var(--type-body);
+    }
+
+    html {
+      overflow-y: auto;
+    }
+
+    body {
+      height: auto;
+      padding: var(--space-6);
+      overflow-x: hidden;
+      overflow-y: auto;
+      display: block;
+    }
+
+    body.is-embed {
+      padding: var(--space-4);
+    }
+
+    .preview-page {
+      width: min(1480px, 100%);
+      margin: 0 auto;
+      display: grid;
+      gap: var(--space-6);
+    }
+
+    .preview-heading,
+    .specimen-head,
+    .contract-section__head,
+    .config-group__head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-4);
+    }
+
+    .preview-heading {
+      align-items: center;
+    }
+
+    .preview-heading__copy,
+    .specimen-copy,
+    .contract-section__head > div {
+      min-width: 0;
+      display: grid;
+      gap: var(--space-1);
+    }
+
+    .preview-heading h1,
+    .preview-heading p,
+    .specimen-head h2,
+    .specimen-head p,
+    .contract-section h2,
+    .contract-section h3,
+    .contract-section p {
+      margin: 0;
+    }
+
+    .preview-heading h1 {
+      font: var(--type-title-1);
+    }
+
+    .preview-heading p,
+    .specimen-head p,
+    .contract-section__head p,
+    .contract-note {
+      color: var(--foreground-secondary);
+      font: var(--type-body);
+    }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-4);
+    }
+
+    .preview-card {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: auto minmax(220px, 1fr);
+      gap: var(--space-3);
+      padding: var(--space-4);
+      border-radius: var(--radius-xl);
+      background: var(--surface-1);
+    }
+
+    .preview-card.is-wide {
+      grid-column: 1 / -1;
+    }
+
+    .preview-card__head {
+      display: grid;
+      gap: var(--space-1);
+    }
+
+    .preview-card__head h2 {
+      font: var(--type-title-2);
+    }
+
+    .preview-card__head p {
+      color: var(--foreground-secondary);
+      font: var(--type-body-sm);
+    }
+
+    .title-stage {
+      display: grid;
+      align-content: start;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      border-radius: var(--radius-lg);
+      background: var(--surface-2);
+    }
+
+    .title-stage__canvas {
+      min-height: 160px;
+      display: grid;
+      place-items: center;
+      border-radius: var(--radius-md);
+      background:
+        linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px),
+        linear-gradient(var(--border-subtle) 1px, transparent 1px),
+        color-mix(in srgb, var(--surface-3) 34%, transparent);
+      background-size: 24px 24px;
+      color: var(--foreground-muted);
+      font: var(--type-micro);
+    }
+
+    .title-stage.is-compact {
+      gap: var(--space-2);
+    }
+
+    .title-stage.is-compact .title-stage__canvas {
+      min-height: 96px;
+    }
+
+    .field-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .field-legend span {
+      min-height: 20px;
+      padding: 0 var(--space-2);
+      display: inline-flex;
+      align-items: center;
+      border-radius: var(--radius-pill);
+      background: var(--surface-3);
+      color: var(--foreground-secondary);
+      font: var(--type-micro);
+    }
+
+    .contract-section {
+      display: grid;
+      gap: var(--space-4);
+    }
+
+    .config-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+      gap: var(--space-4);
+      align-items: start;
+    }
+
+    .config-group {
+      min-width: 0;
+      display: grid;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+      background: var(--surface-1);
+    }
+
+    .config-table-wrap {
+      overflow-x: auto;
+    }
+
+    .config-table {
+      width: 100%;
+      border-collapse: collapse;
+      font: var(--type-body-sm);
+    }
+
+    .config-table th,
+    .config-table td {
+      padding: var(--space-2) var(--space-3);
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .config-table th {
+      color: var(--foreground-secondary);
+      font: var(--type-label);
+      white-space: nowrap;
+    }
+
+    .config-table code {
+      font: var(--type-mono);
+      color: var(--foreground);
+    }
+
+    .value-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .value-list code {
+      padding: 0 var(--space-2);
+      border-radius: var(--radius-sm);
+      background: var(--surface-2);
+      color: var(--foreground-secondary);
+      font: var(--type-micro);
+    }
+
+    .usage-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-4);
+    }
+
+    .usage-copy {
+      min-width: 0;
+      display: grid;
+      gap: var(--space-2);
+      align-content: start;
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+      background: var(--surface-1);
+    }
+
+    .usage-copy h3 {
+      font: var(--type-title-3);
+    }
+
+    .usage-copy p,
+    .usage-list {
+      color: var(--foreground-secondary);
+      font: var(--type-body-sm);
+    }
+
+    .usage-copy code {
+      color: var(--foreground);
+      font: var(--type-mono);
+    }
+
+    .usage-list {
+      margin: 0;
+      padding-left: var(--space-4);
+      display: grid;
+      gap: var(--space-1);
+    }
+
+    .code-sample {
+      margin: 0;
+      padding: var(--space-3);
+      overflow-x: auto;
+      border-radius: var(--radius-md);
+      background: var(--background);
+      color: var(--foreground);
+      font: var(--type-mono);
+      white-space: pre;
+    }
+
+    @media (max-width: 1180px) {
+      .preview-grid,
+      .config-grid,
+      .usage-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      body { padding: var(--space-4); }
+      .preview-heading,
+      .specimen-head,
+      .contract-section__head,
+      .config-group__head {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="preview-page">
+    <header class="preview-heading">
+      <div class="preview-heading__copy">
+        <h1>Tensor Title Pattern</h1>
+        <p>放在 matrix / volume / tiling 视图上方的共享标题条。身份、逻辑与物理 shape、dtype、format、内存、owner、partition、state、provenance、step、axes 和约束都由业务字段驱动。</p>
+      </div>
+      <button class="btn btn-ghost" type="button" id="themeToggle">Light mode</button>
+    </header>
+
+    <section class="preview-grid" aria-label="Tensor title specimens">
+      <article class="preview-card">
+        <div class="preview-card__head">
+          <h2>Vector Add · GM → UB</h2>
+          <p>逻辑 tensor、GM 线性地址、block / tile 切分和当前 CopyIn 步骤同时出现在标题条里。</p>
+        </div>
+        <div class="title-stage">
+          <div id="vectorTitle"></div>
+          <div class="title-stage__canvas">placeholder canvas · 1D logical tensor</div>
+        </div>
+      </article>
+
+      <article class="preview-card">
+        <div class="preview-card__head">
+          <h2>Matmul · L0C → GM</h2>
+          <p>输出网格、base tile、K reduction、owner 和 provenance 组合成完整标题。</p>
+        </div>
+        <div class="title-stage">
+          <div id="cubeTitle"></div>
+          <div class="title-stage__canvas">placeholder canvas · C[M,N] output grid</div>
+        </div>
+      </article>
+
+      <article class="preview-card">
+        <div class="preview-card__head">
+          <h2>Compact · NCHW → NC1HWC0</h2>
+          <p>紧凑密度保留主身份、角色和状态，隐藏 chips 与 footer。</p>
+        </div>
+        <div class="title-stage is-compact">
+          <div id="compactTitle"></div>
+          <div class="title-stage__canvas">placeholder canvas · NCHW volume</div>
+        </div>
+      </article>
+    </section>
+
+    <section class="contract-section" aria-labelledby="mappingTitle">
+      <div class="contract-section__head">
+        <div>
+          <h2 id="mappingTitle">Preview 字段映射</h2>
+          <p>上方每张 preview card 里的标题条都来自同一个 scene 对象，这里列出标题条每个部分对应的 scene 字段，以 Vector Add 示例为准。</p>
+        </div>
+      </div>
+      <div class="config-group">
+        <div class="config-table-wrap">
+          <table class="config-table">
+            <thead><tr><th>标题条部分</th><th>scene 字段</th><th>Vector Add 示例</th></tr></thead>
+            <tbody>
+              <tr><td>主标题</td><td><code>scene.label</code></td><td><code>xLocal</code></td></tr>
+              <tr><td>role badge</td><td><code>scene.role</code></td><td><code>input</code></td></tr>
+              <tr><td>direction</td><td><code>scene.direction</code></td><td><code>GM → UB</code></td></tr>
+              <tr><td>逻辑 shape</td><td><code>scene.logicalShape</code></td><td><code>{ label: '1D logical', dims: [16384] }</code></td></tr>
+              <tr><td>物理 shape</td><td><code>scene.physicalShape</code></td><td><code>{ label: 'GM linear', dims: [16384] }</code></td></tr>
+              <tr><td>tile shape</td><td><code>scene.tileShape</code></td><td><code>{ label: 'tile', dims: [128] }</code></td></tr>
+              <tr><td>dtype</td><td><code>scene.dtype</code></td><td><code>float32</code></td></tr>
+              <tr><td>format</td><td><code>scene.format</code></td><td><code>ND</code></td></tr>
+              <tr><td>axes</td><td><code>scene.axes</code></td><td><code>['GM element offset']</code></td></tr>
+              <tr><td>memory chips</td><td><code>scene.memory.tier</code> / <code>sizeBytes</code> / <code>offset</code> / <code>range</code> / <code>stride</code> / <code>alignment</code></td><td><code>{ tier: 'GM', sizeBytes: 65536, offset: 0, range: '0 → 16384', alignment: 32 }</code></td></tr>
+              <tr><td>owner chip</td><td><code>scene.owner</code> / <code>scene.queueDepth</code></td><td><code>xGm</code></td></tr>
+              <tr><td>partition chip</td><td><code>scene.partition.blockCount</code> / <code>blockLength</code> / <code>tileLength</code> / <code>blockIndex</code> / <code>tileIndex</code> / <code>tileRange</code></td><td><code>{ blockCount: 8, blockLength: 2048, tileLength: 128, blockIndex: 0, tileIndex: 1 }</code></td></tr>
+              <tr><td>state badge</td><td><code>scene.state</code></td><td><code>loading</code></td></tr>
+              <tr><td>operation chips</td><td><code>scene.step.operationChips</code></td><td><code>['DataCopy', 'EnQue']</code></td></tr>
+              <tr><td>footer constraints</td><td><code>scene.constraints</code></td><td><code>['32B aligned', 'no tail']</code></td></tr>
+              <tr><td>provenance</td><td><code>scene.provenance.symbol</code> / <code>file</code> / <code>line</code> / <code>evidence</code></td><td><code>{ symbol: 'xGm', file: 'add_custom.asc', line: 72, evidence: '代码确认' }</code></td></tr>
+              <tr><td>status</td><td><code>scene.status</code>，缺省时用 <code>scene.step.phase</code> / <code>stepIndex</code> / <code>totalSteps</code></td><td><code>block 0 · tile 1/16</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="contract-note">compact 模式下只保留 primary 和 status；meta、chips、footer 不渲染。</p>
+      </div>
+    </section>
+
+    <section class="contract-section" aria-labelledby="fieldsTitle">
+      <div class="contract-section__head">
+        <div>
+          <h2 id="fieldsTitle">字段组</h2>
+          <p>标题条按主行、meta、chips、footer、status 五组渲染。业务只传结构化字段，不传 HTML。</p>
+        </div>
+        <div class="field-legend" aria-label="Field groups">
+          <span>primary · label / role / direction</span>
+          <span>meta · shape / dtype / format / axes</span>
+          <span>chips · memory / owner / partition / state</span>
+          <span>footer · constraints / provenance</span>
+          <span>status · step / live readout</span>
+        </div>
+      </div>
+
+      <div class="config-grid">
+        <article class="config-group">
+          <div class="config-group__head">
+            <h3>Scene</h3>
+            <span class="contract-note">required: label</span>
+          </div>
+          <div class="config-table-wrap">
+            <table class="config-table">
+              <thead><tr><th>字段</th><th>说明</th></tr></thead>
+              <tbody>
+                <tr><td><code>label</code></td><td>主 tensor 名称或变量符号</td></tr>
+                <tr><td><code>role</code></td><td>语义角色，例如 input / output / weight / bias / scratch / temp / reduction / fusion / broadcast / aggregate</td></tr>
+                <tr><td><code>logicalShape</code></td><td>逻辑 shape，字符串或 <code>{ label, dims }</code></td></tr>
+                <tr><td><code>physicalShape</code></td><td>物理布局 shape，例如 NC1HWC0、A1、A2</td></tr>
+                <tr><td><code>tileShape</code></td><td>当前 tile 或 base tile shape</td></tr>
+                <tr><td><code>dtype</code></td><td>dtype 或 dtype 链，例如 half → float → half</td></tr>
+                <tr><td><code>format</code></td><td>format / layout 标识</td></tr>
+                <tr><td><code>axes</code></td><td>坐标轴标签数组</td></tr>
+                <tr><td><code>memory</code></td><td><code>{ tier, sizeBytes, offset, range, stride, alignment }</code></td></tr>
+                <tr><td><code>owner</code> / <code>queueDepth</code></td><td>队列、分配器或 owning object</td></tr>
+                <tr><td><code>partition</code></td><td><code>{ blockCount, blockLength, tileLength, blockIndex, tileIndex, tileRange }</code></td></tr>
+                <tr><td><code>state</code></td><td>生命周期状态，例如 loading / loaded / enqueued / current / produced / free</td></tr>
+                <tr><td><code>direction</code></td><td>数据搬运方向，例如 GM → UB</td></tr>
+                <tr><td><code>provenance</code></td><td><code>{ symbol, file, line, evidence }</code></td></tr>
+                <tr><td><code>step</code></td><td><code>{ phase, operationChips, stepIndex, totalSteps }</code></td></tr>
+                <tr><td><code>constraints</code></td><td>约束数组，例如 32B aligned、no tail、padding、broadcast</td></tr>
+                <tr><td><code>status</code></td><td>右侧实时状态文字</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="config-group">
+          <div class="config-group__head">
+            <h3>Options / Controller</h3>
+            <span class="contract-note">render → controller</span>
+          </div>
+          <div class="config-table-wrap">
+            <table class="config-table">
+              <thead><tr><th>字段</th><th>说明</th></tr></thead>
+              <tbody>
+                <tr><td><code>ariaLabel</code></td><td>无障碍标题，默认使用 label</td></tr>
+                <tr><td><code>density</code></td><td><code>full</code> 或 <code>compact</code>，compact 隐藏 chips / footer</td></tr>
+                <tr><td><code>showRole</code></td><td>是否显示 role badge</td></tr>
+                <tr><td><code>showShapes</code></td><td>是否显示 shape 组</td></tr>
+                <tr><td><code>showChips</code></td><td>是否显示 chips 组</td></tr>
+                <tr><td><code>showStatus</code></td><td>是否显示右侧 status</td></tr>
+                <tr><td><code>update()</code></td><td>更新 scene / options 并原地重绘</td></tr>
+                <tr><td><code>destroy()</code></td><td>清空标题条并移除 pattern 状态</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <pre class="code-sample"><code>const controller = PtoTensorTitle.render(host, scene, options);
+controller.update(nextScene, { density: 'compact' });
+controller.destroy();</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section class="contract-section" aria-labelledby="usageTitle">
+      <div class="contract-section__head">
+        <div>
+          <h2 id="usageTitle">使用说明</h2>
+          <p>消费页面直接加载共享 CSS / JS 并调用 renderer，不通过 iframe，也不要在业务页复制标题 DOM 或字段格式化逻辑。</p>
+        </div>
+      </div>
+      <div class="usage-grid">
+        <article class="usage-copy">
+          <h3>最小接入</h3>
+          <pre class="code-sample"><code>&lt;link rel="stylesheet" href="patterns/tensor-title/pattern.css"&gt;
+&lt;script src="patterns/tensor-title/pattern.js"&gt;&lt;/script&gt;
+
+const controller = PtoTensorTitle.render(
+  document.getElementById('tensorTitle'),
+  {
+    label: 'xLocal',
+    role: 'input',
+    logicalShape: { label: '1D logical', dims: [16384] },
+    physicalShape: { label: 'GM linear', dims: [16384] },
+    tileShape: { label: 'tile', dims: [128] },
+    dtype: 'float32',
+    format: 'ND',
+    memory: { tier: 'GM', sizeBytes: 65536, offset: 0, alignment: 32 },
+    owner: 'xGm',
+    partition: { blockCount: 8, blockLength: 2048, tileLength: 128, blockIndex: 0, tileIndex: 1 },
+    state: 'loading',
+    direction: 'GM → UB',
+    step: { phase: 'CopyIn', operationChips: ['DataCopy', 'EnQue'], stepIndex: 1, totalSteps: 16 },
+    status: 'block 0 · tile 1/16',
+  }
+);</code></pre>
+        </article>
+
+        <article class="usage-copy">
+          <h3>更新与生命周期</h3>
+          <pre class="code-sample"><code>controller.update(nextScene);
+controller.update(
+  { ...scene, state: 'enqueued' },
+  { density: 'compact', showChips: false }
+});
+controller.destroy();</code></pre>
+          <p><code>update</code> 会原地重绘，不保留旧节点；<code>destroy</code> 清空标题条并移除 <code>pto-tensor-title</code> class。</p>
+        </article>
+
+        <article class="usage-copy">
+          <h3>和 Canvas Pattern 组合</h3>
+          <pre class="code-sample"><code>PtoTensorTitle.render(
+  document.getElementById('tensorHeader'),
+  headerScene,
+);
+
+PtoTensorVolumeCanvas.render(
+  document.getElementById('tensorCanvas'),
+  volumeScene,
+  options,
+);</code></pre>
+          <p>标题条只负责身份和元数据；体素 / 矩阵渲染仍由 <code>tensor-volume-canvas</code> 或 <code>matrix-canvas</code> 负责。</p>
+        </article>
+
+        <article class="usage-copy">
+          <h3>限制</h3>
+          <ul class="usage-list">
+            <li>不要在业务页重写标题 DOM、字节格式或字段归一化逻辑。</li>
+            <li>不要给标题条再套卡片、边框或页头装饰。</li>
+            <li>shape、format、memory、state 和 tiling 事实由业务传入，Pattern 不做推导。</li>
+            <li>不要通过 iframe 使用；直接加载 <code>pattern.css</code> 和 <code>pattern.js</code>。</li>
+            <li>文本统一以 textContent 插入，不接受业务 HTML 字符串。</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script src="./pattern.js"></script>
+  <script>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('embed') === '1') document.body.classList.add('is-embed');
+
+      const vectorScene = {
+        label: 'xLocal',
+        role: 'input',
+        logicalShape: { label: '1D logical', dims: [16384] },
+        physicalShape: { label: 'GM linear', dims: [16384] },
+        tileShape: { label: 'tile', dims: [128] },
+        dtype: 'float32',
+        format: 'ND',
+        axes: ['GM element offset'],
+        memory: { tier: 'GM', sizeBytes: 65536, offset: 0, range: '0 → 16384', alignment: 32 },
+        owner: 'xGm',
+        partition: { blockCount: 8, blockLength: 2048, tileLength: 128, blockIndex: 0, tileIndex: 1, tileRange: '0 → 128' },
+        state: 'loading',
+        direction: 'GM → UB',
+        provenance: { symbol: 'xGm', file: 'add_custom.asc', line: 72, evidence: '代码确认' },
+        step: { phase: 'CopyIn', operationChips: ['DataCopy', 'EnQue'], stepIndex: 1, totalSteps: 16 },
+        constraints: ['32B aligned', 'no tail'],
+        status: 'block 0 · tile 1/16',
+      };
+
+      const cubeScene = {
+        label: 'cLocal',
+        role: 'output',
+        logicalShape: { label: 'C[M,N]', dims: [512, 1024] },
+        physicalShape: { label: 'CO1 / L0C', dims: [128, 256] },
+        tileShape: { label: 'base tile', dims: [128, 256] },
+        dtype: 'float32 → float16',
+        format: 'NZ → ND',
+        axes: ['N (列)', 'M (行)', 'K 累加'],
+        memory: { tier: 'L0C', sizeBytes: 131072, offset: 0, range: 'M 0:128 · N 0:256', alignment: 32 },
+        owner: 'L0C allocator',
+        partition: { blockCount: 4, blockLength: 128, tileLength: 256, blockIndex: 0, tileIndex: 0, tileRange: 'M 0:128 · N 0:256' },
+        state: 'accumulating',
+        direction: 'L0C → GM',
+        provenance: { symbol: 'cLocal', file: 'matmul_basic_api.asc', line: 183, evidence: '代码确认' },
+        step: { phase: 'Mmad', operationChips: ['LoadData', 'Mmad', 'Fixpipe'], stepIndex: 3, totalSteps: 8 },
+        constraints: ['K reduction', 'tail-free'],
+        status: 'K 3/8',
+      };
+
+      const compactScene = {
+        label: 'src0Local',
+        role: 'input',
+        logicalShape: { label: 'NCHW', dims: [1, 4, 16, 16] },
+        physicalShape: { label: 'NC1HWC0', dims: [1, 1, 16, 16, 16] },
+        dtype: 'float16',
+        format: 'NC1HWC0',
+        state: 'current',
+        status: '行 3 · 列 5',
+      };
+
+      const specimens = [
+        {
+          scene: vectorScene,
+          controller: window.PtoTensorTitle.render(document.getElementById('vectorTitle'), vectorScene, { ariaLabel: 'Vector Add xLocal tensor title' }),
+        },
+        {
+          scene: cubeScene,
+          controller: window.PtoTensorTitle.render(document.getElementById('cubeTitle'), cubeScene, { ariaLabel: 'Matmul cLocal output tensor title' }),
+        },
+        {
+          scene: compactScene,
+          controller: window.PtoTensorTitle.render(document.getElementById('compactTitle'), compactScene, { ariaLabel: 'NCHW src0Local compact tensor title', density: 'compact' }),
+        },
+      ];
+
+      const themeToggle = document.getElementById('themeToggle');
+      const setTheme = (theme) => {
+        document.documentElement.dataset.theme = theme;
+        themeToggle.textContent = theme === 'dark' ? 'Light mode' : 'Dark mode';
+      };
+      themeToggle.addEventListener('click', () => {
+        setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+      });
+
+      window.addEventListener('pto-preview-theme-applied', () => {
+        specimens.forEach(({ controller, scene }) => controller.update(scene));
+      });
+
+      window.PtoTensorTitle._previewScenes = { vectorScene, cubeScene, compactScene };
+    })();
+  </script>
+</body>
+</html>

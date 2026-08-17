@@ -57,6 +57,16 @@
       "preview": "patterns/model-parallel-rank-deck/pattern.html"
     },
     {
+      "id": "hierarchical-timeline",
+      "path": "patterns/hierarchical-timeline/pattern.json",
+      "preview": "patterns/hierarchical-timeline/pattern.html"
+    },
+    {
+      "id": "communication-traffic-sankey",
+      "path": "patterns/communication-traffic-sankey/pattern.json",
+      "preview": "patterns/communication-traffic-sankey/pattern.html"
+    },
+    {
       "id": "moe-routing",
       "path": "patterns/moe-routing/pattern.json",
       "preview": "patterns/moe-routing/pattern.html"
@@ -80,6 +90,11 @@
       "id": "matrix-canvas",
       "path": "patterns/matrix-canvas/pattern.json",
       "preview": "patterns/matrix-canvas/pattern.html"
+    },
+    {
+      "id": "tensor-title",
+      "path": "patterns/tensor-title/pattern.json",
+      "preview": "patterns/tensor-title/pattern.html"
     },
     {
       "id": "workbench-shell",

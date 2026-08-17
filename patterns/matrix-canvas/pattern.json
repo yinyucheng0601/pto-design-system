@@ -3,7 +3,7 @@
   "family": "tensor-visualization",
   "name": "Matrix Canvas",
   "type": "canvas",
-  "description": "Interactive Canvas 2D renderer for matrix tensors. It preserves the API Visualizer Load3D matrix language—rounded matrix bounds, quiet cell strokes, semantic row/column/written/padding/current states—and adds span-based aggregate cells for very large matrices.",
+  "description": "Interactive Canvas 2D renderer for matrix tensors. It preserves the API Visualizer Load3D matrix language—rounded matrix bounds, quiet cell strokes, semantic row/column/written/padding/current states—adds gray-masked broadcast-result cells, and supports span-based aggregate cells for very large matrices.",
   "source": {
     "visualContract": [
       "API Visualizer A2 logical matrix in pto_compute-graph-viewer/operator-planning/operator planning.html",
@@ -19,6 +19,7 @@
   "useWhen": [
     "rendering a two-dimensional matrix tensor with row and column coordinates",
     "showing current-row, current-column, written, padding, selected, or current-cell states",
+    "distinguishing source values from cells synthesized through matrix broadcasting",
     "simplifying a very large matrix through an injected number of thumbnail cells with arbitrary source spans"
   ],
   "sceneContract": {
@@ -54,10 +55,12 @@
         "reduction",
         "fusion"
       ],
+      "toneDefault": "neutral when no interaction state or explicit semantic emphasis is supplied",
       "style": [
         "value",
         "empty",
         "padding",
+        "broadcast",
         "aggregate"
       ],
       "states": [
@@ -132,6 +135,13 @@
     "aggregate cells stay label-free at every zoom and use the tooltip for source span and statistics",
     "labels never shrink below 11px; hover tooltip is the detail fallback at every zoom"
   ],
+  "broadcastContract": [
+    "style broadcast means the cell value is synthesized through broadcasting rather than stored independently in the source tensor",
+    "broadcast cells retain the underlying semantic fill, add a neutral gray translucent mask, and keep the normal continuous grid boundary",
+    "source cells stay style value; for a [1,N] bias broadcast to [M,N], row 0 is value and rows 1 through M-1 are broadcast",
+    "broadcast may be combined with tone and interaction states such as current, selected, or muted",
+    "tooltip and live status expose style broadcast as a non-visual fallback"
+  ],
   "aggregateContract": [
     "an aggregate cell remains positioned in source coordinates and uses rowSpan and columnSpan to cover its represented source region",
     "aggregate cells stay inside the same continuous square grid as detail cells and add one centered rounded marker; selected aggregate cells use the full primary fill",
@@ -141,15 +151,22 @@
   ],
   "behavior": [
     "the matrix has an 8px-equivalent rounded outer clip and a quiet semantic-token outline",
+    "cells and generated aggregate cells default to neutral tone; semantic tones are opt-in and should represent an explicit interaction state or semantic emphasis",
     "internal cells form one continuous square grid with straight separators; cells do not have individual gaps, rounded corners, or card-like outlines",
+    "broadcast cells add a neutral gray translucent mask while retaining the normal continuous grid boundary; source cells retain the normal fill",
+    "for a [1,N] to [M,N] broadcast, the source row uses style value and the generated rows use style broadcast",
+    "the current cell uses the warning fill and emphasized grid boundary without an inset outline",
     "cell boundaries mirror the API Visualizer Load3D A2 matrix visual language",
+    "padding cells use a low-saturation neutral wash plus adaptive diagonal hatch; when cells shrink, hatch contrast and a single micro slash increase so alignment padding remains legible at lane overview scale",
     "there is no drag-to-pan interaction",
-    "wheel or trackpad scroll moves the matrix; Control or Command plus wheel zooms at the pointer; F or 0 fits; plus and minus adjust zoom",
+    "wheel scrolls vertically; horizontal trackpad gestures or Shift plus wheel scroll horizontally; both axes stop at the matrix bounds instead of behaving like an infinite canvas",
+    "when the matrix is smaller than the viewport it remains centered and wheel input is left available to the surrounding page",
+    "Control or Command plus wheel zooms at the pointer within the bounded scroll range; F or 0 fits; plus and minus adjust zoom",
     "logical grid lines appear only when their screen spacing is useful; aggregate boundaries remain visible at overview scale",
     "ResizeObserver refits until the user changes the view and preserves the user view afterwards",
     "backing-store dimensions follow devicePixelRatio without changing CSS size",
     "out-of-range cells are skipped with a development warning",
     "the canvas tooltip and live status provide readable detail when labels are hidden"
   ],
-  "agentReuseRule": "Load pattern.css and pattern.js, then call window.PtoMatrixCanvas.render with a canvas plus a business-neutral matrix scene. For very large data, keep scene.extent at the source shape and either pass arbitrary aggregate cells with rowSpan/columnSpan/summary.intensity, or call createAggregatedCells({ values, rows, columns }, { thumbnailRows, thumbnailColumns }). blockRows and blockColumns remain available when the business wants fixed source spans. Do not flatten the matrix extent to thumbnail-grid dimensions, copy wheel-scroll or zoom logic, or move product chrome and operator semantics into the Pattern."
+  "agentReuseRule": "Load pattern.css and pattern.js, then call window.PtoMatrixCanvas.render with a canvas plus a business-neutral matrix scene. Mark source cells with style value and values synthesized by broadcasting with style broadcast; for [1,N] to [M,N], only the first row stays value. For very large data, keep scene.extent at the source shape and either pass arbitrary aggregate cells with rowSpan/columnSpan/summary.intensity, or call createAggregatedCells({ values, rows, columns }, { thumbnailRows, thumbnailColumns }). blockRows and blockColumns remain available when the business wants fixed source spans. Do not flatten the matrix extent to thumbnail-grid dimensions, copy wheel-scroll or zoom logic, or move product chrome and operator semantics into the Pattern."
 }

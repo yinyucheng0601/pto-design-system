@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PTO Pattern · Communication Traffic Sankey</title>
+  <link rel="stylesheet" href="../../tokens/foundation.css" />
+  <link rel="stylesheet" href="../../tokens/semantic.css" />
+  <link rel="stylesheet" href="../../tokens/components.css" />
+  <link rel="stylesheet" href="./pattern.css" />
+  <style>
+    html, body, main { width: 100%; height: 100%; margin: 0; }
+    body { min-width: 980px; min-height: 560px; background: var(--background); }
+  </style>
+</head>
+<body>
+  <main id="pattern-host" aria-label="Communication traffic Sankey pattern preview"></main>
+  <script src="./pattern.js"></script>
+  <script>
+    (() => {
+      const MiB = 1024 * 1024;
+      const ranks = [0, 1, 2, 3].map((rank) => ({ rank, node: rank < 2 ? 'node-a' : 'node-b' }));
+      const events = Array.from({ length: 64 }, (_, index) => ({
+        id: `preview-${index}`,
+        timestamp: 100 + index % 40,
+        duration: 0.5 + index % 7 * 0.2,
+        bytes: (4 + index % 4 * 4) * MiB,
+        sourceRank: index % 4,
+        targetRank: (index * 3 + 1) % 4,
+        sourceEngine: index % 9 === 0 ? null : index % 3 ? 'aic' : 'aiv',
+        targetEngine: index % 11 === 0 ? null : index % 4 ? 'aic' : 'aiv',
+        streamId: `s${index % 6}`,
+        transport: (index % 4 < 2) === ((index * 3 + 1) % 4 < 2) ? 'hccs' : 'roce',
+      }));
+      window.PtoCommunicationTrafficSankeyPattern.render(document.getElementById('pattern-host'), {
+        data: {
+          title: 'Communication traffic preview',
+          ranks,
+          events,
+          timeRange: { min: 100, max: 140, step: 1 },
+          defaultWindow: { start: 108, end: 132 },
+          defaultExpanded: { source: [0], target: [2] },
+        },
+      });
+    })();
+  </script>
+</body>
+</html>

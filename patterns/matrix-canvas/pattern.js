@@ -4,7 +4,7 @@
   const BASE_CELL = 32;
   const DEFAULT_PADDING = Object.freeze({ top: 38, right: 28, bottom: 42, left: 52 });
   const VALID_TONES = new Set(['neutral', 'input', 'output', 'compute', 'reduction', 'fusion']);
-  const VALID_STYLES = new Set(['value', 'empty', 'padding', 'aggregate']);
+  const VALID_STYLES = new Set(['value', 'empty', 'padding', 'broadcast', 'aggregate']);
   const VALID_STATES = new Set(['row-focus', 'column-focus', 'written', 'selected', 'current', 'muted']);
   const TONE_TOKENS = Object.freeze({
     neutral: '--foreground-secondary',
@@ -232,19 +232,40 @@
     return { fill, stroke, text, tone, background, foreground };
   }
 
-  function drawHatch(ctx, rect) {
+  function drawPaddingPattern(ctx, rect) {
     const foreground = tokenRgb('--foreground');
+    const background = tokenRgb('--background');
+    const surface3 = tokenRgb('--surface-3');
+    const minDimension = Math.min(rect.width, rect.height);
+    const compactness = clamp((18 - minDimension) / 10, 0, 1);
+    const wash = mix(foreground, surface3, 0.16 + compactness * 0.12);
     ctx.save();
     ctx.beginPath();
     ctx.rect(rect.x, rect.y, rect.width, rect.height);
     ctx.clip();
-    ctx.strokeStyle = rgba(foreground, 0.1);
-    ctx.lineWidth = 1;
-    const step = clamp(Math.min(rect.width, rect.height) * 0.3, 6, 12);
+
+    ctx.fillStyle = rgba(wash, 0.16 + compactness * 0.16);
+    ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+
+    const step = minDimension < 11
+      ? clamp(minDimension * 0.72, 4, 7)
+      : clamp(minDimension * 0.42, 6, 12);
+    ctx.strokeStyle = rgba(foreground, 0.18 + compactness * 0.2);
+    ctx.lineWidth = minDimension < 14 ? 1.35 : 1;
+    ctx.lineCap = 'square';
     for (let start = rect.x - rect.height; start < rect.x + rect.width; start += step) {
       ctx.beginPath();
       ctx.moveTo(start, rect.y + rect.height);
       ctx.lineTo(start + rect.height, rect.y);
+      ctx.stroke();
+    }
+
+    if (minDimension < 14) {
+      ctx.strokeStyle = rgba(mix(foreground, background, 0.78), 0.46);
+      ctx.lineWidth = clamp(minDimension * 0.18, 1.2, 1.8);
+      ctx.beginPath();
+      ctx.moveTo(rect.x + rect.width * 0.18, rect.y + rect.height * 0.82);
+      ctx.lineTo(rect.x + rect.width * 0.82, rect.y + rect.height * 0.18);
       ctx.stroke();
     }
     ctx.restore();
@@ -287,19 +308,19 @@
 
     ctx.fillStyle = colors.fill;
     ctx.fillRect(box.x, box.y, box.width, box.height);
+    if (cell.style === 'broadcast' && !cell.states.has('current')) {
+      const grayMask = mix(tokenRgb('--foreground-secondary'), colors.background, 0.4);
+      ctx.fillStyle = rgba(grayMask, 0.4);
+      ctx.fillRect(box.x, box.y, box.width, box.height);
+    }
+    if (cell.style === 'padding' && !cell.states.has('current')) drawPaddingPattern(ctx, box);
+    if (cell.style === 'aggregate') drawAggregate(ctx, cell, box, colors);
+
+    ctx.save();
     ctx.strokeStyle = colors.stroke;
     ctx.lineWidth = cell.states.has('current') ? 2 : cell.states.has('selected') ? 1.5 : 1;
     ctx.strokeRect(box.x, box.y, box.width, box.height);
-
-    if (cell.style === 'padding') drawHatch(ctx, box);
-    if (cell.style === 'aggregate') drawAggregate(ctx, cell, box, colors);
-
-    if (cell.states.has('current') && minDimension >= 8) {
-      const inset = clamp(minDimension * 0.08, 2, 4);
-      ctx.strokeStyle = rgba(colors.foreground, 0.72);
-      ctx.lineWidth = 1.4;
-      ctx.strokeRect(box.x + inset, box.y + inset, box.width - inset * 2, box.height - inset * 2);
-    }
+    ctx.restore();
 
     const mono = cssValue('--font-mono', 'ui-monospace, monospace');
     ctx.textAlign = 'center';
@@ -367,7 +388,7 @@
           rowSpan,
           columnSpan,
           style: 'aggregate',
-          tone: inputOptions.tone || 'input',
+          tone: VALID_TONES.has(inputOptions.tone) ? inputOptions.tone : 'neutral',
           summary: {
             rows: rowSpan,
             columns: columnSpan,
@@ -427,7 +448,10 @@
     canvas.tabIndex = canvas.tabIndex >= 0 ? canvas.tabIndex : 0;
     canvas.setAttribute('role', 'application');
     canvas.setAttribute('aria-label', options.ariaLabel || 'Two-dimensional matrix tensor');
-    canvas.setAttribute('aria-description', 'Use the wheel to scroll the matrix, Control or Command plus wheel to zoom, and press F or 0 to fit.');
+    canvas.setAttribute(
+      'aria-description',
+      'Use the wheel to scroll vertically, Shift plus wheel or a horizontal trackpad gesture to scroll horizontally, Control or Command plus wheel to zoom, and press F or 0 to fit.'
+    );
 
     function dimensions() {
       const rect = canvas.getBoundingClientRect();
@@ -443,7 +467,32 @@
       const minZoom = finiteOr(options.minZoom, 0.015);
       const maxZoom = finiteOr(options.maxZoom, 12);
       view.scale = clamp(view.scale, minZoom, maxZoom);
+      constrainView();
       needsFit = false;
+    }
+
+    function scrollBounds() {
+      const { width, height } = dimensions();
+      const padding = resolvePadding(options.padding);
+      const matrixWidth = scene.extent.columns * BASE_CELL * view.scale;
+      const matrixHeight = scene.extent.rows * BASE_CELL * view.scale;
+      const innerWidth = Math.max(1, width - padding.left - padding.right);
+      const innerHeight = Math.max(1, height - padding.top - padding.bottom);
+      const centeredX = padding.left + (innerWidth - matrixWidth) / 2;
+      const centeredY = padding.top + (innerHeight - matrixHeight) / 2;
+      return {
+        minX: matrixWidth <= innerWidth ? centeredX : width - padding.right - matrixWidth,
+        maxX: matrixWidth <= innerWidth ? centeredX : padding.left,
+        minY: matrixHeight <= innerHeight ? centeredY : height - padding.bottom - matrixHeight,
+        maxY: matrixHeight <= innerHeight ? centeredY : padding.top,
+      };
+    }
+
+    function constrainView() {
+      const bounds = scrollBounds();
+      view.offsetX = clamp(view.offsetX, bounds.minX, bounds.maxX);
+      view.offsetY = clamp(view.offsetY, bounds.minY, bounds.maxY);
+      return bounds;
     }
 
     function matrixBounds() {
@@ -507,10 +556,11 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);
       if (needsFit) applyFit();
+      else constrainView();
 
       const bounds = matrixBounds();
       ctx.save();
-      roundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 8);
+      roundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 4);
       ctx.clip();
       ctx.fillStyle = rgba(tokenRgb('--surface-1'), 0.68);
       ctx.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
@@ -521,7 +571,7 @@
       });
       ctx.restore();
 
-      roundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 8);
+      roundedRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 4);
       ctx.strokeStyle = rgba(tokenRgb('--foreground'), 0.14);
       ctx.lineWidth = 1;
       ctx.stroke();
@@ -561,7 +611,8 @@
         : `row ${cell.row} · column ${cell.column}`;
       if (cell.style !== 'aggregate') {
         const value = Number.isFinite(cell.value) ? ` · value ${cell.value}` : '';
-        return { title: cell.label || cell.id, meta: `${range}${value}` };
+        const style = cell.style !== 'value' ? ` · style ${cell.style}` : '';
+        return { title: cell.label || cell.id, meta: `${range}${value}${style}` };
       }
       const summary = cell.summary;
       const stats = [
@@ -613,6 +664,7 @@
       view.offsetX = point.x - worldX * scale;
       view.offsetY = point.y - worldY * scale;
       view.scale = scale;
+      constrainView();
       userView = true;
       needsFit = false;
       paint();
@@ -638,24 +690,17 @@
 
     function onWheel(event) {
       if (options.interactive === false) return;
-      event.preventDefault();
       if (event.ctrlKey || event.metaKey) {
+        event.preventDefault();
         const point = eventPoint(event);
         const factor = Math.exp(-event.deltaY * 0.0014);
         setZoom(view.scale * factor, point);
         return;
       }
-      const horizontal = event.shiftKey && Math.abs(event.deltaX) < Math.abs(event.deltaY)
-        ? event.deltaY
-        : event.deltaX;
-      const vertical = event.shiftKey ? 0 : event.deltaY;
-      const speed = clamp(finiteOr(options.scrollSpeed, 1), 0.1, 4);
-      view.offsetX -= horizontal * speed;
-      view.offsetY -= vertical * speed;
-      userView = true;
-      needsFit = false;
-      tooltip.classList.remove('is-visible');
-      paint();
+
+      // Let the browser handle normal page scrolling.
+      // The matrix canvas only zooms when Ctrl/Cmd is pressed.
+      return;
     }
 
     function onKeyDown(event) {
