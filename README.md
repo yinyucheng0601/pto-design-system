@@ -40,7 +40,6 @@ design-system-share/
     ├── workbench-shell/         ← 可拖拽分屏 resize kernel，只负责 split / gutter / localStorage
     ├── floating-playback-control/ ← 悬浮播放、step、scrubber 控制条
     ├── model-graphviz/          ← TorchVista / DeepSeek V3.2 Graphviz / Qwen-7B / openPangu-2.0-Flash model architecture / report overlay
-    ├── model-training-graphviz/ ← 模型训练 evidence、phase、edge tag overlay
     ├── model-architecture-3d-deck/ ← openPangu 深度堆叠模型架构与平行标注
     ├── model-parallel-rank-deck/ ← Three.js 模型到 Rank 的并行放置
     ├── model-architecture-training-sidecar/ ← 模型架构训练语义与 telemetry sidecar
@@ -67,7 +66,6 @@ design-system-share/
 | `workbench-shell` | 任意需要拖拽调整大小的分屏 | `patterns/workbench-shell/pattern.js` |
 | `floating-playback-control` | step、播放、暂停、scrubber、回放控制 | `patterns/floating-playback-control/pattern.js` |
 | `model-graphviz` | TorchVista / 模型 Graphviz / Qwen-7B / openPangu-2.0-Flash 架构页 / 报告 overlay | `patterns/model-graphviz/pattern.html` |
-| `model-training-graphviz` | 在共享模型 Graphviz 上叠加训练 evidence、phase、edge tag 与相关节点强调 | `patterns/model-training-graphviz/pattern.js` |
 | `model-architecture-3d-deck` | openPangu 深度堆叠架构、iso/front/right 视图和平行标注 | `patterns/model-architecture-3d-deck/pattern.js` |
 | `model-parallel-rank-deck` | 将完整模型 Layer 编译到 Three.js Rank volumes；支持全局网格、通信组聚焦与并行归属检查 | `patterns/model-parallel-rank-deck/pattern.js` |
 | `model-architecture-training-sidecar` | 在 3D deck 右视图上增加训练流、梯度、loss、metric 与 Layer 下钻 | `patterns/model-architecture-training-sidecar/pattern.js` |
@@ -188,7 +186,6 @@ AI 应该先问清楚：
 | 二维矩阵 Tensor / 大矩阵缩略概览 | `patterns/matrix-canvas`；页面保持源 shape，通过任意 span + summary 或目标缩略格行列数表达聚合区域 |
 | Tensor / Matrix / Volume 上方的标题与元数据条 | `patterns/tensor-title`；页面把逻辑 shape、物理 layout、memory、tiling、state、provenance 和 step 作为结构化字段传入 |
 | TorchVista / 模型 Graphviz / Qwen-7B / openPangu-2.0-Flash 架构页 / 报告 overlay | `patterns/model-graphviz` |
-| 模型训练 evidence / phase / edge tag overlay | `patterns/model-training-graphviz` |
 | 深度堆叠模型架构与平行标注 | `patterns/model-architecture-3d-deck` |
 | 模型到 Rank 的 Three.js 并行放置 | `patterns/model-parallel-rank-deck` |
 | 模型架构训练流、梯度、loss 与 Layer telemetry | `patterns/model-architecture-training-sidecar` |

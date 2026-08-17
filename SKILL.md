@@ -141,7 +141,6 @@ architecture、graph、map pane 在 IDE frame 内时还要检查：
 | Pass-IR op、tensor、incast、outcast、group node cards | `patterns/pass-ir-graph-node/pattern.json` |
 | 二维 Matrix Tensor、逐元素格、大矩阵聚合格 | `patterns/matrix-canvas/pattern.json` |
 | TorchVista、model Graphviz、Qwen-7B / openPangu-2.0-Flash 折叠模型架构图、report overlays | `patterns/model-graphviz/pattern.json` |
-| 模型训练 evidence、phase、edge tags、related-node overlay | `patterns/model-training-graphviz/pattern.json` |
 | openPangu 深度堆叠模型架构、iso/front/right、平行标注 | `patterns/model-architecture-3d-deck/pattern.json` |
 | Three.js model-to-rank 放置、TP/PP/EP/EDP ownership | `patterns/model-parallel-rank-deck/pattern.json` |
 | 模型训练流、梯度、loss、metric、Layer telemetry sidecar | `patterns/model-architecture-training-sidecar/pattern.json` |

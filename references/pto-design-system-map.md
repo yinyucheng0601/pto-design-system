@@ -84,7 +84,6 @@ Use `patterns/hardware-architecture-viewport` for the shared dotted architecture
 
 ### Model Training & Parallel Patterns
 
-- Use `model-training-graphviz` for training evidence and phase overlays on `model-graphviz`.
 - Use `model-architecture-3d-deck` for the canonical openPangu depth stack and parallel badges.
 - Use `model-parallel-rank-deck` for complete model-to-Rank Three.js placement and ownership inspection.
 - Use `model-architecture-training-sidecar` for forward/backward flows, gradients, optimizer/loss semantics, metrics, and Layer telemetry without mutating the base deck.

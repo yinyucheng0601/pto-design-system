@@ -7,6 +7,11 @@
       "preview": "patterns/swimlane-task/pattern.html"
     },
     {
+      "id": "timeline-time-selection",
+      "path": "patterns/timeline-time-selection/pattern.json",
+      "preview": "patterns/timeline-time-selection/pattern.html"
+    },
+    {
       "id": "memory-architecture-layout",
       "path": "patterns/memory-architecture/pattern.json",
       "preview": "patterns/memory-architecture/pattern.html"
@@ -40,11 +45,6 @@
       "id": "model-graphviz",
       "path": "patterns/model-graphviz/pattern.json",
       "preview": "patterns/model-graphviz/pattern.html"
-    },
-    {
-      "id": "model-training-graphviz",
-      "path": "patterns/model-training-graphviz/pattern.json",
-      "preview": "patterns/model-training-graphviz/pattern.html"
     },
     {
       "id": "model-architecture-3d-deck",

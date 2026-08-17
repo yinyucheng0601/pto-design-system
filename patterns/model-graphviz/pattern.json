@@ -2,7 +2,7 @@
   "id": "model-graphviz",
   "name": "Model Graphviz",
   "type": "svg",
-  "description": "Reusable SVG visual contract for TorchVista/Graphviz model architecture maps, report overlays, and evidence/focus overlays. Captures the approved DeepSeek V3.2 graph style and bundles clean architecture schema assets for DeepSeek V3.2, Qwen7B, openPangu-2.0-Flash, and local Pangu MoE variants; the legacy Gemma schema and openPangu Ultra-MoE 718B schema remain available as assets but are excluded from the preview gallery. The contract keeps default depth-2 folding, no default selected operator, pill module/op nodes, rounded-rect tensor/state nodes, transparent parent cluster shells with a fixed --radius-xl (16px) corner for every meaningful container including repeated layer templates, white edges, vertically centered node labels, the shared model-architecture op-category color profile for gallery model previews with communication operators in a blue-green lane, left-side Parameter/Weight input nodes, right-side State/Cache auxiliary nodes, semantic-first colormap defaults for common op roles with unknown keys expanded through the shared palette, red/green forbidden hue ranges in generated palettes, and an optional operator performance-share heatmap using the DeepSeek report's max-normalized blue-purple-orange-red ramp with a 0.64 exponent. Structural-only roots may remain in source hierarchy while their visual frame is omitted. The base renderer also owns optional controller behavior formerly duplicated by model-training-graphviz: evidence hover panels, edge-object hover panels for tagged tensor/parameter/activation flows, edge type tags, selected/related emphasis, hierarchy-aware focus, drag pan, Command-wheel zoom, and stable non-refitting phase/focus changes.",
+  "description": "Reusable SVG visual contract for TorchVista/Graphviz model architecture maps, report overlays, and evidence/focus overlays. Captures the approved DeepSeek V3.2 graph style and bundles clean architecture schema assets for DeepSeek V3.2, Qwen7B, and openPangu-2.0-Flash; the legacy Gemma schema and openPangu Ultra-MoE 718B schema remain available as assets but are excluded from the preview gallery. The contract keeps default depth-2 folding, no default selected operator, pill module/op nodes, rounded-rect tensor/state nodes, transparent parent cluster shells with a fixed --radius-xl (16px) corner for every meaningful container including repeated layer templates, white edges, vertically centered node labels, the shared model-architecture op-category color profile for gallery model previews with communication operators in a blue-green lane, left-side Parameter/Weight input nodes, right-side State/Cache auxiliary nodes, semantic-first colormap defaults for common op roles with unknown keys expanded through the shared palette, red/green forbidden hue ranges in generated palettes, and an optional operator performance-share heatmap using the DeepSeek report's max-normalized blue-purple-orange-red ramp with a 0.64 exponent. Structural-only roots may remain in source hierarchy while their visual frame is omitted. The base renderer also owns optional controller behavior: evidence hover panels, edge-object hover panels for tagged tensor/parameter/activation flows, edge type tags, selected/related emphasis, hierarchy-aware focus, drag pan, Command-wheel zoom, and stable non-refitting phase/focus changes.",
   "typography": {
     "bodyMinimumPx": 14,
     "uiMinimumPx": 12,
@@ -17,7 +17,6 @@
       "patterns/model-graphviz/graphviz/deepseek_v32_report_overlay_demo.html",
       "patterns/model-graphviz/graphviz/deepseek_v32_report_overlay_demo_v2.html",
       "patterns/model-graphviz/assets/deepseek_v32_modelviz.html",
-      "patterns/model-graphviz/assets/deepseek_v32_gallery_modelviz.html",
       "patterns/model-graphviz/assets/deepseek_v32_model_architecture.json",
       "patterns/model-graphviz/assets/qwen7b_modelviz.html",
       "patterns/model-graphviz/assets/qwen7b_model_architecture.json",
@@ -26,11 +25,9 @@
       "patterns/model-graphviz/assets/openpangu_2_0_flash_training_overlay_modelviz.html",
       "patterns/model-graphviz/assets/openpangu_2_0_flash_model_architecture.json",
       "patterns/model-graphviz/assets/openpangu_2_0_flash_model_architecture_validation.md",
-      "patterns/model-graphviz/assets/pangu_moe_modelviz.html",
       "patterns/model-graphviz/assets/openpangu_ultramoe_718b_model_architecture.json",
       "patterns/model-graphviz/assets/openpangu_ultramoe_718b_model_architecture_validation.md",
       "patterns/model-graphviz/assets/pangu_ultramoe_718b_graph.js",
-      "patterns/model-graphviz/assets/pangu_pro_moe_72ba16b_graph.js",
       "patterns/model-graphviz/capsule.css",
       "patterns/model-graphviz/capsule.js",
       "patterns/pass-ir-graph-node/pattern.css",
@@ -45,12 +42,10 @@
     "originalModule": "patterns/model-graphviz/graphviz/deepseek_v32_source_graph.html",
     "schemaAssets": {
       "deepseekV32": "patterns/model-graphviz/assets/deepseek_v32_model_architecture.json",
-      "deepseekV32Gallery": "patterns/model-graphviz/assets/deepseek_v32_gallery_modelviz.html",
       "qwen7b": "patterns/model-graphviz/assets/qwen7b_model_architecture.json",
       "gemma": "patterns/model-graphviz/assets/gemma_model_architecture.json",
       "openPanguFlash": "patterns/model-graphviz/assets/openpangu_2_0_flash_model_architecture.json",
       "openPanguUltra718B": "patterns/model-graphviz/assets/openpangu_ultramoe_718b_model_architecture.json",
-      "panguMoePreview": "patterns/model-graphviz/assets/pangu_moe_modelviz.html",
       "index": "patterns/model-graphviz/assets/index.json"
     },
     "bundledPreview": "patterns/model-graphviz/assets/deepseek_v32_modelviz.html",
@@ -111,7 +106,7 @@
       "sourcePage": "patterns/model-graphviz/assets/deepseek_v32_modelviz.html",
       "schemaFile": "patterns/model-graphviz/assets/deepseek_v32_model_architecture.json",
       "defaultCollapseDepth": 2,
-      "notes": "Final source-checked DeepSeek V3.2 clean architecture schema: 61 main layers, dense 0-2, MoE 3-60, Module/Op/State node semantics, tensor facts on edges, explicit parameter nodes for embedding, attention projection, dense MLP, router, routed expert, shared expert, and LM head weights, no shapes or constraints inside node labels. Gallery tabs use deepseek_v32_gallery_modelviz.html so DeepSeek shares the same renderer, transparent clusters, neutral parameter nodes, light-mode typography, and readable fit rules as Qwen, openPangu, and Pangu MoE; the legacy deepseek_v32_modelviz.html remains available for full Graphviz inspection."
+      "notes": "Final source-checked DeepSeek V3.2 clean architecture schema: 61 main layers, dense 0-2, MoE 3-60, Module/Op/State node semantics, tensor facts on edges, explicit parameter nodes for embedding, attention projection, dense MLP, router, routed expert, shared expert, and LM head weights, no shapes or constraints inside node labels. The bundled deepseek_v32_modelviz.html renders the clean architecture with the shared renderer, transparent clusters, neutral parameter nodes, light-mode typography, and readable fit rules."
     },
     {
       "id": "deepseek-v32-report-overlay",
@@ -152,14 +147,6 @@
       "schemaFile": "patterns/model-graphviz/assets/openpangu_2_0_flash_model_architecture.json",
       "defaultCollapseDepth": 2,
       "notes": "Training-cross variant of the source-checked openPangu graph. The default L1 view keeps the Weight / Activation / Gradient / Residual / Optimizer cross visible with one folded Decoder Layer at the intersection. Its plus control expands that single representative Decoder Layer inline to L2 direct children only; Attention and FFN remain folded Modules rather than opening the complete model or deeper QKV/router/expert nodes. The main graph carries exactly 29 synthetic high-value telemetry values across token input, embedding, selected layer, final norm, loss, probe weight, gradient, sync, optimizer, and updated weight. Every telemetry record has step, microbatch, layer, owner rank, tensor scope, phase, and collection source; compact graph scope lines preserve those bindings while the right inspector expands Q/K/V, optimizer moments, quantiles, histogram, layer heatmap, and interpretation guardrails. This page opts into cursor-anchored direct wheel zoom while preserving native scrolling inside the inspector. Selecting a parameterized L1/L2 Module still binds Weight/Bias, Activation, Gradient, Residual, Optimizer, and parallel-mapping summaries without mutating canonical architecture facts."
-    },
-    {
-      "id": "pangu-moe-local-variants",
-      "sourcePage": "patterns/model-graphviz/assets/pangu_moe_modelviz.html",
-      "schemaFile": "patterns/model-graphviz/assets/openpangu_ultramoe_718b_model_architecture.json",
-      "validationFile": "patterns/model-graphviz/assets/openpangu_ultramoe_718b_model_architecture_validation.md",
-      "defaultCollapseDepth": 2,
-      "notes": "Local Pangu MoE preview adapter for openPangu-R-72B and Pangu Pro MoE 72BA16B in the gallery. The 718B source schema remains bundled for direct inspection but is intentionally excluded from the tabbed preview because its expert-pool drill-down silhouette is not yet aligned with the other gallery models. The adapter reuses the shared model-graphviz renderer, preserves dashed parameter edges and tensor-style Parameter nodes on the left input lane, keeps the expanded routed-expert detail cluster sized through the terminal All-to-All Combine communication operator, and uses the shared model-architecture op-category color profile with communication operators in the blue-green lane."
     }
   ],
   "useWhen": [
@@ -189,7 +176,7 @@
     "node dimensions when the Graphviz layout requires wider labels",
     "glyph-only operation nodes via node.glyph and node.hideTypeLabel, for visual merge/add symbols that still retain canonical op semantics in the inspector",
     "node semantic color keys, as long as colors are resolved through buildColorMap",
-    "Model architecture gallery previews should use window.PtoModelGraphvizPattern.modelArchitectureColormap(graph, options) and .pto-model-architecture-stage so DeepSeek, Qwen, openPangu, and Pangu MoE variants share the op-category semantic profile, communication operators use the blue-green lane, and all previews keep transparent parent containers, neutral selection stroke, hidden native fold toggles, consistent light-mode text/edge treatment, left-side Parameter/Weight inputs, and right-side State/Cache auxiliaries",
+    "Model architecture gallery previews should use window.PtoModelGraphvizPattern.modelArchitectureColormap(graph, options) and .pto-model-architecture-stage so DeepSeek, Qwen, and openPangu variants share the op-category semantic profile, communication operators use the blue-green lane, and all previews keep transparent parent containers, neutral selection stroke, hidden native fold toggles, consistent light-mode text/edge treatment, left-side Parameter/Weight inputs, and right-side State/Cache auxiliaries",
     "IO colormap entries may use { raw: '#RRGGBB' } only when the page intentionally needs an exact fill such as a true neutral gray that must bypass HSL normalization",
     "node fill colors only; light mode keeps semantic fills saturated enough for scanability and removes default op/module node borders; tensor, parameter, state, selected, and related strokes remain renderer-owned exceptions",
     "module and op nodes render through the shared Pass-IR compact op-pill capsule adapter; tensor/state/parameter nodes remain renderer-owned rounded rectangles",
@@ -229,5 +216,5 @@
     "adding visible border styles to the panel-shell report inspector beyond the shared panel-shell token contract"
     ,"shipping a modelviz HTML preview without the shared capsule.css, capsule.js, and Pass-IR graph-node dependencies"
   ],
-  "agentReuseRule": "Read this JSON first. Every modelviz HTML preview loads capsule.css, capsule.js, and the Pass-IR graph-node pattern so module/op nodes share the openPangu-2.0-Flash capsule language while tensor/state/parameter nodes retain their rounded-rectangle semantics. For any model graph parity preview, use pattern.html because it iframes the real V3.2 Graphviz page. For model architecture gallery tabs, use the shared-renderer asset pages, including deepseek_v32_gallery_modelviz.html rather than the legacy DeepSeek Graphviz page. For new lightweight rendered examples, load pattern.css and pattern.js, then call window.PtoModelGraphvizPattern.render or renderController with data. Treat this as a rendered SVG pattern: node geometry, depth-2 default folding, top-right corner fold placement, right-inset expand placement, --radius-xl (16px) parent cluster corners, vertically centered node label+type stacks, explicit sem:* op colors before parent fallback, transparent expanded parent containers, stronger light-mode node-fill opacity without light-only font-size jumps or default op/module node borders, left-side Parameter/Weight input placement, right-side State/Cache auxiliary placement, Graphviz margin/pad, cluster margin, no-shadow graph rendering, edge tags that avoid graph node boxes with perpendicular fallback offsets, centered report-priority container title pills, no-extra-border priority tags, invisible-only click hit targets, no initial selected node/operator state, and semantic-first colormap generation with red/green forbidden hue ranges stay in the shared renderer rather than page-local CSS. New pages additionally derive cluster boxes from child bounding boxes with title-lane and external-edge clearance, use a single top-to-bottom decoder column, transform-based cursor-anchored pan/zoom, a single white selection stroke after user selection (no focus ring), and a top-left repeat-count badge."
+  "agentReuseRule": "Read this JSON first. Every modelviz HTML preview loads capsule.css, capsule.js, and the Pass-IR graph-node pattern so module/op nodes share the openPangu-2.0-Flash capsule language while tensor/state/parameter nodes retain their rounded-rectangle semantics. For any model graph parity preview, use pattern.html because it iframes the real V3.2 Graphviz page. For model architecture gallery tabs, use the shared-renderer asset pages rather than the legacy DeepSeek Graphviz page. For new lightweight rendered examples, load pattern.css and pattern.js, then call window.PtoModelGraphvizPattern.render or renderController with data. Treat this as a rendered SVG pattern: node geometry, depth-2 default folding, top-right corner fold placement, right-inset expand placement, --radius-xl (16px) parent cluster corners, vertically centered node label+type stacks, explicit sem:* op colors before parent fallback, transparent expanded parent containers, stronger light-mode node-fill opacity without light-only font-size jumps or default op/module node borders, left-side Parameter/Weight input placement, right-side State/Cache auxiliary placement, Graphviz margin/pad, cluster margin, no-shadow graph rendering, edge tags that avoid graph node boxes with perpendicular fallback offsets, centered report-priority container title pills, no-extra-border priority tags, invisible-only click hit targets, no initial selected node/operator state, and semantic-first colormap generation with red/green forbidden hue ranges stay in the shared renderer rather than page-local CSS. New pages additionally derive cluster boxes from child bounding boxes with title-lane and external-edge clearance, use a single top-to-bottom decoder column, transform-based cursor-anchored pan/zoom, a single white selection stroke after user selection (no focus ring), and a top-left repeat-count badge."
 }

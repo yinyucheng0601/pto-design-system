@@ -172,8 +172,7 @@
               <tr><td><code>workbench-shell</code></td><td>Resize kernel only. Use <code>patterns/workbench-shell/pattern.css</code> and <code>patterns/workbench-shell/pattern.js</code>, then call <code>window.PtoWorkbenchShell.initResizablePanes</code>, <code>createSplitGutter</code>, or <code>initNestedResizablePanes</code> for horizontal / vertical / nested splits. Do not put page chrome, pane fills, topbars, titles, canvas controls, or IDE typography into this pattern.</td></tr>
               <tr><td><code>ide-frame</code></td><td>IDE framework shell. Use <code>patterns/ide-frame/pattern.css</code>, <code>patterns/ide-frame/pattern.js</code>, <code>patterns/floating-playback-control/pattern.css</code>, <code>patterns/floating-playback-control/pattern.js</code>, and optional <code>patterns/ide-frame/vscode.css</code>. Set <code>data-host="standalone"</code> or <code>data-host="vscode-webview"</code>. It owns IDE chrome, pane headers, pane-local preview tabs, generic slots, floating playback mounting, split initialization, and the standalone IDE skin: 100% multi-point gradient/aura background, 80% translucent blurred pane fill, pane header fill, pane shadow, and transparent top chrome. It must not ship business sample data, must not recreate playback chrome, must not locally replace the shared IDE skin, and must not override <code>.pto-workbench-shell__*</code> internals.</td></tr>
               <tr><td><code>floating-playback-control</code></td><td>Use <code>patterns/floating-playback-control/pattern.css</code> and <code>patterns/floating-playback-control/pattern.js</code>. Pages should use <code>.pto-floating-playback*</code> classes or call <code>window.PtoFloatingPlaybackControl.createControl</code>, then call <code>init</code> and <code>initScrubberHover</code>. Business pages own playback data and button handlers, but must not copy floating-shell chrome, collapse synchronization, or scrubber hover behavior locally.</td></tr>
-              <tr><td><code>model-graphviz</code></td><td>Use <code>patterns/model-graphviz/pattern.html</code> for parity preview; it iframes the real DeepSeek V3.2 Graphviz page directly. Bundled source/config schema assets include DeepSeek V3.2, Qwen-7B, <code>openpangu_2_0_flash_modelviz.html</code>, and local Pangu MoE previews. For new lightweight examples, use <code>patterns/model-graphviz/pattern.js</code> and call <code>window.PtoModelGraphvizPattern.render</code>. The contract preserves the DeepSeek V3.2 rules: default depth-2 folding, full-pill module/op nodes, rounded-rect tensor nodes for Input/Output/MTP/Constant/Parameter/Tensor, graph stage, graph edges, semantic-first colormap defaults for common op roles with communication operators in a blue-green lane and unknown keys expanded through the shared palette, stronger light-mode node-fill opacity, transparent expanded parent containers, <code>--radius-xl</code> (16px) cluster corners, vertically centered node label+type stacks, strict semantic module hierarchy, explicit <code>sem:*</code> op colors before parent fallback, folded representative edge dedupe, stable expand/collapse viewport anchoring, top-right corner fold controls, right-inset expand controls, no graph shadows, and no-border clicked-operator preview cards. New model graph pages additionally derive cluster boxes from their visible-child bounding boxes (so collapse reflows and shrinks the parent), lay the decoder chain out as a single top-to-bottom column (Gate/Up the only parallel pair), use transform-based cursor-anchored pan/zoom, show a single white selection stroke with no browser focus ring, add <code>.pto-model-architecture-stage</code> for the shared model-architecture gallery treatment, and place the repeat-count badge at the cluster top-left under the title; <code>qwen7b_modelviz.html</code> is the reference implementation. Node fill colors are the only data-viz color exception; all other UI styling must remain token-derived. Do not render tensor nodes as ellipses or full pills, drift fold icons away from the cluster top-right corner anchor, use colored or translucent expanded-cluster fills, add graph shadows or operator-card borders, hard-code non-node UI styles, recenter/refit the whole graph after expand/collapse, or duplicate an expanded parent as a standalone node.</td></tr>
-              <tr><td><code>model-training-graphviz</code></td><td>Use <code>patterns/model-training-graphviz/pattern.js</code> after loading <code>model-graphviz</code>. Call <code>window.PtoModelTrainingGraphvizPattern.render</code> with graph, edge tags, and <code>trainingEvidence</code>; use <code>controller.setPhase({ nodeId, relatedNodeIds })</code> for training-step linkage. It owns hover evidence panels, edge type tags, selected/related emphasis, drag pan, and Command-wheel zoom. Do not iframe a second page shell, recenter the graph when phases advance, dim non-selected operators, create native title tooltips, draw source-file evidence columns inside the graph, or use saturated light-mode selection borders.</td></tr>
+              <tr><td><code>model-graphviz</code></td><td>Use <code>patterns/model-graphviz/pattern.html</code> for parity preview; it iframes the real DeepSeek V3.2 Graphviz page directly. Bundled source/config schema assets include DeepSeek V3.2, Qwen-7B, and <code>openpangu_2_0_flash_modelviz.html</code>. For new lightweight examples, use <code>patterns/model-graphviz/pattern.js</code> and call <code>window.PtoModelGraphvizPattern.render</code>. The contract preserves the DeepSeek V3.2 rules: default depth-2 folding, full-pill module/op nodes, rounded-rect tensor nodes for Input/Output/MTP/Constant/Parameter/Tensor, graph stage, graph edges, semantic-first colormap defaults for common op roles with communication operators in a blue-green lane and unknown keys expanded through the shared palette, stronger light-mode node-fill opacity, transparent expanded parent containers, <code>--radius-xl</code> (16px) cluster corners, vertically centered node label+type stacks, strict semantic module hierarchy, explicit <code>sem:*</code> op colors before parent fallback, folded representative edge dedupe, stable expand/collapse viewport anchoring, top-right corner fold controls, right-inset expand controls, no graph shadows, and no-border clicked-operator preview cards. New model graph pages additionally derive cluster boxes from their visible-child bounding boxes (so collapse reflows and shrinks the parent), lay the decoder chain out as a single top-to-bottom column (Gate/Up the only parallel pair), use transform-based cursor-anchored pan/zoom, show a single white selection stroke with no browser focus ring, add <code>.pto-model-architecture-stage</code> for the shared model-architecture gallery treatment, and place the repeat-count badge at the cluster top-left under the title; <code>qwen7b_modelviz.html</code> is the reference implementation. Node fill colors are the only data-viz color exception; all other UI styling must remain token-derived. Do not render tensor nodes as ellipses or full pills, drift fold icons away from the cluster top-right corner anchor, use colored or translucent expanded-cluster fills, add graph shadows or operator-card borders, hard-code non-node UI styles, recenter/refit the whole graph after expand/collapse, or duplicate an expanded parent as a standalone node.</td></tr>
               <tr><td><code>training-metrics-chart</code></td><td>Use <code>patterns/training-metrics-chart/pattern.css</code> and <code>pattern.js</code>, then call <code>window.PtoTrainingMetricsChart.render</code> for SVG metric series, dual axis, anomaly spikes, interest-window brushing, and step cursors. Series colors must come from viz highlight ramps; anomaly uses <code>--danger</code> and brush uses <code>--primary</code>. Do not rebuild line, axis, brush, or cursor geometry locally.</td></tr>
               <tr><td>Preview rule</td><td>Preview pages may wrap a pattern for layout, but must not redefine the pattern's internal class styles.</td></tr>
             </table>
@@ -820,7 +819,6 @@
                 <div class="model-architecture-tabs" role="tablist" aria-label="Model architecture tabs">
                   <button class="model-architecture-tab is-active" type="button" role="tab" id="model-architecture-tab-qwen7b" aria-selected="true" aria-controls="model-architecture-panel-qwen7b" data-model-architecture-tab="qwen7b">Qwen-7B</button>
                   <button class="model-architecture-tab" type="button" role="tab" id="model-architecture-tab-openpangu-2-0-flash" aria-selected="false" aria-controls="model-architecture-panel-openpangu-2-0-flash" data-model-architecture-tab="openpangu-2-0-flash">openPangu-2.0-Flash</button>
-                  <button class="model-architecture-tab" type="button" role="tab" id="model-architecture-tab-openpangu-r-72b" aria-selected="false" aria-controls="model-architecture-panel-openpangu-r-72b" data-model-architecture-tab="openpangu-r-72b">openPangu-R 72B</button>
                 </div>
               </div>
 
@@ -855,51 +853,12 @@
                   <iframe class="model-architecture-frame" data-pattern-preview="model-architecture-openpangu-2-0-flash" data-model-frame="openpangu-2-0-flash" data-sync-theme-param="true" data-src="./patterns/model-graphviz/assets/openpangu_2_0_flash_modelviz.html?embed=1&amp;v=model-capsule-7" src="about:blank" title="openPangu-2.0-Flash Model Architecture" loading="lazy"></iframe>
                 </div>
               </article>
-
-              <article class="model-architecture-panel" id="model-architecture-panel-openpangu-r-72b" role="tabpanel" aria-labelledby="model-architecture-tab-openpangu-r-72b" data-model-architecture-panel="openpangu-r-72b" hidden>
-                <div class="model-architecture-summary">
-                  <div class="model-architecture-summary-main">
-                    <span class="token-badge">nodes: 24</span>
-                    <span class="token-badge">edges: 24</span>
-                    <span class="token-badge">main layers: 50</span>
-                    <span class="token-badge">dense 0-3 / MoE 4-49</span>
-                    <span class="token-badge">parameter nodes: 7</span>
-                    <span class="token-badge">80 routed experts</span>
-                  </div>
-                  <a class="btn btn-ghost" href="./patterns/model-graphviz/assets/pangu_moe_modelviz.html?variant=r72b&amp;theme=dark&amp;v=model-capsule-7">查看完整示例</a>
-                </div>
-                <div class="model-architecture-frame-shell">
-                  <iframe class="model-architecture-frame" data-pattern-preview="model-architecture-openpangu-r-72b" data-model-frame="openpangu-r-72b" data-sync-theme-param="true" data-src="./patterns/model-graphviz/assets/pangu_moe_modelviz.html?variant=r72b&amp;embed=1&amp;v=model-capsule-7" src="about:blank" title="openPangu-R 72B Model Architecture" loading="lazy"></iframe>
-                </div>
-              </article>
             </div>
           </div>
           <div class="preview-meta">
             <span class="token-badge">pattern id: model-graphviz</span>
             <span class="token-badge">source: patterns/model-graphviz/assets</span>
             <span class="token-badge">contract: tabbed model architecture floor</span>
-            <span class="state-badge">Pattern</span>
-          </div>
-        </article>
-
-        <article class="preview-card preview-card-full-row" hidden data-preview-hidden="covered-by-model-architecture-gallery">
-          <div class="preview-card-head">
-            <h3 class="preview-card-title">Model Training Graphviz Pattern</h3>
-            <div class="preview-card-class">train 模块：模型架构图 + 训练证据 hover + 阶段高亮联动</div>
-          </div>
-          <div class="preview-stage preview-stack">
-            <div class="preview-inline">
-              <a class="btn btn-ghost" href="./patterns/model-training-graphviz/pattern.html?v=training-gallery-align-3">查看完整示例</a>
-            </div>
-            <div class="preview-embed">
-              <iframe class="preview-embed-frame" data-pattern-preview="model-training-graphviz" data-src="./patterns/model-training-graphviz/pattern.html?embed=1&amp;v=training-gallery-align-3" src="about:blank" title="Model Training Graphviz Pattern Preview" loading="lazy"></iframe>
-            </div>
-          </div>
-          <div class="preview-meta">
-            <span class="token-badge">pattern id: model-training-graphviz</span>
-            <span class="token-badge">source: patterns/model-training-graphviz/pattern.js</span>
-            <span class="token-badge">example: Training Run Twin Qwen7B</span>
-            <span class="token-badge">contract: base model graph + training overlay</span>
             <span class="state-badge">Pattern</span>
           </div>
         </article>
