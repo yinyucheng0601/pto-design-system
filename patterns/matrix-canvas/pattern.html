@@ -267,6 +267,42 @@
       font: var(--type-mono);
     }
 
+    .shared-scale-grid {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-4);
+    }
+
+    .shared-scale-item {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: auto 260px;
+      gap: var(--space-2);
+    }
+
+    .shared-scale-item figcaption {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-3);
+      color: var(--foreground-secondary);
+      font: var(--type-body-sm);
+    }
+
+    .shared-scale-item figcaption strong {
+      color: var(--foreground);
+      font: var(--type-body);
+    }
+
+    .shared-scale-stage {
+      min-width: 0;
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius-lg);
+      background: color-mix(in srgb, var(--surface-2) 76%, transparent);
+    }
+
     .config-table-wrap,
     .code-sample {
       overflow-x: auto;
@@ -339,7 +375,8 @@
       body { padding: var(--space-4); }
       .specimen-grid,
       .config-grid,
-      .usage-grid { grid-template-columns: 1fr; }
+      .usage-grid,
+      .shared-scale-grid { grid-template-columns: 1fr; }
       .legend-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
       .specimen { grid-template-rows: auto minmax(420px, 1fr); }
       .canvas-stage { min-height: 420px; }
@@ -468,6 +505,29 @@
       <article class="specimen is-wide">
         <header class="specimen-head">
           <div class="specimen-copy">
+            <h2>Shared source scale · MatMul A / B / C</h2>
+            <p>三个 Tensor 共享 M/K/N 语义轴上的 256 source-unit scale；网格数量由 logical extent 推导，并同步 controller 显示 scale 以保留真实相对尺寸。</p>
+          </div>
+        </header>
+        <div class="shared-scale-grid">
+          <figure class="shared-scale-item">
+            <figcaption><strong>A · M × K</strong><span id="sharedScaleGridA">4 × 8</span></figcaption>
+            <div class="shared-scale-stage"><canvas id="sharedScaleCanvasA" aria-label="A matrix shared-scale specimen"></canvas></div>
+          </figure>
+          <figure class="shared-scale-item">
+            <figcaption><strong>B · K × N</strong><span id="sharedScaleGridB">8 × 16</span></figcaption>
+            <div class="shared-scale-stage"><canvas id="sharedScaleCanvasB" aria-label="B matrix shared-scale specimen"></canvas></div>
+          </figure>
+          <figure class="shared-scale-item">
+            <figcaption><strong>C · M × N</strong><span id="sharedScaleGridC">4 × 16</span></figcaption>
+            <div class="shared-scale-stage"><canvas id="sharedScaleCanvasC" aria-label="C matrix shared-scale specimen"></canvas></div>
+          </figure>
+        </div>
+      </article>
+
+      <article class="specimen is-wide">
+        <header class="specimen-head">
+          <div class="specimen-copy">
             <h2>Broadcast · Bias [1,16] → [16,16]</h2>
             <p>第一行是 Bias 源数据，使用普通填充；后 15 行由广播生成，通过 <code>style: 'broadcast'</code> 叠加灰色蒙版，边界沿用连续网格。</p>
           </div>
@@ -578,6 +638,8 @@
                 <tr><td><code>thumbnailRows / Columns</code></td><td>正整数</td><td>目标缩略网格数量</td></tr>
                 <tr><td><code>blockRows / Columns</code></td><td>正整数</td><td>每格固定覆盖范围，默认 16 × 16</td></tr>
                 <tr><td><code>tone</code></td><td>enum</td><td>聚合格语义颜色，默认 neutral</td></tr>
+                <tr><td><code>resolveSharedAggregateScale</code></td><td>function</td><td>按语义轴和硬边界解析同屏 Tensor 共享 source scale</td></tr>
+                <tr><td><code>synchronizeScale</code></td><td>function</td><td>同步多个 controller 的显示 scale，默认取最小 fit scale</td></tr>
               </tbody>
             </table>
           </div>
@@ -860,6 +922,42 @@ controller.update({
         { ariaLabel: '240 by 420 matrix tensor represented by a 12 by 20 thumbnail grid' }
       );
 
+      const sharedScaleSpecs = [
+        { id: 'A', extent: { rows: 1024, columns: 2048 }, axes: { rows: 'M', columns: 'K' } },
+        { id: 'B', extent: { rows: 2048, columns: 4096 }, axes: { rows: 'K', columns: 'N' } },
+        { id: 'C', extent: { rows: 1024, columns: 4096 }, axes: { rows: 'M', columns: 'N' } },
+      ];
+      const sharedScalePlan = window.PtoMatrixCanvas.resolveSharedAggregateScale({
+        tensors: sharedScaleSpecs,
+        axisScales: { M: 256, K: 256, N: 256 },
+        hardBoundaries: { M: [256], N: [256] },
+      });
+      const sharedScaleControllers = sharedScalePlan.tensors.map((plan) => {
+        document.getElementById(`sharedScaleGrid${plan.id}`).textContent = `${plan.grid.rows} × ${plan.grid.columns}`;
+        return window.PtoMatrixCanvas.render(
+          document.getElementById(`sharedScaleCanvas${plan.id}`),
+          {
+            extent: plan.extent,
+            axes: plan.axes,
+            cells: window.PtoMatrixCanvas.createAggregateLayoutCells(plan.extent, {
+              blockRows: plan.rowSpan,
+              blockColumns: plan.columnSpan,
+            }),
+          },
+          {
+            ariaLabel: `${plan.id} matrix using a shared 256 source-unit scale`,
+            interactive: false,
+            minZoom: 0.001,
+            padding: { top: 18, right: 22, bottom: 38, left: 44 },
+          }
+        );
+      });
+      const syncSharedScale = () => {
+        sharedScaleControllers.forEach((controller) => controller.fit());
+        window.PtoMatrixCanvas.synchronizeScale(sharedScaleControllers);
+      };
+      syncSharedScale();
+
       const refreshReadout = () => {
         document.getElementById('detailZoom').textContent = `${Math.round(detailController.getViewState().scale * 100)}%`;
         document.getElementById('aggregateZoom').textContent = `${Math.round(aggregateController.getViewState().scale * 100)}%`;
@@ -906,6 +1004,7 @@ controller.update({
         aggregateController.resize();
         broadcastController.resize();
         smallPaddingController.resize();
+        sharedScaleControllers.forEach((controller) => controller.resize());
         legendControllers.forEach((controller) => controller.resize());
       };
       themeToggle.addEventListener('click', () => {
@@ -914,11 +1013,14 @@ controller.update({
         syncThemeLabel();
       });
       window.addEventListener('pto-preview-theme-applied', syncThemeLabel);
+      window.addEventListener('resize', syncSharedScale);
       window.addEventListener('beforeunload', () => {
         detailController.destroy();
         aggregateController.destroy();
         broadcastController.destroy();
         smallPaddingController.destroy();
+        sharedScaleControllers.forEach((controller) => controller.destroy());
+        window.removeEventListener('resize', syncSharedScale);
         legendControllers.forEach((controller) => controller.destroy());
       });
       syncThemeLabel();

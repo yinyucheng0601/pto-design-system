@@ -272,6 +272,42 @@ const aggregateCells = window.PtoMatrixCanvas.createAggregatedCells(
 
 每个缩略格的实际跨度会记录在自身的 `rowSpan`、`columnSpan` 和 `summary` 中，尾部格可能小于指定跨度。
 
+如果只有 shape、没有源数值，使用 `createAggregateLayoutCells` 生成同样的 span 布局，不会扫描或伪造统计值：
+
+```js
+const cells = PtoMatrixCanvas.createAggregateLayoutCells(
+  { rows: 1024, columns: 2048 },
+  { blockRows: 256, blockColumns: 256 }
+);
+```
+
+## 多 Tensor 同屏统一比例尺
+
+同屏比较时统一的是共享语义轴上的 source-unit scale，不是网格数量。例如 MatMul 的 A、B、C：
+
+```js
+const plan = PtoMatrixCanvas.resolveSharedAggregateScale({
+  tensors: [
+    { id: 'A', extent: { rows: 1024, columns: 2048 }, axes: { rows: 'M', columns: 'K' } },
+    { id: 'B', extent: { rows: 2048, columns: 4096 }, axes: { rows: 'K', columns: 'N' } },
+    { id: 'C', extent: { rows: 1024, columns: 4096 }, axes: { rows: 'M', columns: 'N' } },
+  ],
+  axisScales: { M: 256, K: 256, N: 256 },
+  hardBoundaries: { M: [256], N: [256] },
+});
+```
+
+结果为 A `4×8`、B `8×16`、C `4×16`。K 即使在 A 中是列轴、在 B 中是行轴，也保持同一个 256 scale。`hardBoundaries` 的每个数字表示该语义轴上必须对齐的规则切分粒度；显式 scale 必须整除这些粒度，否则 API 会拒绝该配置。未显式提供 scale 时，API 使用该轴全部硬边界粒度的最大公约数。
+
+如果同屏面积还要表达 Tensor 的真实相对大小，先让每个 Canvas `fit()`，再同步 controller 的显示 scale：
+
+```js
+controllers.forEach((controller) => controller.fit());
+PtoMatrixCanvas.synchronizeScale(controllers);
+```
+
+默认采用所有 controller fit scale 中的最小值，保证每个矩阵都能落在容器内，同时相同 source span 具有相同像素尺寸。只统一 source span、但让 Canvas 各自 auto-fit，属于结构缩略比较，不能依据屏幕面积比较真实大小。
+
 ### 使用惰性数据读取
 
 如果源数据不适合放入一维数组，可以提供 `valueAt(row, column)`。
@@ -327,6 +363,14 @@ const aggregateCells = window.PtoMatrixCanvas.createAggregatedCells(
 | `padding.left` | number | `52` | 左侧留白 |
 | `onHover(cell, event)` | function | 无 | hover 格变化时回调 |
 | `onSelect(cell, event)` | function | 无 | 点击格子时回调 |
+
+## Shared-scale API
+
+| API | 说明 |
+|---|---|
+| `resolveSharedAggregateScale(config)` | 按共享语义轴解析和校验 source scale，返回每个 Tensor 的 span、网格数与真实尾块 |
+| `createAggregateLayoutCells(source, options)` | 不读取数值，按固定 span 或目标缩略格数生成 aggregate layout cells |
+| `synchronizeScale(controllers, options?)` | 同步多个 Matrix Canvas controller 的显示 scale；默认使用最小 fit scale |
 
 ## 交互
 
