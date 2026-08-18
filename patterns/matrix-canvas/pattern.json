@@ -20,7 +20,8 @@
     "rendering a two-dimensional matrix tensor with row and column coordinates",
     "showing current-row, current-column, written, padding, selected, or current-cell states",
     "distinguishing source values from cells synthesized through matrix broadcasting",
-    "simplifying a very large matrix through an injected number of thumbnail cells with arbitrary source spans"
+    "simplifying a very large matrix through an injected number of thumbnail cells with arbitrary source spans",
+    "comparing multiple matrix tensors with one shared source-unit scale across semantic axes"
   ],
   "sceneContract": {
     "extent": {
@@ -85,6 +86,9 @@
   "requiredApis": [
     "window.PtoMatrixCanvas.render(canvas, scene, options) returning { update, resize, fit, setZoom, resetView, getViewState, destroy }",
     "window.PtoMatrixCanvas.createAggregatedCells(source, options)",
+    "window.PtoMatrixCanvas.createAggregateLayoutCells(source, options)",
+    "window.PtoMatrixCanvas.resolveSharedAggregateScale({ tensors, axisScales, hardBoundaries })",
+    "window.PtoMatrixCanvas.synchronizeScale(controllers, options)",
     "controller.update(nextScene, nextOptions)",
     "controller.fit()",
     "controller.setZoom(nextZoom, anchor)",
@@ -149,6 +153,16 @@
     "marker intensity may be injected through summary.intensity; createAggregatedCells derives it from aggregate means",
     "createAggregatedCells generates arbitrary thumbnail-grid counts without changing the source matrix extent"
   ],
+  "sharedScaleContract": [
+    "shared scale means equal source units per aggregate cell on every shared semantic axis; it never means forcing every tensor to have the same aggregate-cell count",
+    "semantic axes remain linked across orientation changes, so an axis used as columns in one tensor and rows in another receives the same axis scale",
+    "resolveSharedAggregateScale selects the greatest common divisor of supplied hard-boundary granularities unless the business supplies an explicit axis scale",
+    "an explicit axis scale is rejected when it does not divide every supplied hard-boundary granularity on that semantic axis",
+    "each tensor grid is derived with ceil(logicalExtent / axisScale); tail cells retain their actual rowSpan and columnSpan",
+    "createAggregateLayoutCells creates aggregate cells without requiring source values and preserves source extent plus real tail spans",
+    "when screen area must communicate true relative tensor size, consumers fit every canvas and then call synchronizeScale with the controller group; independent auto-fit is only a structural thumbnail comparison",
+    "business pages own semantic-axis names, logical extents, hard-boundary evidence, explicit scale choices, and rationale; the Pattern owns shared-scale validation and aggregate-layout calculation"
+  ],
   "behavior": [
     "the matrix has an 8px-equivalent rounded outer clip and a quiet semantic-token outline",
     "cells and generated aggregate cells default to neutral tone; semantic tones are opt-in and should represent an explicit interaction state or semantic emphasis",
@@ -168,5 +182,5 @@
     "out-of-range cells are skipped with a development warning",
     "the canvas tooltip and live status provide readable detail when labels are hidden"
   ],
-  "agentReuseRule": "Load pattern.css and pattern.js, then call window.PtoMatrixCanvas.render with a canvas plus a business-neutral matrix scene. Mark source cells with style value and values synthesized by broadcasting with style broadcast; for [1,N] to [M,N], only the first row stays value. For very large data, keep scene.extent at the source shape and either pass arbitrary aggregate cells with rowSpan/columnSpan/summary.intensity, or call createAggregatedCells({ values, rows, columns }, { thumbnailRows, thumbnailColumns }). blockRows and blockColumns remain available when the business wants fixed source spans. Do not flatten the matrix extent to thumbnail-grid dimensions, copy wheel-scroll or zoom logic, or move product chrome and operator semantics into the Pattern."
+  "agentReuseRule": "Load pattern.css and pattern.js, then call window.PtoMatrixCanvas.render with a canvas plus a business-neutral matrix scene. Mark source cells with style value and values synthesized by broadcasting with style broadcast; for [1,N] to [M,N], only the first row stays value. For very large data, keep scene.extent at the source shape and either pass arbitrary aggregate cells with rowSpan/columnSpan/summary.intensity, call createAggregateLayoutCells for span-only cells, or call createAggregatedCells when source statistics are available. When multiple tensors share one view, call resolveSharedAggregateScale with semantic axes and hard-boundary evidence; never force equal cell counts or let tensors choose independent source spans. Fit every controller and call synchronizeScale when visual area must preserve true relative tensor size. Do not flatten the matrix extent to thumbnail-grid dimensions, copy aggregate-layout, wheel-scroll, linked-scale, or zoom logic, or move product chrome and operator semantics into the Pattern."
 }

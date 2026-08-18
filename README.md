@@ -76,7 +76,7 @@ design-system-share/
 | `aic-core-object` / `aiv-core-object` | 单独渲染 AIC / AIV 内部结构 | `patterns/aic-core-object/pattern.js` / `patterns/aiv-core-object/pattern.js` |
 | `pass-ir-graph-node` | Pass-IR 节点卡、group node、compact node | `patterns/pass-ir-graph-node/pattern.js` |
 | `tensor-volume-canvas` | NCHW / A1 / Load3D / Conv / Tiling / Code Recovery 的固定视角三维 Tensor 体素渲染 | `patterns/tensor-volume-canvas/pattern.js` |
-| `matrix-canvas` | 二维矩阵 Tensor、Load3D A2 状态，以及业务可注入数量的缩略格概览 | `patterns/matrix-canvas/pattern.js` |
+| `matrix-canvas` | 二维矩阵 Tensor、Load3D A2 状态、大矩阵聚合格，以及多 Tensor 共享语义轴比例尺 | `patterns/matrix-canvas/pattern.js` |
 | `tensor-title` | Tensor / Matrix / Volume 上方的共享标题条，统一身份、shape、dtype、format、memory、owner、partition、state、provenance、step、axes 与约束 | `patterns/tensor-title/pattern.js` |
 | `swimlane-task` | 执行 trace / timeline 的泳道任务条 | `patterns/swimlane-task/pattern.js` |
 
