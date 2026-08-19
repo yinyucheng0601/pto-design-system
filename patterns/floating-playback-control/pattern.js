@@ -6,6 +6,9 @@
     toggle: 'floating-toggle',
     collapsedButton: 'floating-collapsed-btn',
     collapsedIcon: 'floating-collapsed-icon',
+    collapsedSplit: 'floating-collapsed-split',
+    collapsedPlay: 'floating-collapsed-play',
+    collapsedExpand: 'floating-collapsed-expand',
     controls: 'controls-row',
     stepBack: 'step-back-btn',
     play: 'play-btn',
@@ -69,6 +72,7 @@
 
   function createControl(options = {}) {
     const ids = { ...DEFAULT_IDS, ...(options.ids || {}) };
+    const splitCollapsed = options.collapsedSplit === true;
     const showTimeline = options.showTimeline !== false;
     const timelineMarkup = showTimeline ? `
           <div class="pto-floating-playback__sep" aria-hidden="true"></div>
@@ -84,17 +88,28 @@
             </div>
           </div>
     ` : '';
+    const collapsedMarkup = splitCollapsed ? `
+      <div id="${escapeHtml(ids.collapsedSplit)}" class="pto-floating-playback__collapsed-split">
+        <button id="${escapeHtml(ids.collapsedPlay)}" class="pto-floating-playback__button pto-floating-playback__button--primary pto-floating-playback__collapsed-play" type="button" aria-label="Play">
+          <span id="${escapeHtml(ids.collapsedIcon)}" class="pto-floating-playback__collapsed-icon"></span>
+        </button>
+        <button id="${escapeHtml(ids.collapsedExpand)}" class="pto-floating-playback__button pto-floating-playback__collapsed-expand" type="button" aria-label="Expand playback toolbar">
+          ${options.collapsedExpandLabel ? `<span>${escapeHtml(options.collapsedExpandLabel)}</span>` : ''}
+          ${LUCIDE_ICONS.chevronDown}
+        </button>
+      </div>` : `
+      <button id="${escapeHtml(ids.collapsedButton)}" class="pto-floating-playback__collapsed-button" type="button" aria-label="Expand playback toolbar">
+        <span id="${escapeHtml(ids.collapsedIcon)}" class="pto-floating-playback__collapsed-icon">${LUCIDE_ICONS.play}</span>
+      </button>`;
     const root = document.createElement('div');
     root.className = ['pto-floating-playback', options.className].filter(Boolean).join(' ');
     if (options.id) root.id = options.id;
     root.innerHTML = `
-      <div id="${escapeHtml(ids.shell)}" class="pto-floating-playback__shell is-expanded">
+      <div id="${escapeHtml(ids.shell)}" class="pto-floating-playback__shell ${options.defaultCollapsed ? 'is-collapsed' : 'is-expanded'}${splitCollapsed ? ' is-split' : ''}">
         <button id="${escapeHtml(ids.toggle)}" class="pto-floating-playback__toggle" type="button" aria-label="Collapse playback toolbar" aria-expanded="true">
           <span class="pto-floating-playback__toggle-icon">${LUCIDE_ICONS.chevronDown}</span>
         </button>
-        <button id="${escapeHtml(ids.collapsedButton)}" class="pto-floating-playback__collapsed-button" type="button" aria-label="Expand playback toolbar">
-          <span id="${escapeHtml(ids.collapsedIcon)}" class="pto-floating-playback__collapsed-icon">${LUCIDE_ICONS.play}</span>
-        </button>
+        ${collapsedMarkup}
         <div id="${escapeHtml(ids.controls)}" class="pto-floating-playback__controls">
           <div class="pto-floating-playback__group pto-floating-playback__group--playback">
             ${createButton({ id: ids.stepBack, label: iconLabel('skipBack'), title: 'Previous step' })}
@@ -117,6 +132,9 @@
       toggle: find(root, options.toggle, '.pto-floating-playback__toggle', DEFAULT_IDS.toggle),
       collapsedButton: find(root, options.collapsedButton, '.pto-floating-playback__collapsed-button', DEFAULT_IDS.collapsedButton),
       collapsedIcon: find(root, options.collapsedIcon, '.pto-floating-playback__collapsed-icon', DEFAULT_IDS.collapsedIcon),
+      collapsedSplit: find(root, options.collapsedSplit, '.pto-floating-playback__collapsed-split', DEFAULT_IDS.collapsedSplit),
+      collapsedPlay: find(root, options.collapsedPlay, '.pto-floating-playback__collapsed-play', DEFAULT_IDS.collapsedPlay),
+      collapsedExpand: find(root, options.collapsedExpand, '.pto-floating-playback__collapsed-expand', DEFAULT_IDS.collapsedExpand),
       controls: find(root, options.controls, '.pto-floating-playback__controls', DEFAULT_IDS.controls),
       scrubber: find(root, options.scrubber, '.pto-floating-playback__scrubber', DEFAULT_IDS.scrubber),
       scrubberHover: find(root, options.scrubberHover || options.hover, '.pto-floating-playback__hover', DEFAULT_IDS.scrubberHover),
@@ -132,6 +150,7 @@
     const { shell, toggle, collapsedIcon } = elements;
     if (!shell) return false;
     const expanded = !shell.classList.contains('is-collapsed');
+    const playing = readPlaying(options);
     shell.classList.toggle('is-expanded', expanded);
     shell.classList.toggle('is-collapsed', !expanded);
     if (toggle) {
@@ -139,7 +158,10 @@
       toggle.setAttribute('aria-label', expanded ? 'Collapse playback toolbar' : 'Expand playback toolbar');
     }
     if (collapsedIcon) {
-      collapsedIcon.innerHTML = readPlaying(options) ? LUCIDE_ICONS.pause : LUCIDE_ICONS.play;
+      collapsedIcon.innerHTML = playing ? LUCIDE_ICONS.pause : LUCIDE_ICONS.play;
+    }
+    if (elements.collapsedPlay) {
+      elements.collapsedPlay.setAttribute('aria-label', playing ? 'Pause' : 'Play');
     }
     return expanded;
   }
@@ -182,6 +204,23 @@
       };
       elements.collapsedButton.addEventListener('click', onCollapsedButton);
       destroyFns.push(() => elements.collapsedButton.removeEventListener('click', onCollapsedButton));
+    }
+
+    if (elements.collapsedPlay) {
+      const onCollapsedPlay = () => {
+        options.onCollapsedPlayPause?.();
+      };
+      elements.collapsedPlay.addEventListener('click', onCollapsedPlay);
+      destroyFns.push(() => elements.collapsedPlay.removeEventListener('click', onCollapsedPlay));
+    }
+
+    if (elements.collapsedExpand) {
+      const onCollapsedExpand = () => {
+        setExpanded(true);
+        options.onCollapsedExpand?.();
+      };
+      elements.collapsedExpand.addEventListener('click', onCollapsedExpand);
+      destroyFns.push(() => elements.collapsedExpand.removeEventListener('click', onCollapsedExpand));
     }
 
     sync();

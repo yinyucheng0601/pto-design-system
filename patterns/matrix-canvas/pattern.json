@@ -119,7 +119,8 @@
     "canvas and host-container dimensions",
     "aria label and canvas padding",
     "axis, grid, tooltip, and interaction visibility",
-    "zoom limits, wheel-scroll speed, and callbacks"
+    "zoom limits, wheel-scroll speed, and callbacks",
+    "softening the per-cell stroke alpha per canvas through render(canvas, scene, { cellStrokeAlpha }) to quiet a specific matrix without touching the shared palette"
   ],
   "forbiddenOverrides": [
     "copying or rewriting matrix geometry, rounded clipping, DPR setup, hit testing, wheel scrolling, zoom, label LOD, tooltip, or ResizeObserver logic in a consuming page",

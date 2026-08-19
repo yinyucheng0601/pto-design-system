@@ -278,14 +278,14 @@
     return rect.x + rect.width >= 0 && rect.y + rect.height >= 0 && rect.x <= width && rect.y <= height;
   }
 
-  function cellColors(cell) {
+  function cellColors(cell, strokeAlpha = 0.09) {
     const background = tokenRgb('--background');
     const foreground = tokenRgb('--foreground');
     const surface2 = tokenRgb('--surface-2');
     const surface3 = tokenRgb('--surface-3');
     const tone = tokenRgb(TONE_TOKENS[cell.tone]);
     let fill = rgba(mix(surface2, background, 0.82), 0.96);
-    let stroke = rgba(foreground, 0.09);
+    let stroke = rgba(foreground, strokeAlpha);
     let text = rgba(foreground, 0.68);
 
     if (cell.style === 'empty') {
@@ -293,7 +293,7 @@
       text = rgba(foreground, 0.38);
     } else if (cell.style === 'aggregate') {
       fill = rgba(mix(surface3, background, 0.76), 0.98);
-      stroke = rgba(foreground, 0.14);
+      stroke = rgba(foreground, strokeAlpha + 0.05);
     } else if (cell.tone !== 'neutral') {
       fill = rgba(mix(tone, background, 0.22), 0.96);
     }
@@ -391,8 +391,8 @@
     return output ? `${output}…` : '';
   }
 
-  function drawCell(ctx, cell, rect) {
-    const colors = cellColors(cell);
+  function drawCell(ctx, cell, rect, strokeAlpha) {
+    const colors = cellColors(cell, strokeAlpha);
     const minDimension = Math.min(rect.width, rect.height);
     const box = {
       x: rect.x,
@@ -699,7 +699,7 @@
       drawGrid(ctx, bounds, width, height);
       cells.forEach((cell) => {
         const rect = cellScreenRect(cell, view);
-        if (visible(rect, width, height)) drawCell(ctx, cell, rect);
+        if (visible(rect, width, height)) drawCell(ctx, cell, rect, options.cellStrokeAlpha);
       });
       ctx.restore();
 

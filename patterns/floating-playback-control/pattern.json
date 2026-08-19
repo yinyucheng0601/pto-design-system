@@ -35,6 +35,8 @@
   "allowedOverrides": [
     "button labels and ids through createControl options",
     "hiding the built-in scrubber through createControl({ showTimeline: false }) when a shared timeline pattern owns step selection",
+    "two-button collapsed mode and default-collapsed initial state through createControl({ collapsedSplit, defaultCollapsed }), with an optional text label before the expand chevron via collapsedExpandLabel (omit for icon-only)",
+    "collapsed play/pause control through init({ onCollapsedPlayPause }) so the collapsed button toggles playback without expanding",
     "playback state through init({ isPlaying })",
     "scrubber hover label through initScrubberHover({ getLabelForStep })",
     "surface, radius, sizing, and button colors through documented CSS variables"
