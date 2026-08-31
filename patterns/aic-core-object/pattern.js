@@ -152,6 +152,67 @@
     },
   };
 
+  function clonePresetWithBufferCapacities(basePreset, config) {
+    const preset = JSON.parse(JSON.stringify(basePreset));
+    const capacities = config.capacities || {};
+    const grids = config.grids || {};
+    const frames = config.frames || {};
+
+    function visit(column) {
+      if (!column) return;
+      if (column.kind === 'buffer') {
+        const key = column.key || column.label;
+        if (Object.prototype.hasOwnProperty.call(capacities, key)) {
+          column.capacity = capacities[key];
+        }
+        if (Object.prototype.hasOwnProperty.call(grids, key)) {
+          column.grid = grids[key];
+        }
+        if (Object.prototype.hasOwnProperty.call(frames, key)) {
+          column.frame = frames[key];
+        }
+      }
+      if (column.kind === 'buffer-lane') visit(column.buffer);
+      (column.children || []).forEach(visit);
+    }
+
+    preset.id = config.id;
+    preset.name = config.name;
+    preset.stageClassName = config.stageClassName;
+    visit(preset.layout);
+    return preset;
+  }
+
+  PRESETS.ascend950b = clonePresetWithBufferCapacities(PRESETS.aicDraftV1, {
+    id: 'ascend950b',
+    name: 'AIC Core Object (950B)',
+    stageClassName: 'pto-aic-core--950b',
+    capacities: {
+      L1: '512 KB',
+      L0A: '64 KB',
+      L0B: '64 KB',
+      BT: '4 KB',
+      FP: '4 KB',
+      L0C: '256 KB',
+    },
+    grids: {
+      L1: { rows: 8, cols: 16, cellSize: 10, gap: 1, unitKb: 4 },
+      L0A: { rows: 2, cols: 8, cellSize: 10, gap: 1, unitKb: 4 },
+      L0B: { rows: 2, cols: 8, cellSize: 10, gap: 1, unitKb: 4 },
+      BT: { rows: 1, cols: 1, cellSize: 10, gap: 1, unitKb: 4 },
+      FP: { rows: 1, cols: 1, cellSize: 10, gap: 1, unitKb: 4 },
+      L0C: { rows: 8, cols: 8, cellSize: 10, gap: 1, unitKb: 4 },
+    },
+    frames: {
+      L1: { height: 300 },
+      L0A: { width: 128 },
+      L0B: { width: 128 },
+      BT: { width: 128 },
+      FP: { width: 128 },
+      L0C: { width: 128 },
+    },
+  });
+
   function resolvePreset(presetOrKey) {
     if (typeof presetOrKey === 'string') return PRESETS[presetOrKey] || null;
     return presetOrKey || null;
@@ -198,15 +259,21 @@
     const cellSize = Number(gridConfig?.cellSize || 18);
     const gap = Number(gridConfig?.gap || 3);
     const band = gridConfig?.band || null;
+    const unitKb = Number(gridConfig?.unitKb || 0);
 
     grid.style.setProperty('--pto-aic-grid-cols', String(cols));
     grid.style.setProperty('--pto-aic-grid-cell-size', `${cellSize}px`);
     grid.style.setProperty('--pto-aic-grid-gap', `${gap}px`);
+    if (unitKb > 0) {
+      grid.dataset.capacityUnitKb = String(unitKb);
+      grid.setAttribute('aria-label', `${rows * cols} capacity cells, ${unitKb} KB per cell`);
+    }
 
     for (let rowIndex = 0; rowIndex < rows; rowIndex += 1) {
       for (let colIndex = 0; colIndex < cols; colIndex += 1) {
         const cell = node('span', 'pto-aic-core__cell');
         cell.dataset.bufferCellIndex = String(rowIndex * cols + colIndex);
+        if (unitKb > 0) cell.title = `${unitKb} KB capacity unit`;
         if (band && colIndex >= band.from && colIndex <= band.to) {
           cell.classList.add('is-band');
         }

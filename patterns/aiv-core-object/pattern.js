@@ -22,9 +22,13 @@
         { from: 'cache:ICache', to: 'exec:SIMD', color: 'cache', style: 'elbow-h', fromSide: 'right', toSide: 'top', fromBias: 0.62, toBias: 0.14, dashArray: '4 3', offset: -12 },
         { from: 'scalar:Scalar', to: 'exec:SIMT', color: 'control', style: 'elbow-h', fromSide: 'right', toSide: 'top', fromBias: 0.5, toBias: 0.26 },
         { from: 'scalar:Scalar', to: 'exec:SIMD', color: 'control', style: 'elbow-h', fromSide: 'right', toSide: 'top', fromBias: 0.5, toBias: 0.72 },
-        { from: 'buffer:UB', to: 'exec:SIMT', color: 'memory', style: 'elbow-h', fromSide: 'right', toSide: 'left', fromBias: 0.42, toBias: 0.82, dashArray: '6 4', offset: 14 },
-        { from: 'buffer:UB', to: 'vector:Vector', color: 'memory', style: 'horizontal', fromSide: 'right', toSide: 'left', fromBias: 0.56, toBias: 0.5 },
-        { from: 'vector:Vector', to: 'buffer:UB', color: 'compute', style: 'horizontal', fromSide: 'left', toSide: 'right', fromBias: 0.62, toBias: 0.64, dashArray: '5 3' }
+        { from: 'buffer:UB', to: 'exec:SIMT', color: 'memory', style: 'elbow-h', fromSide: 'right', toSide: 'left', fromBias: 0.38, toBias: 0.82, dashArray: '6 4', offset: 14 },
+        { from: 'buffer:UB', to: 'exec:SIMD', color: 'memory', style: 'horizontal', fromSide: 'right', toSide: 'left', fromBias: 0.58, toBias: 0.50 },
+        { from: 'exec:SIMD', to: 'buffer:UB', color: 'compute', style: 'horizontal', fromSide: 'left', toSide: 'right', fromBias: 0.64, toBias: 0.68, dashArray: '5 3' },
+        { from: 'exec:SIMT', to: 'vector:Vector', color: 'memory', style: 'horizontal', fromSide: 'right', toSide: 'left', fromBias: 0.46, toBias: 0.28 },
+        { from: 'vector:Vector', to: 'exec:SIMT', color: 'compute', style: 'horizontal', fromSide: 'left', toSide: 'right', fromBias: 0.38, toBias: 0.62, dashArray: '5 3' },
+        { from: 'exec:SIMD', to: 'vector:Vector', color: 'memory', style: 'horizontal', fromSide: 'right', toSide: 'left', fromBias: 0.42, toBias: 0.68 },
+        { from: 'vector:Vector', to: 'exec:SIMD', color: 'compute', style: 'horizontal', fromSide: 'left', toSide: 'right', fromBias: 0.78, toBias: 0.58, dashArray: '5 3' }
       ],
       layout: {
         kind: 'group',
@@ -73,9 +77,10 @@
                 kind: 'buffer',
                 key: 'UB',
                 label: 'UB',
-                capacity: '64kb',
+                capacity: '256 KB',
                 simtCacheLabel: 'SIMT DCache',
-                grid: { rows: 8, cols: 19, cellSize: 12, gap: 1, band: { from: 8, to: 9 } }
+                frame: { width: 286 },
+                grid: { rows: 4, cols: 16, cellSize: 10, gap: 1, unitKb: 4 }
               }
             ]
           },
@@ -99,10 +104,15 @@
                 chipLabel: 'Aux Scalar',
                 chipTone: 'compute',
                 registerLabel: 'Vector Register File',
-                registerNode: 'vector:Vector',
                 frame: { width: 196, height: 118 }
               }
             ]
+          },
+          {
+            kind: 'vector',
+            key: 'Vector',
+            label: 'Vector',
+            frame: { width: 112, height: 218 }
           }
         ]
       }
@@ -210,15 +220,21 @@
     const cellSize = Number(gridConfig?.cellSize || 12);
     const gap = Number(gridConfig?.gap || 1);
     const band = gridConfig?.band || null;
+    const unitKb = Number(gridConfig?.unitKb || 0);
 
     grid.style.setProperty('--pto-aiv-grid-cols', String(cols));
     grid.style.setProperty('--pto-aiv-grid-cell-size', `${cellSize}px`);
     grid.style.setProperty('--pto-aiv-grid-gap', `${gap}px`);
+    if (unitKb > 0) {
+      grid.dataset.capacityUnitKb = String(unitKb);
+      grid.setAttribute('aria-label', `${rows * cols} capacity cells, ${unitKb} KB per cell`);
+    }
 
     for (let rowIndex = 0; rowIndex < rows; rowIndex += 1) {
       for (let colIndex = 0; colIndex < cols; colIndex += 1) {
         const cell = node('span', `pto-aiv-core__cell pto-aiv-core__cell--${tone}`);
         cell.dataset.bufferCellIndex = String(rowIndex * cols + colIndex);
+        if (unitKb > 0) cell.title = `${unitKb} KB capacity unit`;
         if (band && colIndex >= band.from && colIndex <= band.to) {
           cell.classList.add('is-band');
         }
@@ -229,6 +245,33 @@
     return grid;
   }
 
+  function buildBankGrid(bankGridConfig, tone) {
+    const groups = Math.max(1, Number(bankGridConfig?.groups || 8));
+    const banksPerGroup = Math.max(1, Number(bankGridConfig?.banksPerGroup || 2));
+    const bankSize = bankGridConfig?.bankSize || '16 KB';
+    const grid = node('div', `pto-aiv-core__bank-grid pto-aiv-core__bank-grid--${tone}`);
+    grid.style.setProperty('--pto-aiv-bank-groups', String(groups));
+    grid.setAttribute('aria-label', `${groups} bank groups, ${banksPerGroup} banks per group, ${bankSize} per bank`);
+
+    for (let groupIndex = 0; groupIndex < groups; groupIndex += 1) {
+      const group = node('span', 'pto-aiv-core__bank-group');
+      group.title = `Bank Group ${groupIndex}: ${banksPerGroup} × ${bankSize}`;
+      for (let bankIndex = 0; bankIndex < banksPerGroup; bankIndex += 1) {
+        const cell = node('span', `pto-aiv-core__cell pto-aiv-core__cell--${tone}`);
+        cell.dataset.bufferCellIndex = String(groupIndex * banksPerGroup + bankIndex);
+        cell.setAttribute('aria-label', `Bank Group ${groupIndex}, Bank ${bankIndex}, ${bankSize}`);
+        group.appendChild(cell);
+      }
+      grid.appendChild(group);
+    }
+
+    const caption = node('span', 'pto-aiv-core__bank-caption', `${groups} groups × ${banksPerGroup} banks × ${bankSize}`);
+    const wrapper = node('div', 'pto-aiv-core__bank-structure');
+    wrapper.appendChild(grid);
+    wrapper.appendChild(caption);
+    return wrapper;
+  }
+
   function buildCache(cacheConfig) {
     const card = node('section', 'pto-aiv-core__cache');
     card.dataset.aivNode = `cache:${cacheConfig.label || 'Cache'}`;
@@ -236,7 +279,12 @@
     card.style.width = `${width}px`;
     applyFrameStyle(card, cacheConfig.frame);
     card.appendChild(node('span', 'pto-aiv-core__cache-label', cacheConfig.label || 'Cache'));
-    card.appendChild(buildGrid(cacheConfig.grid, 'cache'));
+    if (cacheConfig.detail) {
+      card.appendChild(node('span', 'pto-aiv-core__cache-detail', cacheConfig.detail));
+    }
+    if (cacheConfig.showGrid !== false) {
+      card.appendChild(buildGrid(cacheConfig.grid, 'cache'));
+    }
     return card;
   }
 
@@ -255,15 +303,46 @@
 
     const header = node('header', 'pto-aiv-core__buffer-header');
     header.appendChild(node('span', 'pto-aiv-core__buffer-label', bufferConfig.label || ''));
-    header.appendChild(node('span', 'pto-aiv-core__buffer-capacity', bufferConfig.capacity || ''));
+    if (Array.isArray(bufferConfig.capacityLines)) {
+      const capacity = node('span', 'pto-aiv-core__buffer-capacity pto-aiv-core__buffer-capacity--stacked');
+      bufferConfig.capacityLines.forEach((line) => capacity.appendChild(node('span', '', line)));
+      header.appendChild(capacity);
+    } else {
+      header.appendChild(node('span', 'pto-aiv-core__buffer-capacity', bufferConfig.capacity || ''));
+    }
     const width = gridContentWidth(bufferConfig.grid) + 28;
     card.style.width = `${width}px`;
     applyFrameStyle(card, bufferConfig.frame);
     card.appendChild(header);
-    if (bufferConfig.simtCacheLabel) {
+    if (bufferConfig.simtCache) {
+      const simtCache = node('section', 'pto-aiv-core__simt-cache pto-aiv-core__simt-cache--range');
+      simtCache.dataset.aivNode = `cache:${bufferConfig.simtCache.key || 'SIMT DCache'}`;
+      const head = node('span', 'pto-aiv-core__simt-cache-head');
+      head.appendChild(node('span', '', bufferConfig.simtCache.label || 'SIMT DCache'));
+      head.appendChild(node('strong', '', bufferConfig.simtCache.range || ''));
+      simtCache.appendChild(head);
+      if (bufferConfig.simtCache.range) {
+        const track = node('span', 'pto-aiv-core__simt-cache-track');
+        const range = node('span', 'pto-aiv-core__simt-cache-range');
+        range.style.width = `${Math.max(0, Math.min(100, Number(bufferConfig.simtCache.maxPercent || 50)))}%`;
+        const marker = node('span', 'pto-aiv-core__simt-cache-min-marker');
+        marker.style.left = `${Math.max(0, Math.min(100, Number(bufferConfig.simtCache.minPercent || 12.5)))}%`;
+        track.appendChild(range);
+        track.appendChild(marker);
+        simtCache.appendChild(track);
+      }
+      if (bufferConfig.simtCache.detail) {
+        simtCache.appendChild(node('span', 'pto-aiv-core__simt-cache-detail', bufferConfig.simtCache.detail));
+      }
+      card.appendChild(simtCache);
+    } else if (bufferConfig.simtCacheLabel) {
       card.appendChild(node('span', 'pto-aiv-core__simt-cache', bufferConfig.simtCacheLabel));
     }
-    card.appendChild(buildGrid(bufferConfig.grid, 'memory'));
+    if (bufferConfig.showGrid !== false) {
+      card.appendChild(bufferConfig.bankGrid
+        ? buildBankGrid(bufferConfig.bankGrid, 'memory')
+        : buildGrid(bufferConfig.grid, 'memory'));
+    }
 
     return card;
   }
@@ -276,7 +355,9 @@
     const header = node('header', 'pto-aiv-core__exec-header');
     header.appendChild(node('span', 'pto-aiv-core__exec-label', execConfig.label || 'Exec'));
     if (execConfig.chipLabel) {
-      header.appendChild(node('span', `pto-aiv-core__exec-chip is-${execConfig.chipTone || 'control'}`, execConfig.chipLabel));
+      const chip = node('span', `pto-aiv-core__exec-chip is-${execConfig.chipTone || 'control'}`, execConfig.chipLabel);
+      if (execConfig.chipNode) chip.dataset.aivNode = execConfig.chipNode;
+      header.appendChild(chip);
     }
     const width = gridContentWidth(execConfig.grid) + 28;
     card.style.width = `${width}px`;
@@ -300,6 +381,34 @@
     return card;
   }
 
+  function buildUnit(unitConfig) {
+    const kind = unitConfig.nodeKind || unitConfig.kind || 'unit';
+    const card = node('section', `pto-aiv-core__unit is-${classToken(unitConfig.tone || kind)}`);
+    card.dataset.aivNode = `${kind}:${unitConfig.key || unitConfig.label || 'Unit'}`;
+    applyFrameStyle(card, unitConfig.frame);
+    card.appendChild(node('span', 'pto-aiv-core__unit-label', unitConfig.label || 'Unit'));
+    if (unitConfig.detail) {
+      card.appendChild(node('span', 'pto-aiv-core__unit-detail', unitConfig.detail));
+    }
+    return card;
+  }
+
+  function buildQueueCluster(clusterConfig) {
+    const cluster = node('section', 'pto-aiv-core__queue-cluster');
+    cluster.dataset.aivNode = `dispatch:${clusterConfig.key || clusterConfig.label || 'Dispatch'}`;
+    applyFrameStyle(cluster, clusterConfig.frame);
+    cluster.appendChild(node('span', 'pto-aiv-core__queue-cluster-label', clusterConfig.label || 'Dispatch / Instruction Queues'));
+
+    const list = node('div', 'pto-aiv-core__queue-list');
+    (clusterConfig.items || []).forEach((item) => {
+      const queue = node('span', 'pto-aiv-core__queue', item.label || item.key || 'Queue');
+      queue.dataset.aivNode = `queue:${item.key || item.label || 'Queue'}`;
+      list.appendChild(queue);
+    });
+    cluster.appendChild(list);
+    return cluster;
+  }
+
   function buildExternalAnchor(anchorConfig) {
     const anchor = node('span', 'pto-aiv-core__external-anchor');
     anchor.dataset.aivNode = `external:${anchorConfig.key || anchorConfig.label || 'anchor'}`;
@@ -320,7 +429,7 @@
     return slot;
   }
 
-  const COLUMN_SELECTOR = '.pto-aiv-core__cache-stack, .pto-aiv-core__center-stack, .pto-aiv-core__exec-stack';
+  const COLUMN_SELECTOR = '.pto-aiv-core__cache-stack, .pto-aiv-core__center-stack, .pto-aiv-core__exec-stack, .pto-aiv-core__external-stack, .pto-aiv-core__vector-stack';
 
   function resolveLaneX(root, fromEl, toEl) {
     const rootRect = root.getBoundingClientRect();
@@ -420,9 +529,21 @@
         'stroke-linejoin': 'round',
         'data-aiv-route-from': route.from,
         'data-aiv-route-to': route.to,
+        'data-aiv-route-color': route.color || 'memory',
       });
       svg.appendChild(path);
-      return { route, path };
+      const label = route.label
+        ? svgNode('text', {
+          class: 'pto-aiv-core__route-label',
+          'text-anchor': 'middle',
+          'dominant-baseline': 'central',
+        })
+        : null;
+      if (label) {
+        label.textContent = route.label;
+        svg.appendChild(label);
+      }
+      return { route, path, label };
     });
 
     stage.appendChild(svg);
@@ -437,7 +558,7 @@
         ? centerStack.getBoundingClientRect().bottom - stageRect.top
         : null;
 
-      routeEls.forEach(({ route, path }) => {
+      routeEls.forEach(({ route, path, label }) => {
         const fromEl = stage.querySelector(`[data-aiv-node="${route.from}"]`);
         const toEl = stage.querySelector(`[data-aiv-node="${route.to}"]`);
         if (!fromEl || !toEl) return;
@@ -457,6 +578,13 @@
           path.setAttribute('stroke-dasharray', route.dashArray);
         } else {
           path.removeAttribute('stroke-dasharray');
+        }
+        if (label) {
+          const labelRatio = Math.max(0.1, Math.min(0.9, Number(route.labelPosition ?? 0.5)));
+          const point = path.getPointAtLength(path.getTotalLength() * labelRatio);
+          label.setAttribute('x', point.x + Number(route.labelDx || 0));
+          label.setAttribute('y', point.y - 7 + Number(route.labelDy || 0));
+          label.setAttribute('fill', color);
         }
       });
     }
@@ -493,6 +621,8 @@
     if (columnConfig.kind === 'buffer') return buildBuffer(columnConfig);
     if (columnConfig.kind === 'exec') return buildExecCard(columnConfig);
     if (columnConfig.kind === 'vector') return buildVector(columnConfig);
+    if (columnConfig.kind === 'unit') return buildUnit(columnConfig);
+    if (columnConfig.kind === 'queue-cluster') return buildQueueCluster(columnConfig);
     if (columnConfig.kind === 'external-anchor') return buildExternalAnchor(columnConfig);
     if (columnConfig.kind === 'instruction-slot') return buildInstructionSlot(columnConfig);
     if (columnConfig.kind === 'group') return buildGroup(columnConfig);

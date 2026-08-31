@@ -33,6 +33,18 @@
       stroke: '#b1a4ff',
       text: '#ffffff',
     },
+    control: {
+      line: '#ff9a54',
+      fill: '#ffb06f',
+      stroke: '#ffc18f',
+      text: '#111111',
+    },
+    scalar: {
+      line: '#9aa6b2',
+      fill: '#778594',
+      stroke: '#aeb8c2',
+      text: '#ffffff',
+    },
   };
   const ZOOM_DEFAULTS = {
     min: 0.4,
@@ -45,6 +57,7 @@
     ascend950b: {
       id: 'ascend950b',
       name: 'Ascend 950B Memory Architecture',
+      defaultDetailVisible: false,
       rails: [
         {
           key: 'GM',
@@ -82,7 +95,7 @@
           id: 'mem950-aic',
           kind: 'aic',
           title: 'AIC',
-          presetKey: 'aicDraftV1',
+          presetKey: 'ascend950b',
         },
         {
           id: 'mem950-aiv2',
@@ -100,7 +113,6 @@
           to: '#mem950-aiv1 [data-aiv-node="cache:DCache"]',
           fromSide: 'right',
           toSide: 'left',
-          toAnchorSelector: '.pto-aiv-core__grid',
           toBias: 0.50,
           style: 'lane-h-target',
           labelDy: 0,
@@ -113,7 +125,6 @@
           to: '#mem950-aiv1 [data-aiv-node="cache:ND-DMA Cache"]',
           fromSide: 'right',
           toSide: 'left',
-          toAnchorSelector: '.pto-aiv-core__grid',
           toBias: 0.50,
           style: 'lane-h-target',
           labelDy: 0,
@@ -126,10 +137,7 @@
           to: '[data-mem950-node="rail:L2"]',
           fromSide: 'left',
           toSide: 'right',
-          fromAnchorSelector: '.pto-aiv-core__grid',
-          fromBias: 0.82,
-          sourceLaneBelowSelector: '#mem950-aiv1 [data-aiv-node="cache:ICache"]',
-          sourceLaneOffset: 14,
+          fromBias: 0.74,
           style: 'lane-h-source',
           labelDy: 0,
         },
@@ -275,10 +283,9 @@
           to: '#mem950-aiv2 [data-aiv-node="cache:ND-DMA Cache"]',
           fromSide: 'right',
           toSide: 'left',
-          toAnchorSelector: '.pto-aiv-core__grid',
           toBias: 0.66,
           style: 'lane-h-target',
-          labelDy: 10,
+          labelDy: 0,
         },
         {
           id: 'gm-to-aiv2-ub',
@@ -331,10 +338,9 @@
           to: '#mem950-aiv2 [data-aiv-node="cache:DCache"]',
           fromSide: 'right',
           toSide: 'left',
-          toAnchorSelector: '.pto-aiv-core__grid',
           toBias: 0.82,
           style: 'lane-h-target',
-          labelDy: 10,
+          labelDy: 0,
         },
         {
           id: 'aiv2-to-l2',
@@ -344,10 +350,7 @@
           to: '[data-mem950-node="rail:L2"]',
           fromSide: 'left',
           toSide: 'right',
-          fromAnchorSelector: '.pto-aiv-core__grid',
-          fromBias: 0.82,
-          sourceLaneBelowSelector: '#mem950-aiv2 [data-aiv-node="cache:ICache"]',
-          sourceLaneOffset: 14,
+          fromBias: 0.74,
           style: 'lane-h-source',
           labelDy: 0,
         },
@@ -365,6 +368,10 @@
         {
           selector: '[data-aiv-node="buffer:UB"]',
           rows: [
+            ['物理总容量', '256KB'],
+            ['默认用户可用', '248KB'],
+            ['可编程容量', '248KB + BISHENG_VF_STACK + ASC_UB_RESERVE'],
+            ['可选编译增量', 'VF Stack 6KB；Reserve 2KB'],
             ['bank', '8组 x 2个/组'],
             ['单bank', '16KB'],
             ['cache', 'ND-DMA Cache / SIMT DCache'],
@@ -384,27 +391,44 @@
         {
           selector: '#mem950-aic [data-aic-node="buffer:L1"]',
           rows: [
+            ['容量', '512KB'],
             ['对齐', '32B'],
+            ['容量编码', '128格 × 4KB'],
             ['建议布局', 'NZ'],
           ],
         },
         {
           selector: '#mem950-aic [data-aic-node="buffer:L0A"]',
           rows: [
+            ['容量', '64KB'],
             ['搬运对齐', '512B'],
+            ['容量编码', '16格 × 4KB'],
             ['推荐布局', 'NZ'],
           ],
         },
         {
           selector: '#mem950-aic [data-aic-node="buffer:L0B"]',
           rows: [
+            ['容量', '64KB'],
             ['搬运对齐', '512B'],
+            ['容量编码', '16格 × 4KB'],
             ['推荐布局', 'ZN'],
+          ],
+        },
+        {
+          selector: '#mem950-aic [data-aic-node="buffer:BT"]',
+          rows: [
+            ['容量', '4KB'],
+            ['对齐', '64B'],
+            ['容量编码', '1格 × 4KB'],
           ],
         },
         {
           selector: '#mem950-aic [data-aic-node="buffer:FP"]',
           rows: [
+            ['容量', '4KB'],
+            ['对齐', '64B'],
+            ['容量编码', '1格 × 4KB'],
             ['流水', 'FixPipe'],
             ['输出', '量化/激活'],
           ],
@@ -412,7 +436,9 @@
         {
           selector: '#mem950-aic [data-aic-node="buffer:L0C"]',
           rows: [
+            ['容量', '256KB'],
             ['搬运对齐', '64B'],
+            ['容量编码', '64格 × 4KB'],
             ['推荐布局', 'NZ'],
           ],
         },
@@ -428,7 +454,7 @@
         },
         'core:AIV1': {
           title: 'AIV 1',
-          body: '向量侧计算核心，包含 DCache、ICache、ND-DMA Cache、Scalar、UB、SIMT、SIMD 和 Vector Reg File，用于规则向量计算与离散 SIMT 场景。',
+          body: '向量侧计算核心，包含 DCache、ICache、ND-DMA Cache、Scalar、UB、SIMT/SIMD 寄存器文件和独立 Vector 计算单元，用于规则向量计算与离散 SIMT 场景。',
         },
         'core:AIC': {
           title: 'AIC',
@@ -491,8 +517,8 @@
           body: '面向连续、规则数据的向量寄存器路径，适合规则向量计算和 RegBase 风格的数据组织。',
         },
         'vector:Vector': {
-          title: 'Vector 寄存器文件',
-          body: 'AIV 向量计算寄存器文件，与 UB 之间存在双向数据通路，用于向量侧暂存、计算和回写。',
+          title: 'Vector 计算单元',
+          body: 'AIV 的向量执行单元，从 SIMD Register File 或 SIMT Register File 读取操作数，并将计算结果写回寄存器文件。',
         },
         'cube:CUBE': {
           title: 'Cube 计算单元',
@@ -1920,6 +1946,7 @@
     layout.appendChild(stack);
     stage.appendChild(layout);
     applyPresetDetails(stage, preset);
+    setDetailVisibility(stage, preset.defaultDetailVisible !== false);
 
     if ((preset.notes || []).length > 0) {
       const notes = node('div', 'pto-mem950__notes');
@@ -1940,13 +1967,12 @@
     const offsetKey = axis === 'x' ? 'offsetWidth' : 'offsetHeight';
     const scrollKey = axis === 'x' ? 'scrollWidth' : 'scrollHeight';
     const clientKey = axis === 'x' ? 'clientWidth' : 'clientHeight';
-    return Math.max(
-      1,
+    const layoutSize = Math.max(
       Number(element?.[offsetKey]) || 0,
       Number(element?.[scrollKey]) || 0,
       Number(element?.[clientKey]) || 0,
-      Number(fallback) || 0,
     );
+    return layoutSize > 0 ? layoutSize : Math.max(1, Number(fallback) || 0);
   }
 
   function overlayMetrics(root) {
@@ -2187,9 +2213,13 @@
     });
 
     const routeEls = (preset.routes || []).map((route) => {
-      const groupAttrs = { 'data-route-id': route.id };
+      const groupAttrs = {
+        'data-route-id': route.id,
+        'data-route-tone': route.tone || 'transport',
+      };
       if (route.defaultHidden) groupAttrs['data-route-default-hidden'] = 'true';
       if (route.group) groupAttrs['data-route-group'] = route.group;
+      if (route.labelStyle) groupAttrs['data-route-label-style'] = route.labelStyle;
       const group = svgNode('g', groupAttrs);
       const path = svgNode('path', {
         fill: 'none',
@@ -2272,8 +2302,12 @@
         entry.labelText.setAttribute('y', String(geometry.labelPoint.y));
         entry.labelText.setAttribute('fill', tone.text);
         const textBox = entry.labelText.getBBox();
-        const labelWidth = Math.max(64, textBox.width + 16);
-        const labelHeight = 22;
+        const isMteLabel = /^MTE[123]$/.test(String(entry.route.label || ''));
+        const labelWidth = Math.max(
+          Number(entry.route.labelMinWidth || (isMteLabel ? 48 : 64)),
+          textBox.width + (isMteLabel ? 12 : 16),
+        );
+        const labelHeight = Number(entry.route.labelHeight || (isMteLabel ? 20 : 22));
         entry.labelBg.setAttribute('x', String(geometry.labelPoint.x - labelWidth / 2));
         entry.labelBg.setAttribute('y', String(geometry.labelPoint.y - labelHeight / 2));
         entry.labelBg.setAttribute('width', String(labelWidth));
