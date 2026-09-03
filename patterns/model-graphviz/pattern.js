@@ -1179,22 +1179,24 @@
       group.appendChild(pager);
     }
 
-    const toggleX = cluster.x + cluster.width - EXPAND_BUTTON_EDGE_GAP - EXPAND_BUTTON_RADIUS;
-    const toggleY = cluster.y + EXPAND_BUTTON_EDGE_GAP + EXPAND_BUTTON_RADIUS;
-    group.appendChild(createSvgElement('circle', {
-      class: 'pto-model-graphviz-toggle',
-      cx: toggleX,
-      cy: toggleY,
-      r: EXPAND_BUTTON_RADIUS,
-    }));
-    const icon = createSvgElement('text', {
-      class: 'pto-model-graphviz-toggle-icon',
-      x: toggleX,
-      y: toggleY + 0.3,
-      'font-size': '12',
-    });
-    icon.textContent = '-';
-    group.appendChild(icon);
+    if (cluster.collapsible !== false) {
+      const toggleX = cluster.x + cluster.width - EXPAND_BUTTON_EDGE_GAP - EXPAND_BUTTON_RADIUS;
+      const toggleY = cluster.y + EXPAND_BUTTON_EDGE_GAP + EXPAND_BUTTON_RADIUS;
+      group.appendChild(createSvgElement('circle', {
+        class: 'pto-model-graphviz-toggle',
+        cx: toggleX,
+        cy: toggleY,
+        r: EXPAND_BUTTON_RADIUS,
+      }));
+      const icon = createSvgElement('text', {
+        class: 'pto-model-graphviz-toggle-icon',
+        x: toggleX,
+        y: toggleY + 0.3,
+        'font-size': '12',
+      });
+      icon.textContent = '-';
+      group.appendChild(icon);
+    }
     svg.appendChild(group);
     return group;
   }
@@ -1799,9 +1801,29 @@
     }
 
     nodeEntries.forEach(({ el, node }) => {
-      el.setAttribute('tabindex', '0');
-      el.setAttribute('role', 'button');
-      el.setAttribute('aria-label', node.label || node.id);
+      const itemSelectable = selectable && node.selectable !== false;
+      const toggle = el.querySelector('.pto-model-graphviz-toggle');
+      if (toggle && typeof opts.onToggle === 'function') {
+        toggle.setAttribute('tabindex', '0');
+        toggle.setAttribute('role', 'button');
+        toggle.setAttribute('aria-label', `Expand ${node.label || node.id}`);
+        listen(toggle, 'click', (event) => {
+          event.stopPropagation();
+          hideHover();
+          opts.onToggle({ nodeId: node.id, collapsed: true, source: 'graph' });
+        });
+        listen(toggle, 'keydown', (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          event.stopPropagation();
+          opts.onToggle({ nodeId: node.id, collapsed: true, source: 'keyboard' });
+        });
+      }
+      if (itemSelectable) {
+        el.setAttribute('tabindex', '0');
+        el.setAttribute('role', 'button');
+        el.setAttribute('aria-label', node.label || node.id);
+      }
       if (hoverEnabled) {
         listen(el, 'pointerenter', (event) => showHover(node, event));
         listen(el, 'pointermove', (event) => {
@@ -1809,7 +1831,7 @@
         });
         listen(el, 'pointerleave', hideHover);
       }
-      if (selectable) {
+      if (itemSelectable) {
         listen(el, 'click', () => {
           if (suppressClick) {
             suppressClick = false;
@@ -1843,6 +1865,24 @@
 
     const selectableClusters = selectable && interaction.selectableClusters !== false && opts.selectableClusters !== false;
     clusterEntries.forEach(({ el, cluster, layerPager }) => {
+      const itemSelectable = selectableClusters && cluster.selectable !== false;
+      const toggle = el.querySelector('.pto-model-graphviz-toggle');
+      if (toggle && typeof opts.onToggle === 'function') {
+        toggle.setAttribute('tabindex', '0');
+        toggle.setAttribute('role', 'button');
+        toggle.setAttribute('aria-label', `Collapse ${cluster.label || cluster.id}`);
+        listen(toggle, 'click', (event) => {
+          event.stopPropagation();
+          hideHover();
+          opts.onToggle({ nodeId: cluster.id, collapsed: false, source: 'graph' });
+        });
+        listen(toggle, 'keydown', (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          event.stopPropagation();
+          opts.onToggle({ nodeId: cluster.id, collapsed: false, source: 'keyboard' });
+        });
+      }
       const controlRoot = layerPager || el;
       const layerDots = Array.from(controlRoot.querySelectorAll('[data-layer-index]'));
       const layerSteps = Array.from(controlRoot.querySelectorAll('[data-layer-step]'));
@@ -1924,10 +1964,12 @@
           });
         });
       }
-      el.setAttribute('tabindex', '0');
-      el.setAttribute('role', 'button');
-      el.setAttribute('aria-label', cluster.label || cluster.id);
-      if (!selectableClusters) return;
+      if (itemSelectable) {
+        el.setAttribute('tabindex', '0');
+        el.setAttribute('role', 'button');
+        el.setAttribute('aria-label', cluster.label || cluster.id);
+      }
+      if (!itemSelectable) return;
       listen(el, 'click', () => {
         if (suppressClick) {
           suppressClick = false;

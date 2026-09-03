@@ -3,9 +3,12 @@
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const SCENE_WIDTH = 1840;
-  const SCENE_HEIGHT = 2420;
+  const SCENE_HEIGHT = 3040;
   const STREAM_X = 920;
   const BUNDLE_OFFSETS = [-7.5, -2.5, 2.5, 7.5];
+  const SIDE_LAYER_TOP = 130;
+  const SIDE_LAYER_HEIGHT = 820;
+  const SIDE_LAYER_BOTTOM = SIDE_LAYER_TOP + SIDE_LAYER_HEIGHT;
 
   function queryRoot(input) {
     return typeof input === 'string' ? document.querySelector(input) : input;
@@ -36,6 +39,7 @@
       height: options.height || 56,
       parent: options.parent || '',
       selectable: false,
+      collapsed: options.collapsed === true,
       origin: 'source',
       dataState: 'source_only',
       role: options.role || '',
@@ -59,7 +63,9 @@
       nodes: [],
       children: [],
       structuralRoot: false,
-      variant: options.variant || ''
+      variant: options.variant || '',
+      selectable: false,
+      collapsible: options.collapsible
     };
   }
 
@@ -90,7 +96,7 @@
     };
   }
 
-  function buildFrontGraph(selectedLayer) {
+  function buildFrontGraph(selectedLayer, collapsedIds = new Set()) {
     const data = global.DeepSeekV4ArchitectureData;
     const config = data.config;
     const descriptor = data.describeLayer(selectedLayer);
@@ -277,6 +283,29 @@
       })
     ];
 
+    const nodeParents = new Map([
+      [ids.input, rootId],
+      [ids.attnMix, attnId],
+      [ids.attnPre, attnId],
+      [ids.norm1, attnId],
+      [ids.attentionType, attnId],
+      [ids.attnPost, attnId],
+      [ids.attnMerge, attnId],
+      [ids.middle, rootId],
+      [ids.ffnMix, ffnId],
+      [ids.ffnPre, ffnId],
+      [ids.norm2, ffnId],
+      [ids.tokenId, moeId],
+      [ids.router, moeId],
+      [ids.combine, moeId],
+      [ids.ffnPost, ffnId],
+      [ids.ffnMerge, ffnId],
+      [ids.output, rootId]
+    ]);
+    nodes.forEach(node => {
+      if (nodeParents.has(node.id)) node.parent = nodeParents.get(node.id);
+    });
+
     const edges = [
       graphEdge('edge/input-attn-pre', ids.input, ids.attnPre, 'hc_streams', {
         shape: '[B,T,4,d]',
@@ -376,12 +405,102 @@
       })
     ];
 
-    return {
+    const decoderOffsetY = 250;
+    clusters.forEach(cluster => {
+      cluster.y += decoderOffsetY;
+    });
+    nodes.forEach(node => {
+      node.y += decoderOffsetY;
+    });
+    edges.forEach(edge => {
+      if (Array.isArray(edge.bundlePath)) {
+        edge.bundlePath = edge.bundlePath.map(point => ({ ...point, y: point.y + decoderOffsetY }));
+      }
+      if (Number.isFinite(edge.fanCurveY)) edge.fanCurveY += decoderOffsetY;
+    });
+
+    const modelIds = {
+      inputTokens: 'dv4/model/input_tokens',
+      embedding: 'dv4/model/token_embedding',
+      previousLayers: 'dv4/model/previous_decoder_layers',
+      remainingLayers: 'dv4/model/remaining_decoder_layers',
+      finalNorm: 'dv4/model/final_rmsnorm',
+      lmHead: 'dv4/model/lm_head',
+      outputTokens: 'dv4/model/output_tokens'
+    };
+    nodes.push(
+      graphNode(modelIds.inputTokens, 'Input Tokens', STREAM_X, 55, {
+        kind: 'state', typeLabel: 'Token IDs', colorKey: 'io:input', width: 280, role: 'model-io'
+      }),
+      graphNode(modelIds.embedding, 'Token Embedding', STREAM_X, 140, {
+        colorKey: 'sem:embedding', width: 300, role: 'model-io'
+      })
+    );
+    if (layer > 0) {
+      nodes.push(graphNode(modelIds.previousLayers, 'Previous Decoder Layers', STREAM_X, 225, {
+        kind: 'module', typeLabel: `Layers 0–${layer - 1}`, colorKey: 'module:decoder', width: 340,
+        role: 'layer-context'
+      }));
+    }
+    const rootBottom = clusters.find(cluster => cluster.id === rootId).y
+      + clusters.find(cluster => cluster.id === rootId).height;
+    const remainingLayersY = rootBottom + 90;
+    if (layer < config.numHiddenLayers - 1) {
+      nodes.push(graphNode(modelIds.remainingLayers, 'Remaining Decoder Layers', STREAM_X, remainingLayersY, {
+        kind: 'module', typeLabel: `Layers ${layer + 1}–${config.numHiddenLayers - 1}`,
+        colorKey: 'module:decoder', width: 340, role: 'layer-context'
+      }));
+    }
+    const finalNormY = remainingLayersY + (layer < config.numHiddenLayers - 1 ? 90 : 0);
+    nodes.push(
+      graphNode(modelIds.finalNorm, 'Final RMSNorm', STREAM_X, finalNormY, {
+        colorKey: 'sem:norm', width: 280, role: 'model-io'
+      }),
+      graphNode(modelIds.lmHead, 'LM Head', STREAM_X, finalNormY + 85, {
+        colorKey: 'sem:linear', width: 280, role: 'model-io'
+      }),
+      graphNode(modelIds.outputTokens, 'Output Tokens', STREAM_X, finalNormY + 170, {
+        kind: 'state', typeLabel: 'Token logits / IDs', colorKey: 'io:output', width: 280, role: 'model-io'
+      })
+    );
+    edges.push(graphEdge('edge/model-input-embedding', modelIds.inputTokens, modelIds.embedding, 'token_ids', {
+      shape: '[B,T]', dtype: 'int64'
+    }));
+    if (layer > 0) {
+      edges.push(
+        graphEdge('edge/model-input-layer-context', modelIds.embedding, modelIds.previousLayers, 'token_embeddings'),
+        graphEdge('edge/model-context-layer-input', modelIds.previousLayers, ids.input, 'layer_input_streams', {
+          shape: '[B,T,4,d]'
+        })
+      );
+    } else {
+      edges.push(graphEdge('edge/model-embedding-layer-input', modelIds.embedding, ids.input, 'layer_input_streams', {
+        shape: '[B,T,4,d]'
+      }));
+    }
+    if (layer < config.numHiddenLayers - 1) {
+      edges.push(
+        graphEdge('edge/model-layer-output-context', ids.output, modelIds.remainingLayers, 'layer_output_streams', {
+          shape: '[B,T,4,d]'
+        }),
+        graphEdge('edge/model-context-final-norm', modelIds.remainingLayers, modelIds.finalNorm, 'decoder_output')
+      );
+    } else {
+      edges.push(graphEdge('edge/model-layer-output-final-norm', ids.output, modelIds.finalNorm, 'decoder_output'));
+    }
+    edges.push(
+      graphEdge('edge/model-final-norm-head', modelIds.finalNorm, modelIds.lmHead, 'normalized_hidden'),
+      graphEdge('edge/model-head-output', modelIds.lmHead, modelIds.outputTokens, 'logits')
+    );
+
+    const graphHeight = finalNormY + 225;
+
+    const graph = {
       schemaVersion: 'model_architecture_graph.v1',
       id: `deepseek-v4-pro-layer-${layer}`,
       title: `DeepSeek V4 Pro Decoder Layer ${layer}`,
       width: SCENE_WIDTH,
-      height: SCENE_HEIGHT,
+      height: graphHeight,
       nodes,
       edges,
       clusters,
@@ -392,6 +511,416 @@
         routerType: descriptor.routerType,
         hcMult: config.hcMult,
         mergeNodeIds: [ids.attnMerge, ids.ffnMerge]
+      }
+    };
+    return projectCollapsedFrontGraph(graph, collapsedIds);
+  }
+
+  function projectCollapsedFrontGraph(graph, collapsedIds) {
+    const requested = collapsedIds instanceof Set
+      ? collapsedIds
+      : new Set(collapsedIds || []);
+    if (!requested.size) return graph;
+
+    const clustersById = new Map((graph.clusters || []).map(cluster => [cluster.id, cluster]));
+    const nodesById = new Map((graph.nodes || []).map(node => [node.id, node]));
+    const collapsed = new Set([...requested].filter(id => clustersById.has(id)));
+    if (!collapsed.size) return graph;
+
+    function ancestorIds(clusterId) {
+      const ancestors = [];
+      let parentId = clustersById.get(clusterId)?.parent || '';
+      while (parentId) {
+        ancestors.push(parentId);
+        parentId = clustersById.get(parentId)?.parent || '';
+      }
+      return ancestors;
+    }
+
+    const topLevelCollapsed = new Set([...collapsed].filter(id => (
+      !ancestorIds(id).some(ancestorId => collapsed.has(ancestorId))
+    )));
+
+    function collapsedOwnerForParent(parentId) {
+      let currentId = parentId || '';
+      while (currentId) {
+        if (topLevelCollapsed.has(currentId)) return currentId;
+        currentId = clustersById.get(currentId)?.parent || '';
+      }
+      return '';
+    }
+
+    const hiddenOwnerById = new Map();
+    (graph.clusters || []).forEach(cluster => {
+      const owner = topLevelCollapsed.has(cluster.id)
+        ? cluster.id
+        : collapsedOwnerForParent(cluster.parent);
+      if (owner) hiddenOwnerById.set(cluster.id, owner);
+    });
+    (graph.nodes || []).forEach(node => {
+      const owner = collapsedOwnerForParent(node.parent);
+      if (owner) hiddenOwnerById.set(node.id, owner);
+    });
+
+    const placeholderNodes = [...topLevelCollapsed].map(id => {
+      const cluster = clustersById.get(id);
+      const isMainStreamModule = id === graph.clusters?.[0]?.id
+        || /\/(mhc_attn|hybrid_attention|mhc_ffn|deepseek_moe)$/.test(id);
+      const width = Math.min(500, Math.max(300, cluster.width - 80));
+      const x = isMainStreamModule ? STREAM_X : cluster.x + cluster.width / 2;
+      return graphNode(id, cluster.label, x, cluster.y + cluster.height / 2, {
+        kind: 'module',
+        typeLabel: 'Module · folded',
+        colorKey: cluster.colorKey,
+        width,
+        height: 64,
+        parent: cluster.parent,
+        role: 'folded-module',
+        variant: cluster.variant,
+        collapsed: true
+      });
+    });
+
+    const nodes = (graph.nodes || []).filter(node => !hiddenOwnerById.has(node.id)).concat(placeholderNodes);
+    const clusters = (graph.clusters || []).filter(cluster => !hiddenOwnerById.has(cluster.id));
+    const edgeKeys = new Set();
+    const edges = [];
+    (graph.edges || []).forEach(edge => {
+      const source = hiddenOwnerById.get(edge.source) || edge.source;
+      const target = hiddenOwnerById.get(edge.target) || edge.target;
+      if (source === target) return;
+      if (!nodesById.has(edge.source) && !hiddenOwnerById.has(edge.source)) return;
+      if (!nodesById.has(edge.target) && !hiddenOwnerById.has(edge.target)) return;
+      const key = `${source}::${target}`;
+      if (edgeKeys.has(key)) return;
+      edgeKeys.add(key);
+      const rewritten = source !== edge.source || target !== edge.target;
+      edges.push(rewritten ? {
+        ...edge,
+        id: `${edge.id}::folded`,
+        source,
+        target,
+        sourceAnchor: 'bottom',
+        targetAnchor: 'top',
+        curve: 'vertical',
+        waypoints: undefined,
+        route: undefined,
+        fanCurveY: undefined,
+        bundlePath: null,
+        bundleDiagonal: false
+      } : edge);
+    });
+
+    const projected = {
+      ...graph,
+      nodes,
+      clusters,
+      edges,
+      metadata: {
+        ...graph.metadata,
+        collapsedClusterIds: [...topLevelCollapsed],
+        mergeNodeIds: (graph.metadata?.mergeNodeIds || []).filter(id => nodes.some(node => node.id === id))
+      }
+    };
+    return compactCollapsedFrontGraph(projected, graph, topLevelCollapsed);
+  }
+
+  function compactCollapsedFrontGraph(projected, expandedGraph, topLevelCollapsed) {
+    if (!topLevelCollapsed?.size) return projected;
+    const allClusters = expandedGraph.clusters || [];
+    const clusterById = new Map(allClusters.map(cluster => [cluster.id, cluster]));
+    const intervalKeys = new Set();
+    const intervals = [];
+
+    [...topLevelCollapsed].forEach(id => {
+      const cluster = clusterById.get(id);
+      if (!cluster) return;
+      const overlappingSiblings = allClusters.filter(candidate => {
+        if (candidate.parent !== cluster.parent) return false;
+        const overlap = Math.min(cluster.y + cluster.height, candidate.y + candidate.height)
+          - Math.max(cluster.y, candidate.y);
+        return overlap > Math.min(cluster.height, candidate.height) * .5;
+      });
+      if (!overlappingSiblings.every(candidate => topLevelCollapsed.has(candidate.id))) return;
+      const start = Math.min(...overlappingSiblings.map(candidate => candidate.y));
+      const end = Math.max(...overlappingSiblings.map(candidate => candidate.y + candidate.height));
+      const key = `${start}:${end}`;
+      if (intervalKeys.has(key)) return;
+      intervalKeys.add(key);
+      intervals.push({ start, end, targetSpan: 128 });
+    });
+    intervals.sort((left, right) => left.start - right.start);
+    if (!intervals.length) return projected;
+
+    function mapY(y) {
+      let removed = 0;
+      for (const interval of intervals) {
+        const span = interval.end - interval.start;
+        if (y < interval.start) break;
+        if (y <= interval.end) {
+          return interval.start - removed
+            + (y - interval.start) * (interval.targetSpan / span);
+        }
+        removed += span - interval.targetSpan;
+      }
+      return y - removed;
+    }
+
+    projected.nodes.forEach(node => {
+      node.y = mapY(node.y);
+    });
+    projected.clusters.forEach(cluster => {
+      const top = mapY(cluster.y);
+      const bottom = mapY(cluster.y + cluster.height);
+      cluster.y = top;
+      cluster.height = Math.max(96, bottom - top);
+    });
+    projected.edges.forEach(edge => {
+      if (Array.isArray(edge.bundlePath)) {
+        edge.bundlePath = edge.bundlePath.map(point => ({ ...point, y: mapY(point.y) }));
+      }
+      if (Number.isFinite(edge.fanCurveY)) edge.fanCurveY = mapY(edge.fanCurveY);
+    });
+    projected.height = Math.max(420, mapY(expandedGraph.height));
+    return projected;
+  }
+
+  function buildSideGraph(selectedLayer) {
+    const data = global.DeepSeekV4ArchitectureData;
+    const config = data.config;
+    const selected = data.clampLayer(selectedLayer);
+    const compactWidth = 42;
+    const selectedWidth = 420;
+    const layerGap = 12;
+    const sidePadding = 100;
+    const nodes = [];
+    const edges = [];
+    const clusters = [];
+    const layerRecords = [];
+    const mergeNodes = [];
+    const residualBundlePaths = [];
+    const streamArrowSegments = [];
+    let cursorX = sidePadding;
+
+    for (let layer = 0; layer < config.numHiddenLayers; layer += 1) {
+      const descriptor = data.describeLayer(layer);
+      const isSelected = layer === selected;
+      const width = isSelected ? selectedWidth : compactWidth;
+      const clusterId = `dv4/side/layer/${layer}`;
+      const clusterX = cursorX;
+      const centerX = clusterX + width / 2;
+      const streamX = centerX;
+      const cluster = graphCluster(
+        clusterId,
+        isSelected ? `Layer ${layer}` : `L${layer}`,
+        clusterX,
+        SIDE_LAYER_TOP,
+        width,
+        SIDE_LAYER_HEIGHT,
+        { colorKey: 'module:decoder', collapsible: false }
+      );
+      cluster.layerIndex = layer;
+      cluster.selected = isSelected;
+      clusters.push(cluster);
+      layerRecords.push({ layer, clusterId, streamX, clusterX, width, selected: isSelected });
+
+      if (isSelected) {
+        const travelsDown = layer % 2 === 0;
+        const layerY = y => travelsDown ? y : SIDE_LAYER_TOP + SIDE_LAYER_BOTTOM - y;
+        const mainNodeWidth = 280;
+        const mixX = clusterX + 42;
+        const attnMergeId = `${clusterId}/attn_merge`;
+        const ffnMergeId = `${clusterId}/ffn_merge`;
+        const attnPreId = `${clusterId}/attn_pre`;
+        const norm1Id = `${clusterId}/rmsnorm_1`;
+        const attentionTypeId = `${clusterId}/attention_type`;
+        const attentionId = `${clusterId}/attention`;
+        const attnPostId = `${clusterId}/attn_post`;
+        const middleId = `${clusterId}/middle_streams`;
+        const ffnPreId = `${clusterId}/ffn_pre`;
+        const norm2Id = `${clusterId}/rmsnorm_2`;
+        const moeId = `${clusterId}/moe`;
+        const ffnPostId = `${clusterId}/ffn_post`;
+        const attentionTypeLabel = descriptor.attentionType === 'csa'
+          ? 'CSA · Compressed Sparse Attention'
+          : 'HCA · Heavily Compressed Attention';
+        const moeLabel = descriptor.routerType === 'hash_moe'
+          ? 'DeepSeekMoE · Hash Routing'
+          : 'DeepSeekMoE · Learned Routing';
+        nodes.push(
+          graphNode(attnPreId, 'HC Pre · 4→1', streamX, layerY(225), {
+            parent: clusterId, colorKey: 'sem:linear', width: mainNodeWidth, height: 42, role: 'mhc-projection'
+          }),
+          graphNode(norm1Id, 'RMSNorm 1', streamX, layerY(275), {
+            parent: clusterId, colorKey: 'sem:norm', width: mainNodeWidth, height: 40
+          }),
+          graphNode(attentionTypeId, attentionTypeLabel, streamX, layerY(330), {
+            parent: clusterId,
+            colorKey: descriptor.attentionType === 'csa' ? 'sem:attention' : 'sem:rope',
+            width: mainNodeWidth,
+            height: 44
+          }),
+          graphNode(attentionId, 'Hybrid Attention · CSA / HCA', streamX, layerY(390), {
+            parent: clusterId, kind: 'module', typeLabel: 'Main module',
+            colorKey: 'module:mhc', width: mainNodeWidth, height: 46, role: 'side-main-module'
+          }),
+          graphNode(attnPostId, 'HC Post · 1→4', streamX, layerY(450), {
+            parent: clusterId, colorKey: 'sem:linear', width: mainNodeWidth, height: 42, role: 'mhc-projection'
+          }),
+          graphNode(attnMergeId, '', streamX, layerY(505), {
+            parent: clusterId, colorKey: 'sem:linear', width: 38, height: 38, role: 'side-merge-anchor'
+          }),
+          graphNode(middleId, `X${layer}′ · 4 × d streams`, streamX, layerY(565), {
+            parent: clusterId, kind: 'state', typeLabel: 'mHC State', colorKey: 'io:state',
+            width: mainNodeWidth, height: 44, role: 'stream-state'
+          }),
+          graphNode(ffnPreId, 'HC Pre · 4→1', streamX, layerY(625), {
+            parent: clusterId, colorKey: 'sem:linear', width: mainNodeWidth, height: 42, role: 'mhc-projection'
+          }),
+          graphNode(norm2Id, 'RMSNorm 2', streamX, layerY(680), {
+            parent: clusterId, colorKey: 'sem:norm', width: mainNodeWidth, height: 40
+          }),
+          graphNode(moeId, moeLabel, streamX, layerY(740), {
+            parent: clusterId, kind: 'module', typeLabel: 'Main module',
+            colorKey: 'opv:moe', width: mainNodeWidth, height: 46, role: 'side-main-module'
+          }),
+          graphNode(ffnPostId, 'HC Post · 1→4', streamX, layerY(800), {
+            parent: clusterId, colorKey: 'sem:linear', width: mainNodeWidth, height: 42, role: 'mhc-projection'
+          }),
+          graphNode(ffnMergeId, '', streamX, layerY(855), {
+            parent: clusterId, colorKey: 'sem:linear', width: 38, height: 38, role: 'side-merge-anchor'
+          })
+        );
+        const flowNodeIds = [
+          attnPreId, norm1Id, attentionTypeId, attentionId, attnPostId, attnMergeId,
+          middleId, ffnPreId, norm2Id, moeId, ffnPostId, ffnMergeId
+        ];
+        flowNodeIds.slice(0, -1).forEach((sourceId, index) => {
+          const source = nodes.find(node => node.id === sourceId);
+          const target = nodes.find(node => node.id === flowNodeIds[index + 1]);
+          const direction = target.y > source.y ? 1 : -1;
+          streamArrowSegments.push({
+            x: streamX,
+            startY: source.y + direction * source.height / 2,
+            endY: target.y - direction * target.height / 2,
+            direction
+          });
+        });
+        mergeNodes.push(
+          { id: attnMergeId, compact: false },
+          { id: ffnMergeId, compact: false }
+        );
+        residualBundlePaths.push(
+          [
+            { x: streamX, y: layerY(225) }, { x: mixX, y: layerY(225) },
+            { x: mixX, y: layerY(505) }, { x: streamX - 20, y: layerY(505) }
+          ],
+          [
+            { x: streamX, y: layerY(565) }, { x: mixX, y: layerY(565) },
+            { x: mixX, y: layerY(855) }, { x: streamX - 20, y: layerY(855) }
+          ]
+        );
+      } else {
+        const sliceY = y => layer % 2 === 0 ? y : SIDE_LAYER_TOP + SIDE_LAYER_BOTTOM - y;
+        const sliceSpecs = [
+          ['attn_pre_slice', 255, 'sem:linear'],
+          ['attention_slice', 365, descriptor.attentionType === 'csa' ? 'sem:attention' : 'sem:rope'],
+          ['ffn_pre_slice', 650, 'sem:linear'],
+          ['moe_slice', 750, 'sem:gate']
+        ];
+        sliceSpecs.forEach(([name, y, colorKey]) => {
+          nodes.push(graphNode(`${clusterId}/${name}`, '', streamX, sliceY(y), {
+            parent: clusterId,
+            colorKey,
+            width: name.includes('attention') || name.includes('moe') ? 8 : 6,
+            height: 62,
+            role: 'side-operator-slice'
+          }));
+        });
+        [505, 855].forEach((y, index) => {
+          const id = `${clusterId}/${index ? 'ffn_merge' : 'attn_merge'}`;
+          nodes.push(graphNode(id, '', streamX, sliceY(y), {
+            parent: clusterId, colorKey: 'sem:linear', width: 20, height: 20, role: 'side-merge-anchor'
+          }));
+          mergeNodes.push({ id, compact: true });
+        });
+      }
+      cursorX += width + layerGap;
+    }
+
+    const firstLayer = layerRecords[0];
+    const lastLayer = layerRecords[layerRecords.length - 1];
+    const sceneWidth = cursorX - layerGap + sidePadding;
+    const embeddingId = 'dv4/side/stages/token_embedding';
+    const expandId = 'dv4/side/stages/hc_expand';
+    const headId = 'dv4/side/stages/hc_head';
+    const finalNormId = 'dv4/side/stages/final_norm';
+    const lmHeadId = 'dv4/side/stages/lm_head';
+    const headY = SIDE_LAYER_BOTTOM + 85;
+    const finalNormY = headY + 65;
+    const lmHeadY = finalNormY + 65;
+    nodes.push(
+      graphNode(embeddingId, 'Token Embedding', firstLayer.streamX, 32, {
+        colorKey: 'sem:embedding', width: 190, height: 42
+      }),
+      graphNode(expandId, 'HC Expand · d→4×d', firstLayer.streamX, 104, {
+        colorKey: 'sem:linear', width: 210, height: 44, role: 'mhc-projection'
+      }),
+      graphNode(headId, 'HC Head · 4×d→d', lastLayer.streamX, headY, {
+        colorKey: 'sem:linear', width: 210, height: 44, role: 'mhc-projection'
+      }),
+      graphNode(finalNormId, 'Final RMSNorm', lastLayer.streamX, finalNormY, {
+        colorKey: 'sem:norm', width: 190, height: 42
+      }),
+      graphNode(lmHeadId, 'LM Head', lastLayer.streamX, lmHeadY, {
+        colorKey: 'sem:head', width: 190, height: 42
+      })
+    );
+    edges.push(
+      graphEdge('edge/side-embedding-expand', embeddingId, expandId, 'embedding_states'),
+      graphEdge('edge/side-head-norm', headId, finalNormId, 'collapsed_hidden'),
+      graphEdge('edge/side-norm-lm-head', finalNormId, lmHeadId, 'normalized_hidden')
+    );
+
+    const mainStreamPoints = [];
+    const appendPoint = (x, y) => {
+      const previous = mainStreamPoints.at(-1);
+      if (previous?.x === x && previous?.y === y) return;
+      mainStreamPoints.push({ x, y });
+    };
+    appendPoint(firstLayer.streamX, 126);
+    layerRecords.forEach((record, index) => {
+      const travelsDown = index % 2 === 0;
+      const entryY = travelsDown ? SIDE_LAYER_TOP : SIDE_LAYER_BOTTOM;
+      const exitY = travelsDown ? SIDE_LAYER_BOTTOM : SIDE_LAYER_TOP;
+      appendPoint(record.streamX, entryY);
+      appendPoint(record.streamX, exitY);
+      const next = layerRecords[index + 1];
+      if (!next) return;
+      const foldY = travelsDown ? SIDE_LAYER_BOTTOM + 55 : SIDE_LAYER_TOP - 45;
+      appendPoint(record.streamX, foldY);
+      appendPoint(next.streamX, foldY);
+    });
+    appendPoint(lastLayer.streamX, headY - 22);
+
+    return {
+      schemaVersion: 'model_architecture_graph.v1',
+      id: `deepseek-v4-pro-side-layer-${selected}`,
+      title: `DeepSeek V4 Pro side view · Layer ${selected}`,
+      width: sceneWidth,
+      height: lmHeadY + 45,
+      nodes,
+      edges,
+      clusters,
+      metadata: {
+        modelId: config.modelId,
+        view: 'side',
+        selectedLayer: selected,
+        layerRecords,
+        mainStreamPoints,
+        mergeNodes,
+        residualBundlePaths,
+        streamArrowSegments
       }
     };
   }
@@ -465,6 +994,109 @@
     });
   }
 
+  function decorateSideBundles(host, graph) {
+    const svg = host.querySelector('.pto-model-graphviz-svg');
+    if (!svg) return;
+    const streamGroup = svgElement('g', { class: 'pto-dv4-side-main-stream', 'aria-hidden': 'true' });
+    BUNDLE_OFFSETS.forEach(offset => {
+      streamGroup.appendChild(svgElement('path', {
+        class: 'pto-dv4-side-main-stream__line',
+        d: bundlePathData(graph.metadata.mainStreamPoints, offset)
+      }));
+    });
+    const residualGroup = svgElement('g', { class: 'pto-dv4-side-residual-bundles', 'aria-hidden': 'true' });
+    (graph.metadata.residualBundlePaths || []).forEach(points => {
+      BUNDLE_OFFSETS.forEach(offset => {
+        residualGroup.appendChild(svgElement('path', {
+          class: 'pto-dv4-side-residual-bundle__line',
+          d: bundlePathData(points, offset)
+        }));
+      });
+    });
+    const arrowGroup = svgElement('g', { class: 'pto-dv4-side-stream-arrows', 'aria-hidden': 'true' });
+    (graph.metadata.streamArrowSegments || []).forEach(segment => {
+      const span = Math.abs(segment.endY - segment.startY);
+      const arrowLength = Math.min(6, Math.max(4, span - 2));
+      BUNDLE_OFFSETS.forEach(offset => {
+        const x = segment.x + offset;
+        const tipY = segment.endY - segment.direction;
+        const baseY = tipY - segment.direction * arrowLength;
+        arrowGroup.appendChild(svgElement('path', {
+          class: 'pto-dv4-side-stream-arrow',
+          d: `M ${x} ${tipY} L ${x - 2} ${baseY} L ${x + 2} ${baseY} Z`
+        }));
+      });
+    });
+    const firstNode = svg.querySelector('.pto-model-graphviz-node');
+    svg.insertBefore(streamGroup, firstNode || null);
+    svg.insertBefore(residualGroup, firstNode || null);
+    svg.insertBefore(arrowGroup, firstNode || null);
+  }
+
+  function decorateSideMerges(host, graph) {
+    const svg = host.querySelector('.pto-model-graphviz-svg');
+    const nodesById = new Map((graph.nodes || []).map(node => [node.id, node]));
+    if (!svg) return;
+    (graph.metadata.mergeNodes || []).forEach(entry => {
+      const node = nodesById.get(entry.id);
+      if (!node) return;
+      const compact = entry.compact === true;
+      const radius = compact ? 8 : 15;
+      const arm = compact ? 4 : 8;
+      const group = svgElement('g', {
+        class: `pto-dv4-side-merge${compact ? ' is-compact' : ' is-expanded'}`,
+        'aria-hidden': 'true'
+      });
+      group.appendChild(svgElement('circle', {
+        class: 'pto-dv4-side-merge__face', cx: node.x, cy: node.y, r: radius
+      }));
+      group.appendChild(svgElement('path', {
+        class: 'pto-dv4-side-merge__plus',
+        d: `M ${node.x - arm} ${node.y} H ${node.x + arm} M ${node.x} ${node.y - arm} V ${node.y + arm}`
+      }));
+      if (!compact) {
+        group.appendChild(svgElement('rect', {
+          class: 'pto-dv4-side-merge__badge',
+          x: node.x + 9,
+          y: node.y + 7,
+          width: 28,
+          height: 16,
+          rx: 8
+        }));
+        const badge = svgElement('text', {
+          class: 'pto-dv4-side-merge__badge-text',
+          x: node.x + 23,
+          y: node.y + 15
+        });
+        badge.textContent = '×4';
+        group.appendChild(badge);
+      }
+      svg.appendChild(group);
+    });
+  }
+
+  function decorateSideLayers(host, graph, onSelect) {
+    const records = new Map((graph.metadata.layerRecords || []).map(record => [record.layer, record]));
+    host.querySelectorAll('[data-cluster-id], [data-node-id]').forEach(item => {
+      const id = item.dataset.clusterId || item.dataset.nodeId || '';
+      const match = id.match(/^dv4\/side\/layer\/(\d+)/);
+      if (!match) return;
+      const layer = Number(match[1]);
+      const record = records.get(layer);
+      item.dataset.sideLayerIndex = String(layer);
+      item.classList.add('pto-dv4-side-layer-item');
+      if (record?.selected) item.classList.add('is-side-selected-layer');
+      if (item.dataset.clusterId) {
+        item.classList.add(record?.selected ? 'is-side-selected-cluster' : 'is-side-compact-cluster');
+      }
+    });
+    host.addEventListener('click', event => {
+      const item = event.target.closest('[data-side-layer-index]');
+      if (!item) return;
+      onSelect(Number(item.dataset.sideLayerIndex));
+    });
+  }
+
   function decorateMhcMerge(host, graph, nodeId) {
     const svg = host.querySelector('.pto-model-graphviz-svg');
     const node = graph.nodes.find(entry => entry.id === nodeId);
@@ -524,6 +1156,10 @@
       <div class="pto-dv4-architecture__viewport" tabindex="0" aria-label="可缩放拖动的 DeepSeek V4 正视图">
         <div class="pto-dv4-architecture__canvas"></div>
         <div class="pto-dv4-architecture__layer-picker" data-dv4-overlay>
+          <div class="pto-dv4-architecture__view-switch" role="group" aria-label="架构视图">
+            <button class="pto-dv4-architecture__button" type="button" data-dv4-view="front">正视</button>
+            <button class="pto-dv4-architecture__button" type="button" data-dv4-view="side">侧视</button>
+          </div>
           <div class="pto-dv4-architecture__layer-controls">
             <button class="pto-dv4-architecture__button is-icon" type="button" data-dv4-layer-step="-1" aria-label="上一层">‹</button>
             <select class="pto-dv4-architecture__layer-select" id="dv4LayerSelect" data-dv4-layer aria-label="Decoder Layer">${options}</select>
@@ -559,6 +1195,7 @@
     const layerSelect = root.querySelector('[data-dv4-layer]');
     const state = {
       selectedLayer: data.clampLayer(options.initialLayer ?? 3),
+      view: options.initialView === 'side' ? 'side' : 'front',
       theme: options.initialTheme === 'light' ? 'light' : 'dark',
       zoom: 1,
       panX: 0,
@@ -567,6 +1204,7 @@
       sceneHeight: SCENE_HEIGHT,
       drag: null,
       graph: null,
+      collapsedFrontIds: new Set(),
       destroyed: false
     };
 
@@ -591,16 +1229,24 @@
 
     function syncLayerControls() {
       layerSelect.value = String(state.selectedLayer);
+      root.querySelectorAll('[data-dv4-view]').forEach(button => {
+        const active = button.dataset.dv4View === state.view;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
     }
 
     function renderScene(shouldFit = true) {
-      const graph = buildFrontGraph(state.selectedLayer);
+      const sideView = state.view === 'side';
+      const graph = sideView
+        ? buildSideGraph(state.selectedLayer)
+        : buildFrontGraph(state.selectedLayer, state.collapsedFrontIds);
       state.graph = graph;
       state.sceneWidth = graph.width;
       state.sceneHeight = graph.height;
       canvas.style.width = `${graph.width}px`;
       canvas.style.height = `${graph.height}px`;
-      canvas.innerHTML = '<div class="pto-dv4-architecture__graph"></div>';
+      canvas.innerHTML = `<div class="pto-dv4-architecture__graph is-${state.view}"></div>`;
       const host = canvas.querySelector('.pto-dv4-architecture__graph');
       if (!global.PtoModelGraphvizPattern) {
         host.innerHTML = '<div class="pto-dv4-architecture__empty">model-graphviz renderer unavailable</div>';
@@ -609,20 +1255,34 @@
       global.PtoModelGraphvizPattern.render(host, graph, {
         width: graph.width,
         height: graph.height,
-        ariaLabel: `DeepSeek V4 Pro Decoder Layer ${state.selectedLayer} front view`,
+        ariaLabel: sideView
+          ? `DeepSeek V4 Pro 61-layer side view · Layer ${state.selectedLayer} expanded`
+          : `DeepSeek V4 Pro Decoder Layer ${state.selectedLayer} front view`,
         metricOverlays: false,
         reportOverlays: false,
         performanceHeatmap: { enabled: false },
         colormap: global.PtoModelGraphvizPattern.modelArchitectureColormap(graph, { theme: state.theme }),
         interaction: { panZoom: false, selectable: false },
+        selectable: false,
+        selectableClusters: false,
         autoFit: false,
-        initialTransform: { tx: 0, ty: 0, zoom: 1 }
+        initialTransform: { tx: 0, ty: 0, zoom: 1 },
+        onToggle({ nodeId, collapsed }) {
+          if (sideView) return;
+          toggleFrontCluster(nodeId, collapsed);
+        }
       });
       decorateRoleClasses(host, graph);
-      decorateHashInput(host, graph);
-      decorateFanCurves(host, graph);
-      decorateMhcBundles(host, graph);
-      graph.metadata.mergeNodeIds.forEach(nodeId => decorateMhcMerge(host, graph, nodeId));
+      if (sideView) {
+        decorateSideBundles(host, graph);
+        decorateSideMerges(host, graph);
+        decorateSideLayers(host, graph, selectLayer);
+      } else {
+        decorateHashInput(host, graph);
+        decorateFanCurves(host, graph);
+        decorateMhcBundles(host, graph);
+        graph.metadata.mergeNodeIds.forEach(nodeId => decorateMhcMerge(host, graph, nodeId));
+      }
       syncLayerControls();
       if (shouldFit) requestAnimationFrame(fit);
       else applyTransform();
@@ -634,6 +1294,22 @@
       if (next === state.selectedLayer) return api;
       state.selectedLayer = next;
       renderScene(false);
+      return api;
+    }
+
+    function toggleFrontCluster(clusterId, collapsed) {
+      if (!clusterId) return api;
+      if (collapsed === true) state.collapsedFrontIds.delete(clusterId);
+      else state.collapsedFrontIds.add(clusterId);
+      renderScene(true);
+      return api;
+    }
+
+    function setView(view) {
+      const next = view === 'side' ? 'side' : 'front';
+      if (next === state.view) return api;
+      state.view = next;
+      renderScene(true);
       return api;
     }
 
@@ -662,7 +1338,12 @@
 
     viewport.addEventListener('wheel', onWheel, { passive: false });
     viewport.addEventListener('pointerdown', event => {
-      if (event.button !== 0 || event.target.closest('[data-dv4-overlay]')) return;
+      if (
+        event.button !== 0
+        || event.target.closest('[data-dv4-overlay]')
+        || event.target.closest('.pto-model-graphviz-toggle')
+        || event.target.closest('[data-side-layer-index]')
+      ) return;
       state.drag = { x: event.clientX, y: event.clientY, panX: state.panX, panY: state.panY };
       viewport.setPointerCapture(event.pointerId);
       viewport.classList.add('is-dragging');
@@ -688,6 +1369,9 @@
         state.selectedLayer + Number(button.dataset.dv4LayerStep)
       ));
     });
+    root.querySelectorAll('[data-dv4-view]').forEach(button => {
+      button.addEventListener('click', () => setView(button.dataset.dv4View));
+    });
     root.querySelector('[data-dv4-fit]').addEventListener('click', fit);
     root.querySelector('[data-dv4-theme]').addEventListener('click', () => (
       setTheme(state.theme === 'light' ? 'dark' : 'light')
@@ -701,12 +1385,15 @@
       root,
       fit,
       selectLayer,
+      setView,
       setTheme,
       getState() {
         return {
           selectedLayer: state.selectedLayer,
+          view: state.view,
           theme: state.theme,
-          zoom: state.zoom
+          zoom: state.zoom,
+          collapsedFrontIds: [...state.collapsedFrontIds]
         };
       },
       destroy() {
@@ -724,6 +1411,7 @@
 
   global.PtoDv4ArchitecturePattern = Object.freeze({
     render,
-    buildFrontGraph
+    buildFrontGraph,
+    buildSideGraph
   });
 })(window);

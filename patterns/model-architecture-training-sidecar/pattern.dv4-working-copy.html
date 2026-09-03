@@ -3,30 +3,32 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="DeepSeek V4 Pro mHC ×4 模型架构正视图工作副本。">
+  <meta name="description" content="DeepSeek V4 Pro mHC ×4 模型架构正视图与侧视图工作副本。">
   <title>DeepSeek V4 Pro Architecture Pattern</title>
   <link rel="stylesheet" href="../../tokens/foundation.css">
   <link rel="stylesheet" href="../../tokens/semantic.css">
   <link rel="stylesheet" href="../../tokens/components.css">
   <link rel="stylesheet" href="../../css/style.css">
   <link rel="stylesheet" href="../model-graphviz/pattern.css?v=dv4-front-v7">
-  <link rel="stylesheet" href="./pattern.dv4.css?v=dv4-front-v10">
+  <link rel="stylesheet" href="./pattern.dv4.css?v=dv4-side-frame-v3">
 </head>
 <body>
   <main class="dv4-pattern-page" id="patternPage">
-    <section id="dv4ArchitecturePattern" aria-label="DeepSeek V4 Pro mHC architecture front view"></section>
+    <section id="dv4ArchitecturePattern" aria-label="DeepSeek V4 Pro mHC architecture front and side views"></section>
   </main>
-  <script src="../model-graphviz/pattern.js?v=dv4-front-v7"></script>
+  <script src="../model-graphviz/pattern.js?v=dv4-side-frame-v3"></script>
   <script src="./pattern.dv4-architecture-data.js?v=dv4-front-v1"></script>
-  <script src="./pattern.dv4.js?v=dv4-front-v11"></script>
+  <script src="./pattern.dv4.js?v=dv4-side-frame-v3"></script>
   <script>
     const params = new URLSearchParams(location.search);
     const theme = params.get('theme') === 'light' ? 'light' : 'dark';
+    const view = params.get('view') === 'side' ? 'side' : 'front';
     const layer = Number.parseInt(params.get('layer') || '3', 10);
     document.documentElement.dataset.theme = theme;
     document.getElementById('patternPage').dataset.embed = String(params.get('embed') === '1');
     window.dv4ArchitectureController = window.PtoDv4ArchitecturePattern.render('#dv4ArchitecturePattern', {
       initialTheme: theme,
+      initialView: view,
       initialLayer: Number.isFinite(layer) ? layer : 3
     });
     window.addEventListener('message', event => {

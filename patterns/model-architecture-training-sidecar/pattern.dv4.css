@@ -115,6 +115,15 @@ body {
   backdrop-filter: blur(10px);
 }
 
+.pto-dv4-architecture__view-switch {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 6px;
+  padding-right: 6px;
+  border-right: 1px solid var(--border-default);
+}
+
 .pto-dv4-architecture__layer-controls {
   display: flex;
   align-items: center;
@@ -279,6 +288,19 @@ body {
   transition: opacity 160ms ease, filter 160ms ease;
 }
 
+.pto-dv4-architecture__graph :is(.pto-model-graphviz-node, .pto-model-graphviz-cluster) {
+  cursor: default;
+}
+
+.pto-dv4-architecture__graph :is(.pto-model-graphviz-node, .pto-model-graphviz-cluster):focus,
+.pto-dv4-architecture__graph :is(.pto-model-graphviz-node, .pto-model-graphviz-cluster):focus-visible {
+  outline: none;
+}
+
+.pto-dv4-architecture__graph .pto-model-graphviz-toggle {
+  cursor: pointer;
+}
+
 .pto-dv4-architecture__graph .pto-model-graphviz-toggle {
   fill: var(--model-graphviz-toggle-bg);
   stroke: none;
@@ -403,6 +425,128 @@ body {
   place-items: center;
   color: var(--foreground-muted);
   font: 600 12px/1.4 var(--font-sans);
+}
+
+.pto-dv4-architecture__graph.is-side .pto-dv4-side-layer-item {
+  cursor: pointer;
+}
+
+.pto-dv4-architecture__graph.is-side .is-side-compact-cluster > rect:first-child {
+  fill: color-mix(in srgb, var(--foreground) 7%, var(--background));
+  fill-opacity: 1;
+  stroke: none;
+}
+
+.pto-dv4-architecture__graph.is-side .is-side-compact-cluster:hover > rect:first-child {
+  fill: color-mix(in srgb, var(--dv4-stream) 12%, var(--background));
+  stroke: none;
+}
+
+.pto-dv4-architecture__graph.is-side .is-side-selected-cluster > rect:first-child {
+  fill: color-mix(in srgb, var(--surface-1) 32%, transparent);
+  fill-opacity: 1;
+  stroke: var(--border-strong);
+  stroke-width: 2;
+}
+
+.pto-dv4-architecture__graph.is-side .pto-model-graphviz-cluster-label {
+  fill: var(--foreground-secondary);
+  font-size: 10px;
+  font-weight: 750;
+  text-anchor: middle;
+}
+
+.pto-dv4-architecture__graph.is-side .is-side-selected-cluster .pto-model-graphviz-cluster-label {
+  font-size: 13px;
+  text-anchor: start;
+}
+
+.pto-dv4-architecture__graph.is-side .is-side-compact-cluster .pto-model-graphviz-cluster-label {
+  transform: translateX(1px);
+}
+
+.pto-dv4-architecture__graph.is-side .is-side-operator-slice > rect:first-child {
+  rx: 2px;
+  ry: 2px;
+  fill-opacity: 1;
+  stroke: none;
+}
+
+.pto-dv4-architecture__graph.is-side .is-side-operator-slice :is(
+  .pto-model-graphviz-node-label,
+  .pto-model-graphviz-node-type
+) {
+  display: none;
+}
+
+.pto-dv4-architecture__graph.is-side .is-side-merge-anchor {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pto-dv4-architecture__graph.is-side .is-side-selected-layer.pto-model-graphviz-node:not(.is-side-merge-anchor) .pto-model-graphviz-node-label {
+  font-size: 11px;
+}
+
+.pto-dv4-architecture__graph.is-side .is-side-selected-layer.pto-model-graphviz-node > rect:first-child {
+  fill-opacity: 1;
+}
+
+.pto-dv4-side-main-stream,
+.pto-dv4-side-residual-bundles,
+.pto-dv4-side-stream-arrows,
+.pto-dv4-side-merge {
+  pointer-events: none;
+}
+
+.pto-dv4-side-main-stream__line,
+.pto-dv4-side-residual-bundle__line {
+  fill: none;
+  stroke: var(--dv4-stream);
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.pto-dv4-side-residual-bundle__line {
+  stroke-width: 1.6;
+  opacity: .82;
+}
+
+.pto-dv4-side-stream-arrow {
+  fill: var(--dv4-stream);
+  stroke: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.pto-dv4-side-merge__face {
+  fill: var(--background);
+  stroke: var(--dv4-stream);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.pto-dv4-side-merge__plus {
+  fill: none;
+  stroke: var(--dv4-stream);
+  stroke-width: 2.2;
+  stroke-linecap: square;
+  vector-effect: non-scaling-stroke;
+}
+
+.pto-dv4-side-merge__badge {
+  fill: var(--dv4-stream);
+  stroke: var(--background);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.pto-dv4-side-merge__badge-text {
+  fill: white;
+  font: 800 8px/1 var(--font-mono);
+  text-anchor: middle;
+  dominant-baseline: central;
 }
 
 @media (max-width: 980px) {
