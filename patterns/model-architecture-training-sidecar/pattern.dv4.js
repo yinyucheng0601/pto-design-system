@@ -5,6 +5,7 @@
   const SCENE_WIDTH = 1840;
   const SCENE_HEIGHT = 3040;
   const STREAM_X = 920;
+  const FRONT_MAIN_NODE_WIDTH = 390;
   const BUNDLE_OFFSETS = [-7.5, -2.5, 2.5, 7.5];
   const SIDE_LAYER_TOP = 130;
   const SIDE_LAYER_HEIGHT = 820;
@@ -175,13 +176,13 @@
         typeLabel: 'mHC Mapping', colorKey: 'sem:linear', width: 170, height: 42, role: 'residual-mix'
       }),
       graphNode(ids.attnPre, 'HC Pre · 4→1', STREAM_X, 325, {
-        typeLabel: 'mHC Projection', colorKey: 'sem:attention', width: 300, height: 64, role: 'mhc-projection'
+        typeLabel: 'mHC Projection', colorKey: 'sem:attention', width: FRONT_MAIN_NODE_WIDTH, height: 64, role: 'mhc-projection'
       }),
       graphNode(ids.norm1, 'RMSNorm 1', STREAM_X, 420, {
-        colorKey: 'sem:norm', width: 260
+        colorKey: 'sem:norm', width: FRONT_MAIN_NODE_WIDTH
       }),
       graphNode(ids.attentionType, descriptor.attentionLabel, STREAM_X, 510, {
-        typeLabel: `L${layer} architecture schedule`, colorKey: descriptor.attentionType === 'csa' ? 'sem:attention' : 'sem:rope', width: 410, height: 64
+        typeLabel: `L${layer} architecture schedule`, colorKey: descriptor.attentionType === 'csa' ? 'sem:attention' : 'sem:rope', width: FRONT_MAIN_NODE_WIDTH, height: 64
       }),
 
       graphNode(`${csaId}/query_projection`, 'Query Projection', 697, 655, {
@@ -226,7 +227,7 @@
       }),
 
       graphNode(ids.attnPost, 'HC Post · 1→4', STREAM_X, 1160, {
-        typeLabel: 'mHC Projection', colorKey: 'sem:attention', width: 300, height: 64, role: 'mhc-projection'
+        typeLabel: 'mHC Projection', colorKey: 'sem:attention', width: FRONT_MAIN_NODE_WIDTH, height: 64, role: 'mhc-projection'
       }),
       graphNode(ids.attnMerge, '', STREAM_X, 1260, {
         typeLabel: '', colorKey: 'sem:linear', width: 82, height: 72, role: 'mhc-merge'
@@ -239,17 +240,17 @@
         typeLabel: 'mHC Mapping', colorKey: 'sem:linear', width: 170, height: 42, role: 'residual-mix'
       }),
       graphNode(ids.ffnPre, 'HC Pre · 4→1', STREAM_X, 1510, {
-        typeLabel: 'mHC Projection', colorKey: 'sem:mlp', width: 300, height: 64, role: 'mhc-projection'
+        typeLabel: 'mHC Projection', colorKey: 'sem:mlp', width: FRONT_MAIN_NODE_WIDTH, height: 64, role: 'mhc-projection'
       }),
       graphNode(ids.norm2, 'RMSNorm 2', STREAM_X, 1590, {
-        colorKey: 'sem:norm', width: 260
+        colorKey: 'sem:norm', width: FRONT_MAIN_NODE_WIDTH
       }),
       graphNode(ids.tokenId, 'Token ID', 500, 1710, {
         kind: 'state', typeLabel: 'Hash Input', colorKey: 'io:input', width: 180, role: 'token-id-input'
       }),
       graphNode(ids.router, descriptor.routerLabel, STREAM_X, 1710, {
         typeLabel: descriptor.routerType === 'hash_moe' ? 'Hash-MoE' : 'MoE Router',
-        colorKey: 'sem:gate', width: 390, height: 64
+        colorKey: 'sem:gate', width: FRONT_MAIN_NODE_WIDTH, height: 64
       }),
       graphNode(ids.selection, descriptor.routeSelectionLabel, 895, 1845, {
         parent: routedId, typeLabel: 'Routing Selection', colorKey: 'sem:gate', width: 270
@@ -270,10 +271,10 @@
         parent: moeId, typeLabel: 'Always active', colorKey: 'sem:gate', width: 220
       }),
       graphNode(ids.combine, 'Combine', STREAM_X, 2040, {
-        parent: moeId, colorKey: 'sem:gate', width: 270
+        parent: moeId, colorKey: 'sem:gate', width: FRONT_MAIN_NODE_WIDTH
       }),
       graphNode(ids.ffnPost, 'HC Post · 1→4', STREAM_X, 2120, {
-        typeLabel: 'mHC Projection', colorKey: 'sem:mlp', width: 300, height: 64, role: 'mhc-projection'
+        typeLabel: 'mHC Projection', colorKey: 'sem:mlp', width: FRONT_MAIN_NODE_WIDTH, height: 64, role: 'mhc-projection'
       }),
       graphNode(ids.ffnMerge, '', STREAM_X, 2210, {
         typeLabel: '', colorKey: 'sem:linear', width: 82, height: 72, role: 'mhc-merge'
@@ -430,15 +431,15 @@
     };
     nodes.push(
       graphNode(modelIds.inputTokens, 'Input Tokens', STREAM_X, 55, {
-        kind: 'state', typeLabel: 'Token IDs', colorKey: 'io:input', width: 280, role: 'model-io'
+        kind: 'state', typeLabel: 'Token IDs', colorKey: 'io:input', width: FRONT_MAIN_NODE_WIDTH, role: 'model-io'
       }),
       graphNode(modelIds.embedding, 'Token Embedding', STREAM_X, 140, {
-        colorKey: 'sem:embedding', width: 300, role: 'model-io'
+        colorKey: 'sem:embedding', width: FRONT_MAIN_NODE_WIDTH, role: 'model-io'
       })
     );
     if (layer > 0) {
       nodes.push(graphNode(modelIds.previousLayers, 'Previous Decoder Layers', STREAM_X, 225, {
-        kind: 'module', typeLabel: `Layers 0–${layer - 1}`, colorKey: 'module:decoder', width: 340,
+        kind: 'module', typeLabel: `Layers 0–${layer - 1}`, colorKey: 'module:decoder', width: FRONT_MAIN_NODE_WIDTH,
         role: 'layer-context'
       }));
     }
@@ -448,19 +449,19 @@
     if (layer < config.numHiddenLayers - 1) {
       nodes.push(graphNode(modelIds.remainingLayers, 'Remaining Decoder Layers', STREAM_X, remainingLayersY, {
         kind: 'module', typeLabel: `Layers ${layer + 1}–${config.numHiddenLayers - 1}`,
-        colorKey: 'module:decoder', width: 340, role: 'layer-context'
+        colorKey: 'module:decoder', width: FRONT_MAIN_NODE_WIDTH, role: 'layer-context'
       }));
     }
     const finalNormY = remainingLayersY + (layer < config.numHiddenLayers - 1 ? 90 : 0);
     nodes.push(
       graphNode(modelIds.finalNorm, 'Final RMSNorm', STREAM_X, finalNormY, {
-        colorKey: 'sem:norm', width: 280, role: 'model-io'
+        colorKey: 'sem:norm', width: FRONT_MAIN_NODE_WIDTH, role: 'model-io'
       }),
       graphNode(modelIds.lmHead, 'LM Head', STREAM_X, finalNormY + 85, {
-        colorKey: 'sem:linear', width: 280, role: 'model-io'
+        colorKey: 'sem:linear', width: FRONT_MAIN_NODE_WIDTH, role: 'model-io'
       }),
       graphNode(modelIds.outputTokens, 'Output Tokens', STREAM_X, finalNormY + 170, {
-        kind: 'state', typeLabel: 'Token logits / IDs', colorKey: 'io:output', width: 280, role: 'model-io'
+        kind: 'state', typeLabel: 'Token logits / IDs', colorKey: 'io:output', width: FRONT_MAIN_NODE_WIDTH, role: 'model-io'
       })
     );
     edges.push(graphEdge('edge/model-input-embedding', modelIds.inputTokens, modelIds.embedding, 'token_ids', {
@@ -565,8 +566,10 @@
     const placeholderNodes = [...topLevelCollapsed].map(id => {
       const cluster = clustersById.get(id);
       const isMainStreamModule = id === graph.clusters?.[0]?.id
-        || /\/(mhc_attn|hybrid_attention|mhc_ffn|deepseek_moe)$/.test(id);
-      const width = Math.min(500, Math.max(300, cluster.width - 80));
+        || /\/(mhc_attn|hybrid_attention|mhc_ffn|deepseek_moe|routed_experts)$/.test(id);
+      const width = isMainStreamModule
+        ? FRONT_MAIN_NODE_WIDTH
+        : Math.min(500, Math.max(300, cluster.width - 80));
       const x = isMainStreamModule ? STREAM_X : cluster.x + cluster.width / 2;
       return graphNode(id, cluster.label, x, cluster.y + cluster.height / 2, {
         kind: 'module',
@@ -955,6 +958,37 @@
     }).join(' ');
   }
 
+  function roundedPathData(points, radius = 12) {
+    const cleanPoints = points.filter(point => Number.isFinite(point.x) && Number.isFinite(point.y));
+    if (cleanPoints.length < 2) return '';
+    const parts = [`M ${cleanPoints[0].x} ${cleanPoints[0].y}`];
+    const pointToward = (from, to, distance) => {
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const length = Math.hypot(dx, dy);
+      if (!length) return { ...from };
+      const ratio = Math.min(1, distance / length);
+      return { x: from.x + dx * ratio, y: from.y + dy * ratio };
+    };
+    for (let index = 1; index < cleanPoints.length - 1; index += 1) {
+      const previous = cleanPoints[index - 1];
+      const point = cleanPoints[index];
+      const next = cleanPoints[index + 1];
+      const bendRadius = Math.min(
+        radius,
+        Math.hypot(point.x - previous.x, point.y - previous.y) / 2,
+        Math.hypot(next.x - point.x, next.y - point.y) / 2
+      );
+      const before = pointToward(point, previous, bendRadius);
+      const after = pointToward(point, next, bendRadius);
+      parts.push(`L ${before.x} ${before.y}`);
+      parts.push(`Q ${point.x} ${point.y} ${after.x} ${after.y}`);
+    }
+    const end = cleanPoints[cleanPoints.length - 1];
+    parts.push(`L ${end.x} ${end.y}`);
+    return parts.join(' ');
+  }
+
   function decorateMhcBundles(host, graph) {
     const svg = host.querySelector('.pto-model-graphviz-svg');
     if (!svg) return;
@@ -975,7 +1009,7 @@
     svg.insertBefore(group, firstNode || null);
   }
 
-  function decorateFanCurves(host, graph) {
+  function decorateFanCurves(host, graph, edgeStyle) {
     const nodesById = new Map((graph.nodes || []).map(node => [node.id, node]));
     const renderedEdges = [...host.querySelectorAll('.pto-model-graphviz-edge')];
     (graph.edges || []).filter(edge => Number.isFinite(edge.fanCurveY)).forEach(edge => {
@@ -987,10 +1021,15 @@
       if (!source || !target || !rendered) return;
       const start = { x: source.x, y: source.y + source.height / 2 };
       const end = { x: target.x, y: target.y - target.height / 2 };
-      rendered.setAttribute(
-        'd',
-        `M ${start.x} ${start.y} C ${start.x} ${edge.fanCurveY}, ${end.x} ${edge.fanCurveY}, ${end.x} ${end.y}`
-      );
+      const path = edgeStyle === 'orthogonal'
+        ? roundedPathData([
+          start,
+          { x: start.x, y: edge.fanCurveY },
+          { x: end.x, y: edge.fanCurveY },
+          end
+        ], 12)
+        : `M ${start.x} ${start.y} C ${start.x} ${edge.fanCurveY}, ${end.x} ${edge.fanCurveY}, ${end.x} ${end.y}`;
+      rendered.setAttribute('d', path);
     });
   }
 
@@ -1168,13 +1207,12 @@
         </div>
         <div class="pto-dv4-architecture__viewport-actions" data-dv4-overlay>
           <button class="pto-dv4-architecture__button is-icon" type="button" data-dv4-theme aria-label="切换主题">◐</button>
+          <button class="pto-dv4-architecture__button is-edge-style is-active" type="button" data-dv4-edge-style aria-label="切换为贝塞尔曲线连线" aria-pressed="true">连线 · 圆角直角</button>
           <button class="pto-dv4-architecture__button" type="button" data-dv4-fit>适配</button>
           <span class="pto-dv4-architecture__readout" data-dv4-readout>100%</span>
         </div>
         <aside class="pto-dv4-architecture__legend" data-dv4-overlay aria-label="mHC 图例">
           <div class="pto-dv4-architecture__legend-item"><i class="pto-dv4-architecture__legend-mark is-streams"></i><strong>4 × Residual Streams</strong></div>
-          <div class="pto-dv4-architecture__legend-item"><i class="pto-dv4-architecture__legend-mark is-pre"></i><strong>HC Pre / Post</strong></div>
-          <div class="pto-dv4-architecture__legend-item"><i class="pto-dv4-architecture__legend-mark is-mix"></i><strong>Residual Mix B</strong></div>
           <div class="pto-dv4-architecture__legend-item"><i class="pto-dv4-architecture__legend-mark is-merge"></i><strong>mHC Merge ×4</strong></div>
         </aside>
       </div>
@@ -1197,6 +1235,7 @@
       selectedLayer: data.clampLayer(options.initialLayer ?? 3),
       view: options.initialView === 'side' ? 'side' : 'front',
       theme: options.initialTheme === 'light' ? 'light' : 'dark',
+      edgeStyle: options.initialEdgeStyle === 'bezier' ? 'bezier' : 'orthogonal',
       zoom: 1,
       panX: 0,
       panY: 0,
@@ -1234,6 +1273,12 @@
         button.classList.toggle('is-active', active);
         button.setAttribute('aria-pressed', String(active));
       });
+      const edgeStyleButton = root.querySelector('[data-dv4-edge-style]');
+      const orthogonal = state.edgeStyle === 'orthogonal';
+      edgeStyleButton.textContent = orthogonal ? '连线 · 圆角直角' : '连线 · 曲线';
+      edgeStyleButton.setAttribute('aria-label', orthogonal ? '切换为贝塞尔曲线连线' : '切换为圆角直角连线');
+      edgeStyleButton.setAttribute('aria-pressed', String(orthogonal));
+      edgeStyleButton.classList.toggle('is-active', orthogonal);
     }
 
     function renderScene(shouldFit = true) {
@@ -1266,6 +1311,8 @@
         selectable: false,
         selectableClusters: false,
         autoFit: false,
+        edgeRouting: state.edgeStyle,
+        edgeCornerRadius: 12,
         initialTransform: { tx: 0, ty: 0, zoom: 1 },
         onToggle({ nodeId, collapsed }) {
           if (sideView) return;
@@ -1279,7 +1326,7 @@
         decorateSideLayers(host, graph, selectLayer);
       } else {
         decorateHashInput(host, graph);
-        decorateFanCurves(host, graph);
+        decorateFanCurves(host, graph, state.edgeStyle);
         decorateMhcBundles(host, graph);
         graph.metadata.mergeNodeIds.forEach(nodeId => decorateMhcMerge(host, graph, nodeId));
       }
@@ -1318,6 +1365,14 @@
       if (next === state.theme) return api;
       state.theme = next;
       document.documentElement.dataset.theme = next;
+      renderScene(false);
+      return api;
+    }
+
+    function setEdgeStyle(style) {
+      const next = style === 'orthogonal' ? 'orthogonal' : 'bezier';
+      if (next === state.edgeStyle) return api;
+      state.edgeStyle = next;
       renderScene(false);
       return api;
     }
@@ -1372,6 +1427,9 @@
     root.querySelectorAll('[data-dv4-view]').forEach(button => {
       button.addEventListener('click', () => setView(button.dataset.dv4View));
     });
+    root.querySelector('[data-dv4-edge-style]').addEventListener('click', () => {
+      setEdgeStyle(state.edgeStyle === 'bezier' ? 'orthogonal' : 'bezier');
+    });
     root.querySelector('[data-dv4-fit]').addEventListener('click', fit);
     root.querySelector('[data-dv4-theme]').addEventListener('click', () => (
       setTheme(state.theme === 'light' ? 'dark' : 'light')
@@ -1387,11 +1445,13 @@
       selectLayer,
       setView,
       setTheme,
+      setEdgeStyle,
       getState() {
         return {
           selectedLayer: state.selectedLayer,
           view: state.view,
           theme: state.theme,
+          edgeStyle: state.edgeStyle,
           zoom: state.zoom,
           collapsedFrontIds: [...state.collapsedFrontIds]
         };

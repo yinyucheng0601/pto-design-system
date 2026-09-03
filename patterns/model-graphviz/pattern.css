@@ -423,12 +423,10 @@
 }
 
 .pto-model-graphviz-toggle-icon {
-  fill: var(--model-graphviz-toggle-icon);
-  font-family: var(--font-sans);
-  font-size: var(--font-size-title-sm);
-  font-weight: var(--font-weight-bold);
-  text-anchor: middle;
-  dominant-baseline: central;
+  fill: none;
+  stroke: var(--model-graphviz-toggle-icon);
+  stroke-width: 2.2px;
+  stroke-linecap: round;
   pointer-events: none;
 }
 

@@ -969,7 +969,7 @@
     return parts.join(' ');
   }
 
-  function edgePath(source, target, edge) {
+  function edgePath(source, target, edge, options = {}) {
     const vertical = Math.abs(source.y - target.y) >= Math.abs(source.x - target.x);
     const sourceAnchor = edge?.sourceAnchor || (vertical
       ? source.y < target.y ? 'bottom' : 'top'
@@ -977,22 +977,58 @@
     const targetAnchor = edge?.targetAnchor || (vertical
       ? source.y < target.y ? 'top' : 'bottom'
       : source.x < target.x ? 'left' : 'right');
+    const sourceSide = typeof sourceAnchor === 'string'
+      ? sourceAnchor
+      : sourceAnchor?.side || sourceAnchor?.anchor;
+    const targetSide = typeof targetAnchor === 'string'
+      ? targetAnchor
+      : targetAnchor?.side || targetAnchor?.anchor;
     const start = edge?.sourcePoint
       ? { x: Number(edge.sourcePoint.x), y: Number(edge.sourcePoint.y) }
       : nodeAnchor(source, sourceAnchor);
     const end = edge?.targetPoint
       ? { x: Number(edge.targetPoint.x), y: Number(edge.targetPoint.y) }
       : nodeAnchor(target, targetAnchor);
+    const orthogonal = options.edgeRouting === 'orthogonal';
+    const cornerRadius = Number.isFinite(Number(options.edgeCornerRadius))
+      ? Number(options.edgeCornerRadius)
+      : 12;
     if (Array.isArray(edge?.waypoints) && edge.waypoints.length) {
       const points = [
         start,
         ...edge.waypoints.map((point) => ({ x: Number(point.x), y: Number(point.y) })),
         end,
       ];
+      if (orthogonal) return roundedRoutePath(points, cornerRadius);
       if (edge.route === 'smooth' || edge.curve === 'smooth') {
         return smoothRoutePath(points, edge.tension);
       }
       return roundedRoutePath(points, edge.cornerRadius ?? 32);
+    }
+    if (orthogonal) {
+      if (start.x === end.x || start.y === end.y) {
+        return `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
+      }
+      const anchoredVertically = ['top', 'bottom'].includes(sourceSide)
+        && ['top', 'bottom'].includes(targetSide);
+      const anchoredHorizontally = ['left', 'right'].includes(sourceSide)
+        && ['left', 'right'].includes(targetSide);
+      if (anchoredVertically || (!anchoredHorizontally && vertical)) {
+        const midY = (start.y + end.y) / 2;
+        return roundedRoutePath([
+          start,
+          { x: start.x, y: midY },
+          { x: end.x, y: midY },
+          end,
+        ], cornerRadius);
+      }
+      const midX = (start.x + end.x) / 2;
+      return roundedRoutePath([
+        start,
+        { x: midX, y: start.y },
+        { x: midX, y: end.y },
+        end,
+      ], cornerRadius);
     }
     const curve = edge?.curve || (vertical ? 'vertical' : 'horizontal');
 
@@ -1188,13 +1224,10 @@
         cy: toggleY,
         r: EXPAND_BUTTON_RADIUS,
       }));
-      const icon = createSvgElement('text', {
+      const icon = createSvgElement('path', {
         class: 'pto-model-graphviz-toggle-icon',
-        x: toggleX,
-        y: toggleY + 0.3,
-        'font-size': '12',
+        d: `M ${toggleX - 5} ${toggleY} H ${toggleX + 5}`,
       });
-      icon.textContent = '-';
       group.appendChild(icon);
     }
     svg.appendChild(group);
@@ -1366,12 +1399,10 @@
         cy: toggleY,
         r: EXPAND_BUTTON_RADIUS,
       }));
-      const icon = createSvgElement('text', {
+      const icon = createSvgElement('path', {
         class: 'pto-model-graphviz-toggle-icon',
-        x: toggleX,
-        y: toggleY + 0.2,
+        d: `M ${toggleX - 5} ${toggleY} H ${toggleX + 5} M ${toggleX} ${toggleY - 5} V ${toggleY + 5}`,
       });
-      icon.textContent = '+';
       group.appendChild(icon);
     }
 
@@ -2142,7 +2173,7 @@
       renderedEdges.add(edgeKey);
       const el = createSvgElement('path', {
         class: 'pto-model-graphviz-edge',
-        d: edgePath(source, targetNode, edge),
+        d: edgePath(source, targetNode, edge, resolvedOptions),
         stroke: edge.color || LINE_COLOR,
         'stroke-dasharray': edge.dashed ? '8 7' : null,
         'marker-end': `url(#${markerId})`,

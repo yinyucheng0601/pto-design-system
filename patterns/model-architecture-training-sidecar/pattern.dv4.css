@@ -33,9 +33,11 @@ body {
   --dv4-router: #f1bc63;
   --dv4-expert: #f19c6d;
   --dv4-shared: #bb7bea;
-  --model-graphviz-line: var(--foreground-muted);
-  --model-graphviz-line-soft: color-mix(in srgb, var(--foreground-muted) 62%, transparent);
-  --model-graphviz-toggle-bg: color-mix(in srgb, var(--foreground) 10%, var(--surface-2));
+  --dv4-edge-gray: #858A93;
+  --dv4-module-border-gray: #41464F;
+  --model-graphviz-line: var(--dv4-edge-gray);
+  --model-graphviz-line-soft: var(--dv4-module-border-gray);
+  --model-graphviz-toggle-bg: rgba(0, 0, 0, 0.10);
   --model-graphviz-toggle-icon: var(--foreground-secondary);
   position: relative;
   display: block;
@@ -58,6 +60,8 @@ body {
   --dv4-router: #d99d34;
   --dv4-expert: #df8350;
   --dv4-shared: #9c5dca;
+  --dv4-edge-gray: #858A93;
+  --dv4-module-border-gray: #C8CBD1;
 }
 
 .pto-dv4-architecture__layer-picker {
@@ -93,6 +97,11 @@ body {
   width: 32px;
   min-width: 32px;
   padding: 0;
+}
+
+.pto-dv4-architecture__button.is-edge-style {
+  min-width: 94px;
+  font-family: var(--font-mono);
 }
 
 .pto-dv4-architecture__readout {
@@ -192,21 +201,6 @@ body {
   );
 }
 
-.pto-dv4-architecture__legend-mark.is-pre {
-  clip-path: polygon(0 10%, 100% 30%, 100% 70%, 0 90%);
-  background: var(--dv4-attention);
-}
-
-.pto-dv4-architecture__legend-mark.is-mix {
-  border: 1px solid var(--dv4-stream);
-  border-radius: 4px;
-  background: repeating-linear-gradient(
-    45deg,
-    color-mix(in srgb, var(--dv4-stream) 40%, transparent) 0 2px,
-    transparent 2px 5px
-  );
-}
-
 .pto-dv4-architecture__legend-mark.is-merge {
   position: relative;
   box-sizing: border-box;
@@ -301,6 +295,14 @@ body {
   cursor: pointer;
 }
 
+.pto-dv4-architecture__graph .pto-model-graphviz-edge {
+  stroke: var(--dv4-edge-gray);
+}
+
+.pto-dv4-architecture__graph .pto-model-graphviz-cluster > rect:first-child {
+  stroke: var(--dv4-module-border-gray);
+}
+
 .pto-dv4-architecture__graph .pto-model-graphviz-toggle {
   fill: var(--model-graphviz-toggle-bg);
   stroke: none;
@@ -309,9 +311,8 @@ body {
 .pto-dv4-architecture__graph .pto-model-graphviz-toggle-icon {
   fill: none;
   stroke: var(--model-graphviz-toggle-icon);
-  stroke-width: 2;
+  stroke-width: 2.2;
   stroke-linecap: round;
-  transform: translateY(1px);
 }
 
 .pto-dv4-architecture__graph .is-inactive-variant {
@@ -445,7 +446,7 @@ body {
 .pto-dv4-architecture__graph.is-side .is-side-selected-cluster > rect:first-child {
   fill: color-mix(in srgb, var(--surface-1) 32%, transparent);
   fill-opacity: 1;
-  stroke: var(--border-strong);
+  stroke: var(--dv4-module-border-gray);
   stroke-width: 2;
 }
 
