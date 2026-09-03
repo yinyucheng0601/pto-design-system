@@ -75,6 +75,9 @@
       waypoints: options.waypoints,
       cornerRadius: options.cornerRadius || 18,
       color: options.color,
+      route: options.route,
+      tension: options.tension,
+      fanCurveY: options.fanCurveY,
       tensor: {
         name: tensorName || 'hidden_states',
         shape: options.shape || '[B,T,d]',
@@ -235,10 +238,10 @@
       graphNode(ids.norm2, 'RMSNorm 2', STREAM_X, 1590, {
         colorKey: 'sem:norm', width: 260
       }),
-      graphNode(ids.tokenId, 'Token ID', 500, 1685, {
+      graphNode(ids.tokenId, 'Token ID', 500, 1710, {
         kind: 'state', typeLabel: 'Hash Input', colorKey: 'io:input', width: 180, role: 'token-id-input'
       }),
-      graphNode(ids.router, descriptor.routerLabel, STREAM_X, 1705, {
+      graphNode(ids.router, descriptor.routerLabel, STREAM_X, 1710, {
         typeLabel: descriptor.routerType === 'hash_moe' ? 'Hash-MoE' : 'MoE Router',
         colorKey: 'sem:gate', width: 390, height: 64
       }),
@@ -347,16 +350,14 @@
       graphEdge('edge/selection-expert-ellipsis', ids.selection, `${routedId}/expert_ellipsis`, 'routed_tokens'),
       graphEdge('edge/selection-expert-384', ids.selection, `${routedId}/expert_384`, 'routed_tokens'),
       graphEdge('edge/norm-shared', ids.norm2, `${moeId}/shared_expert`, 'all_tokens', {
-        sourceAnchor: 'right', targetAnchor: 'top', curve: 'orthogonal',
-        waypoints: [{ x: 1430, y: 1590 }]
+        sourceAnchor: 'bottom', targetAnchor: 'top', curve: 'vertical', fanCurveY: 1652
       }),
       graphEdge('edge/expert-1-combine', `${routedId}/expert_001`, ids.combine, 'expert_output'),
       graphEdge('edge/expert-2-combine', `${routedId}/expert_002`, ids.combine, 'expert_output'),
       graphEdge('edge/expert-ellipsis-combine', `${routedId}/expert_ellipsis`, ids.combine, 'expert_output'),
       graphEdge('edge/expert-384-combine', `${routedId}/expert_384`, ids.combine, 'expert_output'),
       graphEdge('edge/shared-combine', `${moeId}/shared_expert`, ids.combine, 'shared_expert_output', {
-        sourceAnchor: 'bottom', targetAnchor: 'right', curve: 'orthogonal',
-        waypoints: [{ x: 1430, y: 1985 }]
+        sourceAnchor: 'bottom', targetAnchor: 'top', curve: 'vertical'
       }),
       graphEdge('edge/combine-post', ids.combine, ids.ffnPost, 'moe_output'),
       graphEdge('edge/ffn-post-merge', ids.ffnPost, ids.ffnMerge, 'hc_contribution', {
@@ -445,6 +446,25 @@
     svg.insertBefore(group, firstNode || null);
   }
 
+  function decorateFanCurves(host, graph) {
+    const nodesById = new Map((graph.nodes || []).map(node => [node.id, node]));
+    const renderedEdges = [...host.querySelectorAll('.pto-model-graphviz-edge')];
+    (graph.edges || []).filter(edge => Number.isFinite(edge.fanCurveY)).forEach(edge => {
+      const source = nodesById.get(edge.source);
+      const target = nodesById.get(edge.target);
+      const rendered = renderedEdges.find(item => (
+        item.dataset.source === edge.source && item.dataset.target === edge.target
+      ));
+      if (!source || !target || !rendered) return;
+      const start = { x: source.x, y: source.y + source.height / 2 };
+      const end = { x: target.x, y: target.y - target.height / 2 };
+      rendered.setAttribute(
+        'd',
+        `M ${start.x} ${start.y} C ${start.x} ${edge.fanCurveY}, ${end.x} ${edge.fanCurveY}, ${end.x} ${end.y}`
+      );
+    });
+  }
+
   function decorateMhcMerge(host, graph, nodeId) {
     const svg = host.querySelector('.pto-model-graphviz-svg');
     const node = graph.nodes.find(entry => entry.id === nodeId);
@@ -500,41 +520,27 @@
     const options = Array.from({ length: config.numHiddenLayers }, (_, layer) => (
       `<option value="${layer}">Layer ${layer}</option>`
     )).join('');
-    return `<header class="pto-dv4-architecture__toolbar">
-      <div class="pto-dv4-architecture__identity">
-        <span class="pto-dv4-architecture__eyebrow">Model Architecture</span>
-        <h1 class="pto-dv4-architecture__title">DeepSeek V4 Pro · mHC ×4 Architecture</h1>
-        <span class="pto-dv4-architecture__count">${config.numHiddenLayers} layers</span>
-      </div>
-      <div class="pto-dv4-architecture__actions">
-        <div class="pto-dv4-architecture__control" role="group" aria-label="视图切换">
-          <button class="pto-dv4-architecture__button is-active" type="button" aria-pressed="true">正视</button>
+    return `<div class="pto-dv4-architecture__workspace">
+      <div class="pto-dv4-architecture__viewport" tabindex="0" aria-label="可缩放拖动的 DeepSeek V4 正视图">
+        <div class="pto-dv4-architecture__canvas"></div>
+        <div class="pto-dv4-architecture__layer-picker" data-dv4-overlay>
+          <div class="pto-dv4-architecture__layer-controls">
+            <button class="pto-dv4-architecture__button is-icon" type="button" data-dv4-layer-step="-1" aria-label="上一层">‹</button>
+            <select class="pto-dv4-architecture__layer-select" id="dv4LayerSelect" data-dv4-layer aria-label="Decoder Layer">${options}</select>
+            <button class="pto-dv4-architecture__button is-icon" type="button" data-dv4-layer-step="1" aria-label="下一层">›</button>
+          </div>
         </div>
-        <div class="pto-dv4-architecture__control">
+        <div class="pto-dv4-architecture__viewport-actions" data-dv4-overlay>
           <button class="pto-dv4-architecture__button is-icon" type="button" data-dv4-theme aria-label="切换主题">◐</button>
           <button class="pto-dv4-architecture__button" type="button" data-dv4-fit>适配</button>
           <span class="pto-dv4-architecture__readout" data-dv4-readout>100%</span>
         </div>
-      </div>
-    </header>
-    <div class="pto-dv4-architecture__layer-picker">
-      <div class="pto-dv4-architecture__layer-controls">
-        <label for="dv4LayerSelect">Decoder Layer</label>
-        <button class="pto-dv4-architecture__button is-icon" type="button" data-dv4-layer-step="-1" aria-label="上一层">‹</button>
-        <select class="pto-dv4-architecture__layer-select" id="dv4LayerSelect" data-dv4-layer>${options}</select>
-        <button class="pto-dv4-architecture__button is-icon" type="button" data-dv4-layer-step="1" aria-label="下一层">›</button>
-      </div>
-      <div class="pto-dv4-architecture__layer-summary" data-dv4-layer-summary></div>
-    </div>
-    <div class="pto-dv4-architecture__legend" aria-label="mHC 图例">
-      <div class="pto-dv4-architecture__legend-item"><i class="pto-dv4-architecture__legend-mark is-streams"></i><strong>4 × Residual Streams</strong><small>Layer 边界持续保存四路宽度为 d 的状态。</small></div>
-      <div class="pto-dv4-architecture__legend-item"><i class="pto-dv4-architecture__legend-mark is-pre"></i><strong>HC Pre / Post</strong><small>4→1 折叠后执行子层，再由 1→4 展开。</small></div>
-      <div class="pto-dv4-architecture__legend-item"><i class="pto-dv4-architecture__legend-mark is-mix"></i><strong>Residual Mix B</strong><small>4→4 doubly-stochastic residual mapping。</small></div>
-      <div class="pto-dv4-architecture__legend-item"><i class="pto-dv4-architecture__legend-mark is-merge"></i><strong>mHC Merge ×4</strong><small>保留标志性 +，双环叠层表示四路合流。</small></div>
-    </div>
-    <div class="pto-dv4-architecture__workspace">
-      <div class="pto-dv4-architecture__viewport" tabindex="0" aria-label="可缩放拖动的 DeepSeek V4 正视图">
-        <div class="pto-dv4-architecture__canvas"></div>
+        <aside class="pto-dv4-architecture__legend" data-dv4-overlay aria-label="mHC 图例">
+          <div class="pto-dv4-architecture__legend-item"><i class="pto-dv4-architecture__legend-mark is-streams"></i><strong>4 × Residual Streams</strong></div>
+          <div class="pto-dv4-architecture__legend-item"><i class="pto-dv4-architecture__legend-mark is-pre"></i><strong>HC Pre / Post</strong></div>
+          <div class="pto-dv4-architecture__legend-item"><i class="pto-dv4-architecture__legend-mark is-mix"></i><strong>Residual Mix B</strong></div>
+          <div class="pto-dv4-architecture__legend-item"><i class="pto-dv4-architecture__legend-mark is-merge"></i><strong>mHC Merge ×4</strong></div>
+        </aside>
       </div>
     </div>`;
   }
@@ -551,7 +557,6 @@
     const canvas = root.querySelector('.pto-dv4-architecture__canvas');
     const readout = root.querySelector('[data-dv4-readout]');
     const layerSelect = root.querySelector('[data-dv4-layer]');
-    const layerSummary = root.querySelector('[data-dv4-layer-summary]');
     const state = {
       selectedLayer: data.clampLayer(options.initialLayer ?? 3),
       theme: options.initialTheme === 'light' ? 'light' : 'dark',
@@ -585,13 +590,7 @@
     }
 
     function syncLayerControls() {
-      const descriptor = data.describeLayer(state.selectedLayer);
       layerSelect.value = String(state.selectedLayer);
-      layerSummary.innerHTML = `
-        <span class="pto-dv4-architecture__status-chip">L${descriptor.layer}</span>
-        <span class="pto-dv4-architecture__status-chip is-attention">${descriptor.attentionType.toUpperCase()} · ×${descriptor.compression}</span>
-        <span class="pto-dv4-architecture__status-chip is-router">${descriptor.routerType === 'hash_moe' ? 'Hash-MoE' : 'Learned MoE'}</span>
-        <span class="pto-dv4-architecture__status-chip">${data.config.routedExperts} experts · Top-${data.config.expertsPerToken}</span>`;
     }
 
     function renderScene(shouldFit = true) {
@@ -621,6 +620,7 @@
       });
       decorateRoleClasses(host, graph);
       decorateHashInput(host, graph);
+      decorateFanCurves(host, graph);
       decorateMhcBundles(host, graph);
       graph.metadata.mergeNodeIds.forEach(nodeId => decorateMhcMerge(host, graph, nodeId));
       syncLayerControls();
@@ -662,7 +662,7 @@
 
     viewport.addEventListener('wheel', onWheel, { passive: false });
     viewport.addEventListener('pointerdown', event => {
-      if (event.button !== 0) return;
+      if (event.button !== 0 || event.target.closest('[data-dv4-overlay]')) return;
       state.drag = { x: event.clientX, y: event.clientY, panX: state.panX, panY: state.panY };
       viewport.setPointerCapture(event.pointerId);
       viewport.classList.add('is-dragging');
